@@ -2,6 +2,26 @@
 
 A gothic text adventure game built with LangGraph and OpenAI.
 
+## Check what branch
+git branch
+
+## Switch between branches
+git checkout main
+git checkout web-app
+
+### Save to Main branch and switch to web-app
+git add .
+git commit -m "your change"
+git checkout web-app
+
+### And go back to main
+git add .
+git commit -m "your change"
+git checkout main
+
+git checkout web-app #web-app version
+
+
 ## Setup
 
 1. Clone the repo

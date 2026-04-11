@@ -98,3 +98,14 @@ CRITICAL RULES:
 Conversation so far:
 {history}
 """
+NPC_EMAIL_PROMPT = """You are {npc_name} in a gothic text adventure game.
+Personality: {personality}
+
+The player has asked you to send them an email or you have decided to send them something important.
+Player email: {player_email}
+Conversation so far: {history}
+
+Use the send_email tool to send an email completely in character.
+The email subject and body should match your personality and the context of the conversation.
+Sign the email as {npc_name}.
+"""

@@ -1,7 +1,8 @@
+import os
 from typing import Annotated, Dict, List, NotRequired, Optional, Sequence, TypedDict
 from urllib import response
 from dotenv import load_dotenv  
-from langchain_core.messages import BaseMessage # The foundational class for all message types in LangGraph
+from langchain_core.messages import BaseMessage, HumanMessage # The foundational class for all message types in LangGraph
 from langchain_core.messages import ToolMessage # Passes data back to LLM after it calls a tool such as the content and the tool_call_id
 from langchain_core.messages import SystemMessage # Message for providing instructions to the LLM
 from langchain_openai import ChatOpenAI
@@ -13,7 +14,9 @@ from langchain_core.prompts import ChatPromptTemplate
 from sqlalchemy import text
 from audio_utils import speak
 import json
-from openai import OpenAI
+#from openai import OpenAItalk to aldric
+from tavily import TavilyClient
+
 
 from rooms import ROOMS
 from prompts import ROOM_DESCRIPTION_PROMPT, COMMAND_PARSER_PROMPT, EXAMINE_PROMPT, NPC_PROMPT, WEB_SEARCH_ROLEPLAY_PROMPT
@@ -36,7 +39,6 @@ class NPCData(TypedDict):
     personality: str
     knowledge: str
     can_search_web: bool
-    
     
 #These are things that change in the rooms, such as items and monsters. We will store these in the state and use them to override the base room data when we load it.
 class RoomState(TypedDict, total=False):
@@ -94,6 +96,7 @@ def load_room_data(state: AgentState):
         "current_room_data": room,
         "route_to": None
     }
+
 
 def visible_items(room: RoomData) -> List[ItemData]:
     """Items the player can currently see."""
@@ -211,7 +214,7 @@ def npc_dialogue(state: AgentState) -> dict:
     print("(Type 'goodbye' or 'leave' to end the conversation)\n")
 
     use_web_search = npc.get("can_search_web", False)
-    openai_client = OpenAI() if use_web_search else None
+    tavily_client = TavilyClient(api_key=os.getenv("TAVILY_API_KEY")) if use_web_search else None
 
     history = []
     exit_words = ["goodbye", "bye", "leave", "exit", "done", "farewell", "stop"]
@@ -225,21 +228,9 @@ def npc_dialogue(state: AgentState) -> dict:
             break
 
         if use_web_search:
-            # Step 1: Search call to get raw facts
-            search_messages = [
-                {"role": "user", "content": f"Search for current information to answer this question: {player_msg}. Return only the raw facts, no formatting."}
-            ]
+            search_result = tavily_client.search(player_msg)
+            raw_facts = "\n".join([r["content"] for r in search_result["results"]])
 
-            search_response = openai_client.chat.completions.create(
-                model="gpt-4o-search-preview",
-                web_search_options={},
-                messages=search_messages,
-            )
-
-            raw_facts = search_response.choices[0].message.content
-            print(f"\n[RAW SEARCH RESULTS]\n{raw_facts}\n")
-
-            # Step 2: Roleplay call using WEB_SEARCH_ROLEPLAY_PROMPT
             roleplay_prompt = WEB_SEARCH_ROLEPLAY_PROMPT.format(
                 npc_name=npc["name"],
                 personality=npc["personality"],
@@ -248,20 +239,10 @@ def npc_dialogue(state: AgentState) -> dict:
                 raw_facts=raw_facts,
                 history=chr(10).join(history),
             )
-
-            roleplay_messages = [
-                {"role": "system", "content": roleplay_prompt},
-                {"role": "user", "content": "Respond in character now."}
-            ]
-
-            roleplay_response = openai_client.chat.completions.create(
-                model="gpt-4o",
-                messages=roleplay_messages,
-            )
-
-            reply = roleplay_response.choices[0].message.content
-            print(f"\n[RAW REPLY]\n{reply}\n")
-
+            reply = llm.invoke([
+                SystemMessage(content=roleplay_prompt),
+                HumanMessage(content="Respond in character now.")
+            ]).content
 
         else:
             prompt = NPC_PROMPT.invoke({
@@ -272,8 +253,7 @@ def npc_dialogue(state: AgentState) -> dict:
                 "history": "\n".join(history),
                 "player_input": player_msg,
             })
-            response = llm.invoke(prompt)
-            reply = str(response.content)
+            reply = str(llm.invoke(prompt).content)
 
         end_conversation = "[END CONVERSATION]" in reply
         clean_reply = reply.replace("[END CONVERSATION]", "").strip()
