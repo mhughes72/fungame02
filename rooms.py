@@ -5,11 +5,12 @@ ROOMS = {
         "exits": {"north": "room_2"},
         "monsters": ["ghost"],
         "items": [
-            {"name": "rusty key",        "hidden": False, "revealed_by": None},
-            {"name": "old book",         "hidden": False, "revealed_by": None},
-            {"name": "magnifying glass", "hidden": False, "revealed_by": None},
-            {"name": "quill pen",        "hidden": False, "revealed_by": None},
-            {"name": "secret letter",    "hidden": True,  "revealed_by": "old book"},
+            {"name": "rusty key",        "hidden": False, "revealed_by": None, "openable": False, "is_open": False, "gold": 0},
+            {"name": "old book",         "hidden": False, "revealed_by": None, "openable": False, "is_open": False, "gold": 0},
+            {"name": "magnifying glass", "hidden": False, "revealed_by": None, "openable": False, "is_open": False, "gold": 0},
+            {"name": "quill pen",        "hidden": False, "revealed_by": None, "openable": False, "is_open": False, "gold": 0},
+            {"name": "secret letter",    "hidden": True,  "revealed_by": "old book", "openable": False, "is_open": False, "gold": 0},
+            {"name": "wooden chest",     "hidden": False, "revealed_by": None, "openable": True,  "is_open": False, "gold": 15},
         ],
         "npcs": [
             {
@@ -42,8 +43,10 @@ ROOMS = {
         "exits": {"west": "room_2", "north": "room_6"},
         "monsters": ["giant rat"],
         "items": [
-            {"name": "knife",               "hidden": False, "revealed_by": None},
-            {"name": "loaf of stale bread", "hidden": False, "revealed_by": None},
+            {"name": "knife",               "hidden": False, "revealed_by": None, "openable": False, "is_open": False, "gold": 0},
+            {"name": "loaf of stale bread", "hidden": False, "revealed_by": None, "openable": False, "is_open": False, "gold": 0},
+            {"name": "battered tin box",    "hidden": False, "revealed_by": None, "openable": True,  "is_open": False, "gold": 8},
+
         ],
         "npcs": [],
     },
@@ -65,7 +68,9 @@ ROOMS = {
         "exits": {"south": "room_2", "north": "room_8"},
         "monsters": [],
         "items": [
-            {"name": "silver coin", "hidden": False, "revealed_by": None},
+            {"name": "silver coin",         "hidden": False, "revealed_by": None, "openable": False, "is_open": False, "gold": 0},
+            {"name": "ornate box",          "hidden": False, "revealed_by": None, "openable": True,  "is_open": False, "gold": 30},
+
         ],
         "npcs": [],
     },
@@ -97,8 +102,10 @@ ROOMS = {
         "exits": {"south": "room_5", "east": "room_9", "west": "room_10"},
         "monsters": ["vampire"],
         "items": [
-            {"name": "golden goblet", "hidden": False, "revealed_by": None},
-            {"name": "invitation",    "hidden": True,  "revealed_by": "golden goblet"},
+            {"name": "golden goblet",       "hidden": False, "revealed_by": None, "openable": False, "is_open": False, "gold": 0},
+            {"name": "invitation",          "hidden": True,  "revealed_by": "golden goblet", "openable": False, "is_open": False, "gold": 0},
+            {"name": "dusty lockbox",       "hidden": False, "revealed_by": None, "openable": True,  "is_open": False, "gold": 50},
+
         ],
         "npcs": [],
     },
@@ -127,10 +134,11 @@ ROOMS = {
         "exits": {"up": "room_10"},
         "monsters": ["ghoul"],
         "items": [
-            {"name": "iron key",     "hidden": False, "revealed_by": None},
-            {"name": "broken chain", "hidden": False, "revealed_by": None},
-            {"name": "locket",       "hidden": True,  "revealed_by": "broken chain"},
-        ],
+            {"name": "iron key",            "hidden": False, "revealed_by": None, "openable": False, "is_open": False, "gold": 0},
+            {"name": "broken chain",        "hidden": False, "revealed_by": None, "openable": False, "is_open": False, "gold": 0},
+            {"name": "locket",              "hidden": True,  "revealed_by": "broken chain", "openable": False, "is_open": False, "gold": 0},
+            {"name": "rotting satchel",     "hidden": False, "revealed_by": None, "openable": True,  "is_open": False, "gold": 12},
+                    ],
         "npcs": [],
     },
 }

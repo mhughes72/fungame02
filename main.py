@@ -32,6 +32,9 @@ class ItemData(TypedDict):
     name: str
     hidden: bool
     revealed_by: Optional[str]
+    openable: bool
+    is_open: bool
+    gold: int
     
 class NPCData(TypedDict):
     name: str
@@ -60,6 +63,7 @@ class PlayerState(TypedDict, total=False):
     health: int
     max_health: int
     status_effects: List[str]
+    gold: int
 
 #This is the state for the agent. It includes the current room ID, the current room data (which is loaded from the ROOMS constant and then overridden with any changes from the state), and the room states (which include any changes to the items and monsters in each room).
 
@@ -120,11 +124,17 @@ def describe_room(state: AgentState) -> dict:
     if not already_visited or force_full_description:
         visible = [i["name"] for i in room["items"] if not i["hidden"]]
 
-        # Pass visible to the prompt instead of all items
+# Add hints for unopened containers
+        container_hints = []
+        for i in room["items"]:
+            if not i["hidden"] and i.get("openable") and not i.get("is_open"):
+                container_hints.append(f"The {i['name']} looks like it might contain something")
+
         prompt = ROOM_DESCRIPTION_PROMPT.invoke({
             "name": room["name"],
             "description": room["description"],
             "items": ", ".join(visible) if visible else "none",
+            "containers": ". ".join(container_hints) if container_hints else "none",
             "monsters": ", ".join(room["monsters"]) if room["monsters"] else "none",
             "npcs": ", ".join(n["name"] for n in room["npcs"]) if room["npcs"] else "none",
             "exits": ", ".join(room["exits"].keys()) if room["exits"] else "none",
@@ -323,10 +333,8 @@ def resolve_action(state: AgentState) -> dict:
             print("You are carrying: " + ", ".join(inventory))
         else:
             print("Your inventory is empty.")
+        print(f"Gold: {player.get('gold', 0)} coins")
         return {"force_full_description": False}
-
-    if action == "look":
-        return {"force_full_description": True}
 
     if action == "examine":
         new_items = []
@@ -375,6 +383,52 @@ def resolve_action(state: AgentState) -> dict:
         print(f"There is no {target} here.")
         return {"force_full_description": False}
 
+    if action == "open":
+        item = find_item(room, target)
+        
+        if not item:
+            print(f"There's no {target} here.")
+            return {"force_full_description": False}
+        
+        if not item.get("openable"):
+            print(f"You can't open the {target}.")
+            return {"force_full_description": False}
+        
+        if item.get("is_open"):
+            print(f"The {target} is already open.")
+            return {"force_full_description": False}
+
+        gold_found = item.get("gold", 0)
+
+        # Mark item as open AND zero out the gold
+        new_items = []
+        for i in room["items"]:
+            if i["name"] == target:
+                new_items.append({**i, "is_open": True, "gold": 0})
+            else:
+                new_items.append(i)
+
+        room_override["items"] = new_items
+        room_states[room_id] = room_override
+
+        if gold_found > 0:
+            current_gold = player.get("gold", 0)
+            player["gold"] = current_gold + gold_found
+            print(f"You open the {target} and find {gold_found} gold coins inside!")
+            print(f"You now have {player['gold']} gold.")
+            return {
+                "room_states": room_states,
+                "player": player,
+                "force_full_description": False
+            }
+
+        print(f"You open the {target} but find nothing of value inside.")
+        return {
+            "room_states": room_states,
+            "force_full_description": False
+        }
+
+
     if action == "room":
         visible = [i for i in room["items"] if not i["hidden"]]
         hidden = [i for i in room["items"] if i["hidden"]]
@@ -388,14 +442,21 @@ def resolve_action(state: AgentState) -> dict:
                 print(f"  - {i['name']} (hidden behind: {i['revealed_by']})")
         else:
             print("Hidden items: none")
+
+        # Show containers and their gold status
+        containers = [i for i in visible if i.get("openable")]
+        if containers:
+            print("Containers:")
+            for i in containers:
+                if i.get("is_open"):
+                    print(f"  - {i['name']} (open, empty)")
+                else:
+                    print(f"  - {i['name']} (unopened, contains {i.get('gold', 0)} gold)")
         
         print(f"Monsters: {', '.join(room['monsters']) if room['monsters'] else 'none'}")
         print(f"NPCs:     {', '.join(n['name'] for n in room['npcs']) if room['npcs'] else 'none'}")
         print(f"Exits:    {', '.join(room['exits'].keys())}")
         return {"force_full_description": False}
-    # fallback
-    print("You're not sure how to do that.")
-    return {"force_full_description": False}
 
 
 def next_step(state: AgentState) -> str:
@@ -439,7 +500,8 @@ initial_state_1 = AgentState(
         "inventory": [],
         "health": 100,
         "max_health": 100,
-        "status_effects": []
+        "status_effects": [],
+        "gold": 0
     }
 )
 app.invoke(initial_state_1)

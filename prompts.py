@@ -8,10 +8,13 @@ Describe the room vividly.
 Room: {name}
 Description: {description}
 Items: {items}
+Containers that look like they might hold something: {containers}
 Monsters: {monsters}
+NPCs present: {npcs}
 Exits: {exits}
 
-Keep it immersive and concise. If there are monsters present, make sure to mention them in a threatening way.
+Keep it immersive and concise. Mention monsters threateningly. Mention NPCs naturally.
+If there are containers, subtly hint they might hold something without being explicit.
 """)
 
 COMMAND_PARSER_PROMPT = ChatPromptTemplate.from_template("""
@@ -37,6 +40,7 @@ Rules:
 - For quitting (quit, exit, bye), set action to "quit" and target to null.
 - If the player types "room", "where am i", "current room", or similar, set action to "room" and target to null.
 - If nothing matches, set action to "unknown" and target to null.
+- For opening containers (open, unlock, pry open), set action to "open" and target to the container name.
 
 Respond with ONLY raw JSON, no markdown, no explanation.
 Format: {{"action": "go", "target": "north"}}
