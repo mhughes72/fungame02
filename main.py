@@ -16,7 +16,7 @@ import json
 
 
 from rooms import ROOMS
-from prompts import ROOM_DESCRIPTION_PROMPT, COMMAND_PARSER_PROMPT
+from prompts import ROOM_DESCRIPTION_PROMPT, COMMAND_PARSER_PROMPT, EXAMINE_PROMPT, NPC_PROMPT
 
 
 load_dotenv()
@@ -24,9 +24,21 @@ load_dotenv()
 from typing import Dict, List, Optional
 from typing_extensions import TypedDict, NotRequired
 
+
+class ItemData(TypedDict):
+    name: str
+    hidden: bool
+    revealed_by: Optional[str]
+    
+class NPCData(TypedDict):
+    name: str
+    description: str
+    personality: str
+    knowledge: str
+    
 #These are things that change in the rooms, such as items and monsters. We will store these in the state and use them to override the base room data when we load it.
 class RoomState(TypedDict, total=False):
-    items: List[str]
+    items: List[ItemData]
     monsters: List[str]
     visited: bool
 
@@ -35,8 +47,9 @@ class RoomData(TypedDict):
     name: str
     description: str
     exits: Dict[str, str]
-    items: List[str]
+    items: List[ItemData]
     monsters: List[str]
+    npcs: List[NPCData]
 
 class PlayerState(TypedDict, total=False):
     inventory: List[str]
@@ -54,6 +67,7 @@ class AgentState(TypedDict):
     player: NotRequired[PlayerState]
     force_full_description: NotRequired[bool]
     game_over: NotRequired[bool]
+    route_to: NotRequired[str]
     
 llm = ChatOpenAI(
     model="gpt-4o", temperature = 0.5)
@@ -63,26 +77,30 @@ llm = ChatOpenAI(
 def load_room_data(state: AgentState):
     room_id = state["current_room_id"]
     base_room = ROOMS[room_id]
-
     room_override = state.get("room_states", {}).get(room_id, {})
 
     room: RoomData = {
         "name": base_room["name"],
         "description": base_room["description"],
         "exits": dict(base_room["exits"]),
-        "items": list(room_override.get("items", base_room["items"])),
         "monsters": list(room_override.get("monsters", base_room["monsters"])),
+        "items": list(room_override.get("items", base_room["items"])),  # full ItemData list
+        "npcs": list(base_room.get("npcs", [])),
     }
-
-    print(f"BASE ITEMS: {base_room['items']}")
-    print(f"OVERRIDE ITEMS: {room_override.get('items')}")
-    print(f"FINAL ROOM ITEMS: {room['items']}")
 
     return {
-        "current_room_data": room
+        "current_room_data": room,
+        "route_to": None
     }
 
+def visible_items(room: RoomData) -> List[ItemData]:
+    """Items the player can currently see."""
+    return [i for i in room["items"] if not i["hidden"]]
 
+def find_item(room: RoomData, name: str, include_hidden=False) -> Optional[ItemData]:
+    """Find an item by name, optionally including hidden ones."""
+    items = room["items"] if include_hidden else visible_items(room)
+    return next((i for i in items if i["name"] == name), None)
 
 def describe_room(state: AgentState) -> dict:
     room = state["current_room_data"]  # type: ignore
@@ -95,10 +113,15 @@ def describe_room(state: AgentState) -> dict:
     force_full_description = state.get("force_full_description", False)
 
     if not already_visited or force_full_description:
+        visible = [i["name"] for i in room["items"] if not i["hidden"]]
+
+        # Pass visible to the prompt instead of all items
         prompt = ROOM_DESCRIPTION_PROMPT.invoke({
             "name": room["name"],
             "description": room["description"],
-            "items": ", ".join(room["items"]) if room["items"] else "none",
+            "items": ", ".join(visible) if visible else "none",
+            "monsters": ", ".join(room["monsters"]) if room["monsters"] else "none",
+            "npcs": ", ".join(n["name"] for n in room["npcs"]) if room["npcs"] else "none",
             "exits": ", ".join(room["exits"].keys()) if room["exits"] else "none",
         })
 
@@ -117,7 +140,7 @@ def describe_room(state: AgentState) -> dict:
 
     short_desc = (
         f"You are back in the {room['name']}. "
-        f"You see {', '.join(room['items']) if room['items'] else 'nothing of note'}. "
+        f"Items: {', '.join(i["name"] for i in room['items'] if not i['hidden']) or 'none'}. "
         f"Exits: {', '.join(room['exits'].keys()) if room['exits'] else 'none'}."
     )
     print(short_desc)
@@ -140,8 +163,9 @@ def parse_command(player_input: str, state: AgentState) -> dict:
     prompt = COMMAND_PARSER_PROMPT.invoke({
         "room_name": room["name"],
         "exits": ", ".join(room["exits"].keys()) or "none",
-        "items": ", ".join(room["items"]) or "none",
+        "items": ", ".join(i["name"] for i in room["items"] if not i["hidden"]) or "none",        
         "monsters": ", ".join(room["monsters"]) or "none",
+        "npcs": ", ".join(n["name"] for n in room["npcs"]) or "none",
         "inventory": ", ".join(inventory) or "nothing",
         "player_input": player_input,
     })
@@ -163,6 +187,57 @@ def parse_command(player_input: str, state: AgentState) -> dict:
         print(f"[DEBUG] Parse error: {e}, raw response: {response.content}")
         return {"action": "unknown", "target": None}
 
+def npc_dialogue(state: AgentState) -> dict:
+    room = state["current_room_data"]
+    player_input = state.get("player_input", "").strip()
+
+    # Find which NPC the player wants to talk to
+    command = parse_command(player_input, state)
+    target = command.get("target", "").lower() if command.get("target") else ""
+
+    npc = next(
+        (n for n in room["npcs"] if n["name"].lower() in target or target in n["name"].lower()),
+        room["npcs"][0] if room["npcs"] else None  # default to first NPC if only one
+    )
+
+    if not npc:
+        print("There's no one here to talk to.")
+        return {"force_full_description": False}
+
+    print(f"\n{npc['name']}: \"{npc['description']}\"")
+    print("(Type 'goodbye' or 'leave' to end the conversation)\n")
+
+    history = []
+
+    while True:
+        player_msg = input("You: ").strip()
+        history.append(f"Player: {player_msg}")
+
+        prompt = NPC_PROMPT.invoke({
+            "npc_name": npc["name"],
+            "personality": npc["personality"],
+            "knowledge": npc["knowledge"],
+            "room_name": room["name"],
+            "history": "\n".join(history),
+            "player_input": player_msg,
+        })
+
+        response = llm.invoke(prompt)
+        reply = str(response.content)
+
+        end_conversation = "[END CONVERSATION]" in reply
+        clean_reply = reply.replace("[END CONVERSATION]", "").strip()
+
+        print(f"\n{npc['name']}: {clean_reply}\n")
+        history.append(f"{npc['name']}: {clean_reply}")
+
+        if end_conversation:
+            print(f"({npc['name']} turns away.)")
+            break
+
+    return {"force_full_description": False}
+
+
 def resolve_action(state: AgentState) -> dict:
     player_input = state.get("player_input", "").strip()
     room = state["current_room_data"]
@@ -177,7 +252,11 @@ def resolve_action(state: AgentState) -> dict:
     command = parse_command(player_input, state)
     action = command.get("action", "unknown")
     target = command.get("target")
+    print(f"\n[Input: '{player_input}' → action: '{action}', target: '{target}']")
 
+    if action == "talk":
+        return {"route_to": "npc_dialogue"}
+    
     if action == "quit":
         print("Goodbye.")
         return {"game_over": True}
@@ -193,12 +272,12 @@ def resolve_action(state: AgentState) -> dict:
         return {"force_full_description": False}
 
     if action == "take":
-        current_items = list(room["items"])
-        if target in current_items:
-            current_items.remove(target)
-            inventory.append(target)
-            room_override["items"] = current_items
+        item = find_item(room, target)
+        if item:
+            new_items = [i for i in room["items"] if i["name"] != target]
+            room_override["items"] = new_items
             room_states[room_id] = room_override
+            inventory.append(target)
             player["inventory"] = inventory
             print(f"You take the {target}.")
             return {
@@ -220,15 +299,71 @@ def resolve_action(state: AgentState) -> dict:
         return {"force_full_description": True}
 
     if action == "examine":
-        # Placeholder — perfect hook for the examine feature later!
-        print(f"You examine the {target}. Nothing special stands out.")
+        new_items = []
+        newly_revealed = []
+        for item in room["items"]:
+            if item["hidden"] and item["revealed_by"] == target:
+                new_items.append({**item, "hidden": False})
+                newly_revealed.append(item["name"])
+            else:
+                new_items.append(item)
+
+        if newly_revealed:
+            room_override["items"] = new_items
+            room_states[room_id] = room_override
+
+        discovery_text = f"The player discovers: {', '.join(newly_revealed)}" if newly_revealed else ""
+
+        prompt = EXAMINE_PROMPT.invoke({
+            "target": target,
+            "room_name": room["name"],
+            "room_description": room["description"],
+            "discovery_text": discovery_text,
+        })
+        response = llm.invoke(prompt)
+        print(response.content)
+
+        if newly_revealed:
+            print(f"\n[You find: {', '.join(newly_revealed)}]")
+            return {
+                "room_states": room_states,
+                "force_full_description": False
+            }
+
         return {"force_full_description": False}
 
     if action == "attack":
-        print(f"You ready yourself to fight the {target}!")
-        # Hook for combat system later
+        if target in room["monsters"]:
+            new_monsters = [m for m in room["monsters"] if m != target]
+            room_override["monsters"] = new_monsters
+            room_states[room_id] = room_override
+            print(f"You defeated the {target}!")
+            return {
+                "room_states": room_states,
+                "force_full_description": False
+            }
+        print(f"There is no {target} here.")
         return {"force_full_description": False}
 
+    if action == "room":
+        visible = [i for i in room["items"] if not i["hidden"]]
+        hidden = [i for i in room["items"] if i["hidden"]]
+        
+        print(f"\n--- {room['name']} ---")
+        print(f"Visible items: {', '.join(i['name'] for i in visible) if visible else 'none'}")
+        
+        if hidden:
+            print("Hidden items:")
+            for i in hidden:
+                print(f"  - {i['name']} (hidden behind: {i['revealed_by']})")
+        else:
+            print("Hidden items: none")
+        
+        print(f"Monsters: {', '.join(room['monsters']) if room['monsters'] else 'none'}")
+        print(f"NPCs:     {', '.join(n['name'] for n in room['npcs']) if room['npcs'] else 'none'}")
+        print(f"Exits:    {', '.join(room['exits'].keys())}")
+        return {"force_full_description": False}
+    # fallback
     print("You're not sure how to do that.")
     return {"force_full_description": False}
 
@@ -236,6 +371,8 @@ def resolve_action(state: AgentState) -> dict:
 def next_step(state: AgentState) -> str:
     if state.get("game_over"):
         return END
+    if state.get("route_to") == "npc_dialogue":
+        return "npc_dialogue"
     return "load_room_data"
 
 graph = StateGraph(AgentState)
@@ -243,17 +380,22 @@ graph.add_node("load_room_data", load_room_data)
 graph.add_node("describe_room", describe_room)
 graph.add_node("get_player_action", get_player_action)
 graph.add_node("resolve_action", resolve_action)
+graph.add_node("npc_dialogue", npc_dialogue)
+
 
 graph.add_edge(START, "load_room_data")
 graph.add_edge("load_room_data", "describe_room")
 graph.add_edge("describe_room", "get_player_action")
 graph.add_edge("get_player_action", "resolve_action")
 #graph.add_edge("resolve_action", "load_room_data")
+graph.add_edge("npc_dialogue", "load_room_data")
+
 graph.add_conditional_edges(
     "resolve_action",
     next_step,
     {
         "load_room_data": "load_room_data",
+        "npc_dialogue": "npc_dialogue",
         END: END,
     }
 )
