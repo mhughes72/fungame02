@@ -11,14 +11,22 @@ ROOMS = {
             {"name": "quill pen",        "hidden": False, "revealed_by": None},
             {"name": "secret letter",    "hidden": True,  "revealed_by": "old book"},
         ],
-         "npcs": [
-        {
-            "name": "Professor Aldric",
-            "description": "A frail old man hunched over a desk, scribbling notes by candlelight.",
-            "personality": "Speaks in riddles, knows secrets about the mansion, cryptic but helpful if you earn his trust.",
-            "knowledge": "Knows about the ghost, the secret letter behind the old book, and that the rusty key opens something in the basement.",
-        }
-    ],
+        "npcs": [
+            {
+                "name": "Professor Aldric",
+                "description": "A frail old man hunched over a desk, scribbling notes by candlelight.",
+                "personality": "Speaks in riddles, knows secrets about the mansion, cryptic but helpful if you earn his trust.",
+                "knowledge": "Knows about the ghost, the secret letter behind the old book, and that the rusty key opens something in the basement.",
+                "can_search_web": False,
+            },
+            {
+                "name": "The Oracle",
+                "description": "A mysterious figure hunched over a glowing crystal ball, muttering about distant lands.",
+                "personality": "Speaks with authority on matters of the outside world. Dry, precise, and occasionally sardonic.",
+                "knowledge": "Has an uncanny knowledge of American politics, current events, and world affairs.",
+                "can_search_web": True,
+            },
+        ],
     },
     "room_2": {
         "name": "Hallway",
@@ -26,6 +34,7 @@ ROOMS = {
         "exits": {"south": "room_1", "east": "room_3", "west": "room_4", "north": "room_5"},
         "monsters": [],
         "items": [],
+        "npcs": [],
     },
     "room_3": {
         "name": "Kitchen",
@@ -33,9 +42,10 @@ ROOMS = {
         "exits": {"west": "room_2", "north": "room_6"},
         "monsters": ["giant rat"],
         "items": [
-            {"name": "knife",              "hidden": False, "revealed_by": None},
-            {"name": "loaf of stale bread","hidden": False, "revealed_by": None},
+            {"name": "knife",               "hidden": False, "revealed_by": None},
+            {"name": "loaf of stale bread", "hidden": False, "revealed_by": None},
         ],
+        "npcs": [],
     },
     "room_4": {
         "name": "Library",
@@ -47,6 +57,7 @@ ROOMS = {
             {"name": "candle",       "hidden": False, "revealed_by": None},
             {"name": "hidden note",  "hidden": True,  "revealed_by": "ancient tome"},
         ],
+        "npcs": [],
     },
     "room_5": {
         "name": "Grand Foyer",
@@ -56,6 +67,7 @@ ROOMS = {
         "items": [
             {"name": "silver coin", "hidden": False, "revealed_by": None},
         ],
+        "npcs": [],
     },
     "room_6": {
         "name": "Pantry",
@@ -63,9 +75,10 @@ ROOMS = {
         "exits": {"south": "room_3"},
         "monsters": ["spider swarm"],
         "items": [
-            {"name": "glass jar",      "hidden": False, "revealed_by": None},
-            {"name": "poison vial",    "hidden": True,  "revealed_by": "glass jar"},
+            {"name": "glass jar",   "hidden": False, "revealed_by": None},
+            {"name": "poison vial", "hidden": True,  "revealed_by": "glass jar"},
         ],
+        "npcs": [],
     },
     "room_7": {
         "name": "Secret Room",
@@ -76,6 +89,7 @@ ROOMS = {
             {"name": "strange amulet", "hidden": False, "revealed_by": None},
             {"name": "ritual dagger",  "hidden": True,  "revealed_by": "strange amulet"},
         ],
+        "npcs": [],
     },
     "room_8": {
         "name": "Dining Hall",
@@ -86,6 +100,7 @@ ROOMS = {
             {"name": "golden goblet", "hidden": False, "revealed_by": None},
             {"name": "invitation",    "hidden": True,  "revealed_by": "golden goblet"},
         ],
+        "npcs": [],
     },
     "room_9": {
         "name": "Garden",
@@ -93,9 +108,10 @@ ROOMS = {
         "exits": {"west": "room_8"},
         "monsters": ["werewolf"],
         "items": [
-            {"name": "herbs",          "hidden": False, "revealed_by": None},
-            {"name": "silver bullet",  "hidden": True,  "revealed_by": "herbs"},
+            {"name": "herbs",         "hidden": False, "revealed_by": None},
+            {"name": "silver bullet", "hidden": True,  "revealed_by": "herbs"},
         ],
+        "npcs": [],
     },
     "room_10": {
         "name": "Basement Stairs",
@@ -103,6 +119,7 @@ ROOMS = {
         "exits": {"east": "room_8", "down": "room_11"},
         "monsters": [],
         "items": [],
+        "npcs": [],
     },
     "room_11": {
         "name": "Basement",
@@ -110,9 +127,10 @@ ROOMS = {
         "exits": {"up": "room_10"},
         "monsters": ["ghoul"],
         "items": [
-            {"name": "iron key",      "hidden": False, "revealed_by": None},
-            {"name": "broken chain",  "hidden": False, "revealed_by": None},
-            {"name": "locket",        "hidden": True,  "revealed_by": "broken chain"},
+            {"name": "iron key",     "hidden": False, "revealed_by": None},
+            {"name": "broken chain", "hidden": False, "revealed_by": None},
+            {"name": "locket",       "hidden": True,  "revealed_by": "broken chain"},
         ],
+        "npcs": [],
     },
 }

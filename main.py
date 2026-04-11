@@ -13,11 +13,10 @@ from langchain_core.prompts import ChatPromptTemplate
 from sqlalchemy import text
 from audio_utils import speak
 import json
-
+from openai import OpenAI
 
 from rooms import ROOMS
-from prompts import ROOM_DESCRIPTION_PROMPT, COMMAND_PARSER_PROMPT, EXAMINE_PROMPT, NPC_PROMPT
-
+from prompts import ROOM_DESCRIPTION_PROMPT, COMMAND_PARSER_PROMPT, EXAMINE_PROMPT, NPC_PROMPT, WEB_SEARCH_ROLEPLAY_PROMPT
 
 load_dotenv()
 
@@ -35,6 +34,8 @@ class NPCData(TypedDict):
     description: str
     personality: str
     knowledge: str
+    can_search_web: bool
+    
     
 #These are things that change in the rooms, such as items and monsters. We will store these in the state and use them to override the base room data when we load it.
 class RoomState(TypedDict, total=False):
@@ -187,17 +188,18 @@ def parse_command(player_input: str, state: AgentState) -> dict:
         print(f"[DEBUG] Parse error: {e}, raw response: {response.content}")
         return {"action": "unknown", "target": None}
 
+
+
 def npc_dialogue(state: AgentState) -> dict:
     room = state["current_room_data"]
     player_input = state.get("player_input", "").strip()
 
-    # Find which NPC the player wants to talk to
     command = parse_command(player_input, state)
     target = command.get("target", "").lower() if command.get("target") else ""
 
     npc = next(
         (n for n in room["npcs"] if n["name"].lower() in target or target in n["name"].lower()),
-        room["npcs"][0] if room["npcs"] else None  # default to first NPC if only one
+        room["npcs"][0] if room["npcs"] else None
     )
 
     if not npc:
@@ -207,23 +209,70 @@ def npc_dialogue(state: AgentState) -> dict:
     print(f"\n{npc['name']}: \"{npc['description']}\"")
     print("(Type 'goodbye' or 'leave' to end the conversation)\n")
 
+    use_web_search = npc.get("can_search_web", False)
+    openai_client = OpenAI() if use_web_search else None
+
     history = []
+    exit_words = ["goodbye", "bye", "leave", "exit", "done", "farewell", "stop"]
 
     while True:
         player_msg = input("You: ").strip()
         history.append(f"Player: {player_msg}")
 
-        prompt = NPC_PROMPT.invoke({
-            "npc_name": npc["name"],
-            "personality": npc["personality"],
-            "knowledge": npc["knowledge"],
-            "room_name": room["name"],
-            "history": "\n".join(history),
-            "player_input": player_msg,
-        })
+        if any(word in player_msg.lower() for word in exit_words):
+            print(f"({npc['name']} turns away.)")
+            break
 
-        response = llm.invoke(prompt)
-        reply = str(response.content)
+        if use_web_search:
+            # Step 1: Search call to get raw facts
+            search_messages = [
+                {"role": "user", "content": f"Search for current information to answer this question: {player_msg}. Return only the raw facts, no formatting."}
+            ]
+
+            search_response = openai_client.chat.completions.create(
+                model="gpt-4o-search-preview",
+                web_search_options={},
+                messages=search_messages,
+            )
+
+            raw_facts = search_response.choices[0].message.content
+            print(f"\n[RAW SEARCH RESULTS]\n{raw_facts}\n")
+
+            # Step 2: Roleplay call using WEB_SEARCH_ROLEPLAY_PROMPT
+            roleplay_prompt = WEB_SEARCH_ROLEPLAY_PROMPT.format(
+                npc_name=npc["name"],
+                personality=npc["personality"],
+                knowledge=npc["knowledge"],
+                player_msg=player_msg,
+                raw_facts=raw_facts,
+                history=chr(10).join(history),
+            )
+
+            roleplay_messages = [
+                {"role": "system", "content": roleplay_prompt},
+                {"role": "user", "content": "Respond in character now."}
+            ]
+
+            roleplay_response = openai_client.chat.completions.create(
+                model="gpt-4o",
+                messages=roleplay_messages,
+            )
+
+            reply = roleplay_response.choices[0].message.content
+            print(f"\n[RAW REPLY]\n{reply}\n")
+
+
+        else:
+            prompt = NPC_PROMPT.invoke({
+                "npc_name": npc["name"],
+                "personality": npc["personality"],
+                "knowledge": npc["knowledge"],
+                "room_name": room["name"],
+                "history": "\n".join(history),
+                "player_input": player_msg,
+            })
+            response = llm.invoke(prompt)
+            reply = str(response.content)
 
         end_conversation = "[END CONVERSATION]" in reply
         clean_reply = reply.replace("[END CONVERSATION]", "").strip()
