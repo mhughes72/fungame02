@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Environment variables (KEEP THIS SECRET)
+.env
+
+# LangGraph / LangChain cache
+.langchain.db
+langchain_cache/
+
+# Generated files
+graph.png
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

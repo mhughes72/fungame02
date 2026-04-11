@@ -1,0 +1,1 @@
+i want to build a dungeon crawler game with langgraph.  i just want to start off by constructing a graph that can loop as the player goes into a different room and pull new room info into that node to describe it.  what would the graph look like?
