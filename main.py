@@ -107,6 +107,9 @@ class AgentState(TypedDict):
     combat_target: NotRequired[str]
     skip_description: NotRequired[bool]
     game_won: NotRequired[bool]
+    previous_room_id: NotRequired[str]
+    just_fled: NotRequired[bool]
+
 
 
 # ── Setup ────────────────────────────────────────────────────────────────────
@@ -122,9 +125,29 @@ with open(os.path.join("data", "shop.json"), "r") as f:
 # ── Nodes ────────────────────────────────────────────────────────────────────
 
 def load_room_data(state: AgentState) -> dict:
-    room_id = state["current_room_id"]
-    base_room = ROOMS[room_id]
-    room_override = state.get("room_states", {}).get(room_id, {})
+    new_room_id = state["current_room_id"]
+    
+    # previous_room_id should be where we just came FROM
+    # We can tell a room change happened if current_room_data exists 
+    # and its room is different from the new room
+    current_room_data = state.get("current_room_data")
+    if current_room_data:
+        # Find the room_id of the current room data by matching name
+        old_room_id = next(
+            (rid for rid, r in ROOMS.items() if r["name"] == current_room_data["name"]),
+            None
+        )
+        if old_room_id and old_room_id != new_room_id:
+            previous_room_id = old_room_id
+        else:
+            previous_room_id = state.get("previous_room_id")
+    else:
+        previous_room_id = state.get("previous_room_id")
+
+    print(f"[DEBUG] load_room_data — new: {new_room_id}, previous: {previous_room_id}")
+
+    base_room = ROOMS[new_room_id]
+    room_override = state.get("room_states", {}).get(new_room_id, {})
 
     room: RoomData = {
         "name": base_room["name"],
@@ -137,7 +160,8 @@ def load_room_data(state: AgentState) -> dict:
 
     return {
         "current_room_data": room,
-        "route_to": None
+        "route_to": None,
+        "previous_room_id": previous_room_id
     }
 
 
@@ -189,6 +213,22 @@ def describe_room(state: AgentState) -> dict:
     )
     print(short_desc)
     return {"force_full_description": False}
+
+def check_aggressive(state: AgentState) -> dict:
+    # Skip aggressive check if player just fled
+    print(f"[DEBUG] check_aggressive — just_fled: {state.get('just_fled')}")
+    if state.get("just_fled"):
+        return {"route_to": None, "just_fled": False}
+    
+    room = state["current_room_data"]
+    aggressive_monsters = [m for m in room["monsters"] if m.get("aggressive")]
+    
+    if aggressive_monsters:
+        monster = aggressive_monsters[0]
+        print(f"\nThe {monster['name']} lunges at you before you can react!")
+        return {"route_to": "combat", "combat_target": monster["name"]}
+    
+    return {"route_to": None}
 
 def trigger_win(state: AgentState) -> dict:
     player = state.get("player", {})
@@ -302,21 +342,34 @@ def next_step(state: AgentState) -> str:
         return "combat"
     return "load_room_data"
 
+def after_describe(state: AgentState) -> str:
+    if state.get("route_to") == "combat":
+        return "combat"
+    return "get_player_action"
+
 
 # ── Graph ────────────────────────────────────────────────────────────────────
 
 graph = StateGraph(AgentState)
 graph.add_node("load_room_data", load_room_data)
 graph.add_node("describe_room", describe_room)
+graph.add_node("check_aggressive", check_aggressive)
 graph.add_node("get_player_action", get_player_action)
 graph.add_node("resolve_action", resolve_action)
 graph.add_node("combat", lambda state: combat_node(state, ROOMS, llm))
 graph.add_node("npc_dialogue", lambda state: npc_dialogue(state, SHOPS, llm, parse_command))
 
-
 graph.add_edge(START, "load_room_data")
 graph.add_edge("load_room_data", "describe_room")
-graph.add_edge("describe_room", "get_player_action")
+graph.add_edge("describe_room", "check_aggressive")
+graph.add_conditional_edges(
+    "check_aggressive",
+    after_describe,
+    {
+        "get_player_action": "get_player_action",
+        "combat": "combat",
+    }
+)
 graph.add_edge("get_player_action", "resolve_action")
 graph.add_edge("npc_dialogue", "load_room_data")
 graph.add_edge("combat", "load_room_data")

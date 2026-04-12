@@ -56,7 +56,19 @@
     "name": "Hallway",
     "description": "A narrow hallway lined with cracked mirrors.",
     "exits": {"south": "room_1", "east": "room_3", "west": "room_4", "north": "room_5"},
-    "monsters": [],
+       "monsters": [
+        {
+        "name": "vampire",
+        "health": 60,
+        "max_health": 60,
+        "defense": 8,
+        "damage": 18,
+        "damage_variance": 4,
+        "weaknesses": ["blade", "fire"],
+        "drops": {"gold": 40, "item": null},
+        "aggressive": true
+        }
+    ],
     "items": [],
     "npcs": [
       {
@@ -200,16 +212,17 @@
     "description": "A long dining table covered in dust, set as if awaiting guests who never came.",
     "exits": {"south": "room_5", "east": "room_9", "west": "room_10"},
     "monsters": [
-      {
+    {
         "name": "vampire",
         "health": 60,
         "max_health": 60,
         "defense": 8,
         "damage": 18,
-        "damage_variance": 12,
+        "damage_variance": 4,
         "weaknesses": ["blade", "fire"],
-        "drops": {"gold": 40, "item": null}
-      }
+        "drops": {"gold": 40, "item": null},
+        "aggressive": true
+    }
     ],
     "items": [
       {"name": "golden goblet", "hidden": false, "revealed_by": null,           "openable": false, "is_open": false, "gold": 0,  "damage": 0, "weapon_type": null},

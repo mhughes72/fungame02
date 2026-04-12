@@ -55,12 +55,28 @@ def combat_node(state, ROOMS, llm) -> dict:
             print(f"\n{response.content}")
 
             if success:
-                print("\n[You escaped!]")
+                previous_room = state.get("previous_room_id")
+                print(f"[DEBUG] Fleeing to previous room: {previous_room}")
+
+                # Save wounded monster back to room state
+                updated_monsters = []
+                for m in room["monsters"]:
+                    if m["name"] == target:
+                        updated_monsters.append({**m, "health": monster["health"]})
+                    else:
+                        updated_monsters.append(m)
+                room_override["monsters"] = updated_monsters
+                room_states[room_id] = room_override
+
+                print("\n[You escaped back the way you came!]")
                 return {
                     "player": player,
                     "route_to": None,
-                    "force_full_description": False,
-                    "skip_description": True
+                    "force_full_description": True,
+                    "skip_description": False,
+                    "current_room_id": previous_room if previous_room else state["current_room_id"],
+                    "just_fled": True,
+                    "room_states": room_states
                 }
             else:
                 variance = monster.get("damage_variance", 2)
