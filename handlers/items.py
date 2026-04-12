@@ -10,6 +10,39 @@
 from utils import find_item, invoke_with_system
 from prompts import EXAMINE_PROMPT
 
+def handle_use(state, target) -> dict:
+    player = dict(state.get("player", {}))
+    inventory = list(player.get("inventory", []))
+
+    item = next((i for i in inventory if i["name"] == target), None)
+
+    if not item:
+        print(f"You don't have {target} in your inventory.")
+        return {"force_full_description": False}
+
+    # Health potion
+    if item.get("heal_amount"):
+        current_health = player.get("health", 100)
+        max_health = player.get("max_health", 100)
+
+        if current_health == max_health:
+            print("You are already at full health.")
+            return {"force_full_description": False}
+
+        heal_amount = item.get("heal_amount", 50)
+        healed = min(heal_amount, max_health - current_health)
+        player["health"] = current_health + healed
+        player["inventory"] = [i for i in inventory if i != item]
+        print(f"You drink the health potion and recover {healed} health.")
+        print(f"Health: {player['health']}/{max_health}")
+        return {
+            "player": player,
+            "force_full_description": False
+        }
+
+    print(f"You can't use the {target}.")
+    return {"force_full_description": False}
+
 def handle_take(state, target) -> dict:
     room = state["current_room_data"]
     room_id = state["current_room_id"]

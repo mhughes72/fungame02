@@ -13,23 +13,55 @@ def handle_inventory(state) -> dict:
     player = state.get("player", {})
     inventory = list(player.get("inventory", []))
 
-    if inventory:
-        print("You are carrying: " + ", ".join(i["name"] for i in inventory))
-    else:
-        print("Your inventory is empty.")
+    print(f"\n--- PLAYER STATUS ---")
+    
+    # Health
+    health = player.get("health", 100)
+    max_health = player.get("max_health", 100)
+    health_bar = "█" * int((health / max_health) * 10) + "░" * (10 - int((health / max_health) * 10))
+    print(f"Health:   {health}/{max_health} [{health_bar}]")
+    
+    # Gold
+    print(f"Gold:     {player.get('gold', 0)} coins")
 
+    # Equipped weapon
     equipped_weapon = player.get("equipped_weapon")
-    print(f"Equipped weapon: {equipped_weapon if equipped_weapon else 'none'}")
+    print(f"Weapon:   {equipped_weapon if equipped_weapon else 'none'}")
 
+    # Equipped armour
     equipped_armor = player.get("equipped_armor", {})
     if equipped_armor:
-        print("Equipped armour:")
+        print("Armour:")
         for slot, item_name in equipped_armor.items():
-            print(f"  {slot}: {item_name}")
+            item = next((i for i in inventory if i["name"] == item_name), None)
+            rating = item.get("armor_rating", 0) if item else 0
+            print(f"  {slot:<8} {item_name} ({rating} armor)")
     else:
-        print("Equipped armour: none")
+        print("Armour:   none")
 
-    print(f"Gold: {player.get('gold', 0)} coins")
+    # Total armor rating
+    from utils import total_armor_rating
+    print(f"Total armor rating: {total_armor_rating(player, inventory)}")
+
+    # Inventory
+    carried = [i for i in inventory if not i.get("armor_slot") and i["name"] != equipped_weapon]
+    if carried:
+        print("Carrying:")
+        for i in carried:
+            if i.get("weapon_type"):
+                print(f"  {i['name']} ({i['weapon_type']}, {i['damage']} damage)")
+            elif i.get("heal_amount"):
+                print(f"  {i['name']} (restores {i['heal_amount']} health)")
+            else:
+                print(f"  {i['name']}")
+    else:
+        print("Carrying: nothing")
+
+    # Status effects
+    status = player.get("status_effects", [])
+    if status:
+        print(f"Status:   {', '.join(status)}")
+
     return {"force_full_description": False}
 
 

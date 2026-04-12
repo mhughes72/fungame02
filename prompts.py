@@ -45,28 +45,28 @@ Convert the player's natural language input into a structured JSON action.
 
 Current room: {room_name}
 Available exits (ONLY these are valid movement targets): {exits}
-Items in room (ONLY these are valid take targets): {items}
+Room items (things you can take FROM THE ROOM): {room_items}
 Monsters in room: {monsters}
 NPCs in room: {npcs}
-Player inventory: {inventory}
+Player inventory (things you are already carrying): {inventory}
 
 Player input: "{player_input}"
 
 Rules:
 - For movement words (go, walk, move, head, travel, run), set action to "go" and target to the direction word found in the player input, even if it is not a valid exit.
-- For picking up items (take, grab, pick up), set action to "take" and target to the closest matching item name from the room.
+- For picking up items FROM THE ROOM (take, grab, pick up), set action to "take" and target to the closest matching item name from room items. Only use this if the item is in the room items list.
+- For using or consuming items FROM INVENTORY (use, drink, consume, eat, quaff), set action to "use" and target to the closest matching item name from inventory. Only use this if the item is in the player inventory list.
+- If the player says "take potion" or "drink potion" and the potion is in their inventory, set action to "use". If it is in the room, set action to "take".
+- For examining or inspecting something (examine, look at, inspect, study), set action to "examine" and target to the thing being examined.
 - For checking items held (inventory, i, carrying, what do i have), set action to "inventory" and target to null.
 - For attacking or fighting (attack, fight, kill, hit), set action to "attack" and target to the monster name.
 - For talking to someone (talk, speak, chat, ask, say, greet), set action to "talk" and target to the NPC name from the NPCs list.
+- For opening containers (open, unlock, pry open), set action to "open" and target to the container name.
+- For equipping items (equip, wield, wear, put on), set action to "equip" and target to the item name.
+- For unequipping items (unequip, remove, take off), set action to "unequip" and target to the item name.
 - For quitting (quit, exit, bye), set action to "quit" and target to null.
 - If the player types "room", "where am i", "current room", or similar, set action to "room" and target to null.
 - If nothing matches, set action to "unknown" and target to null.
-- For opening containers (open, unlock, pry open), set action to "open" and target to the container name.
-- For examining or inspecting anything (examine, look at, inspect, study, check) including items, monsters, NPCs, or the room itself, set action to "examine" and target to what is being examined. If the player just says "look" or "look around" with no target, set target to "room".
-- If the player wants to equip or wield a weapon (equip, wield, use, hold), set action to "equip" and target to the weapon name.
-- If the player wants to flee or run away (flee, run, escape, retreat), set action to "attack" and include "flee" in the target so combat handles it.
-- If the player wants to unequip or remove armour or a weapon (unequip, remove, take off), set action to "unequip" and target to the item name.
-
 
 Respond with ONLY raw JSON, no markdown, no explanation.
 Format: {{"action": "go", "target": "north"}}

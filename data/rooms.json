@@ -6,10 +6,11 @@
     "monsters": [
       {
         "name": "ghost",
-        "health": 30,
-        "max_health": 30,
+        "health": 300,
+        "max_health": 300,
         "defense": 3,
         "damage": 8,
+        "damage_variance": 4,
         "weaknesses": ["magic"],
         "drops": {"gold": 10, "item": null}
       }
@@ -22,7 +23,8 @@
       {"name": "secret letter",    "hidden": true,  "revealed_by": "old book", "openable": false, "is_open": false, "gold": 0, "damage": 0, "weapon_type": null},
       {"name": "wooden chest",     "hidden": false, "revealed_by": null, "openable": true,  "is_open": false, "gold": 15, "damage": 0, "weapon_type": null},
       {"name": "letter opener",    "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0, "damage": 3, "weapon_type": "blade"},
-      {"name": "tattered cloak",  "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0, "damage": 0, "weapon_type": null, "armor_slot": "chest",  "armor_rating": 2}
+      {"name": "tattered cloak",  "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0, "damage": 0, "weapon_type": null, "armor_slot": "chest",  "armor_rating": 2},
+      {"name": "health potion", "heal_amount": 30, "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0, "damage": 0, "weapon_type": null, "armor_slot": null, "armor_rating": 0}
 
     ],
     "npcs": [
@@ -84,6 +86,7 @@
         "max_health": 20,
         "defense": 1,
         "damage": 5,
+        "damage_variance": 3,
         "weaknesses": ["blade"],
         "drops": {"gold": 5, "item": null}
       }
@@ -92,7 +95,9 @@
       {"name": "knife",               "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0, "damage": 0, "weapon_type": null},
       {"name": "loaf of stale bread", "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0, "damage": 0, "weapon_type": null},
       {"name": "battered tin box",    "hidden": false, "revealed_by": null, "openable": true,  "is_open": false, "gold": 8, "damage": 0, "weapon_type": null},
-      {"name": "kitchen knife",       "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0, "damage": 5, "weapon_type": "blade"}
+      {"name": "kitchen knife",       "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0, "damage": 5, "weapon_type": "blade"},
+      {"name": "health potion", "heal_amount": 30, "hidden": true, "revealed_by": "silver coin", "openable": false, "is_open": false, "gold": 0, "damage": 0, "weapon_type": null, "armor_slot": null, "armor_rating": 0}
+
     ],
     "npcs": []
   },
@@ -107,6 +112,7 @@
         "max_health": 25,
         "defense": 4,
         "damage": 10,
+        "damage_variance": 8,
         "weaknesses": ["magic", "fire"],
         "drops": {"gold": 8, "item": null}
       }
@@ -151,13 +157,16 @@
         "max_health": 15,
         "defense": 0,
         "damage": 6,
+        "damage_variance": 4,
         "weaknesses": ["fire", "blade"],
         "drops": {"gold": 3, "item": "glass jar"}
       }
     ],
     "items": [
       {"name": "glass jar",   "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0, "damage": 0, "weapon_type": null},
-      {"name": "poison vial", "hidden": true,  "revealed_by": "glass jar", "openable": false, "is_open": false, "gold": 0, "damage": 0, "weapon_type": null}
+      {"name": "poison vial", "hidden": true,  "revealed_by": "glass jar", "openable": false, "is_open": false, "gold": 0, "damage": 0, "weapon_type": null},
+      {"name": "health potion", "heal_amount": 30, "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0, "damage": 0, "weapon_type": null, "armor_slot": null, "armor_rating": 0}
+
     ],
     "npcs": []
   },
@@ -172,6 +181,7 @@
         "max_health": 40,
         "defense": 6,
         "damage": 14,
+        "damage_variance": 10,
         "weaknesses": ["magic"],
         "drops": {"gold": 20, "item": null}
       }
@@ -196,6 +206,7 @@
         "max_health": 60,
         "defense": 8,
         "damage": 18,
+        "damage_variance": 12,
         "weaknesses": ["blade", "fire"],
         "drops": {"gold": 40, "item": null}
       }
@@ -226,6 +237,7 @@
         "max_health": 50,
         "defense": 6,
         "damage": 15,
+        "damage_variance": 6,
         "weaknesses": ["silver"],
         "drops": {"gold": 30, "item": null}
       }
@@ -255,6 +267,7 @@
         "max_health": 35,
         "defense": 4,
         "damage": 12,
+        "damage_variance": 4,
         "weaknesses": ["blade", "magic"],
         "drops": {"gold": 15, "item": null}
       }

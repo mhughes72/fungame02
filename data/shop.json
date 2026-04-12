@@ -5,7 +5,7 @@
         {"name": "silver dagger",  "damage": 15, "weapon_type": "silver", "price": 50, "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0},
         {"name": "magic wand",     "damage": 18, "weapon_type": "magic",  "price": 80, "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0},
         {"name": "leather armour", "damage": 0,  "weapon_type": null,     "price": 40, "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0},
-        {"name": "health potion",  "damage": 0,  "weapon_type": null,     "price": 20, "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0},
+        {"name": "health potion", "heal_amount": 30,  "damage": 0,  "weapon_type": null,     "price": 20, "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0},
         {"name": "leather armour", "damage": 0, "weapon_type": null, "armor_slot": "chest",  "armor_rating": 5,  "price": 40, "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0},
         {"name": "iron helmet",    "damage": 0, "weapon_type": null, "armor_slot": "helmet", "armor_rating": 4,  "price": 35, "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0},
         {"name": "sturdy boots",   "damage": 0, "weapon_type": null, "armor_slot": "boots",  "armor_rating": 3,  "price": 25, "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0},

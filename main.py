@@ -25,7 +25,7 @@ from prompts import (
 )
 
 from utils import invoke_with_system, find_item, visible_items, total_armor_rating
-from handlers import handle_go, handle_take, handle_examine, handle_open, handle_equip, handle_inventory, handle_room
+from handlers import handle_go, handle_take, handle_examine, handle_open, handle_equip, handle_unequip, handle_use, handle_inventory, handle_room
 
 load_dotenv()
 
@@ -41,6 +41,7 @@ class MonsterData(TypedDict):
     max_health: int
     defense: int
     damage: int
+    damage_variance: int
     weaknesses: List[str]
     drops: MonsterDrops
 
@@ -53,8 +54,9 @@ class ItemData(TypedDict):
     gold: int
     damage: int
     weapon_type: Optional[str]
-    armor_slot: Optional[str]   # "helmet", "chest", "boots", "gloves"
-    armor_rating: int           # damage reduction
+    armor_slot: Optional[str]
+    armor_rating: int
+    heal_amount: int
 
 class NPCData(TypedDict):
     name: str
@@ -195,7 +197,7 @@ def parse_command(player_input: str, state: AgentState) -> dict:
     prompt = COMMAND_PARSER_PROMPT.invoke({
         "room_name": room["name"],
         "exits": ", ".join(room["exits"].keys()) or "none",
-        "items": ", ".join(i["name"] for i in room["items"] if not i["hidden"]) or "none",
+        "room_items": ", ".join(i["name"] for i in room["items"] if not i["hidden"]) or "none",
         "monsters": ", ".join(m["name"] for m in room["monsters"]) or "none",
         "npcs": ", ".join(n["name"] for n in room["npcs"]) or "none",
         "inventory": ", ".join(i["name"] for i in inventory) or "nothing",
@@ -379,8 +381,11 @@ def combat_node(state: AgentState) -> dict:
 
         monster_dmg = 0
         if monster["health"] > 0:
+            variance = monster.get("damage_variance", 2)
             armor = total_armor_rating(player, player.get("inventory", []))
-            monster_dmg = max(0, monster["damage"] + random.randint(-2, 2) - armor)
+            raw_dmg = monster["damage"] + random.randint(-variance, variance)
+            damage_reduction = min(0.75, armor * 0.05)
+            monster_dmg = max(1, int(raw_dmg * (1 - damage_reduction)))
             player["health"] -= monster_dmg
 
         round_events = f"Player dealt {player_dmg} damage to the {monster['name']}."
@@ -474,6 +479,7 @@ def resolve_action(state: AgentState) -> dict:
         "attack":    lambda: {"route_to": "combat", "combat_target": target},
         "quit":      lambda: (print("Goodbye.") or {"game_over": True}),
         "unequip":   lambda: handle_unequip(state, target),
+        "use": lambda: handle_use(state, target),
     }
 
     handler = handlers.get(action)
@@ -525,22 +531,52 @@ graph.add_conditional_edges(
 app = graph.compile()
 
 # ── Run ──────────────────────────────────────────────────────────────────────
+'''
 
+# Fresh game start
+initial_state_1 = AgentState(
+    current_room_id="room_1",
+    player={
+        "inventory": [],
+        "health": 100,
+        "max_health": 100,
+        "status_effects": [],
+        "gold": 0,
+        "equipped_weapon": None,
+        "equipped_armor": {}
+    }
+)
+
+
+'''
+
+
+
+# Testing state — fully loaded
 initial_state_1 = AgentState(
     current_room_id="room_1",
     player={
         "inventory": [
-            {"name": "golden sword", "hidden": False, "revealed_by": None,
-             "openable": False, "is_open": False, "gold": 0,
-             "damage": 25, "weapon_type": "blade",
-             "armor_slot": None, "armor_rating": 0}
+            {"name": "golden sword",   "hidden": False, "revealed_by": None, "openable": False, "is_open": False, "gold": 0, "damage": 25, "weapon_type": "blade",  "armor_slot": None,     "armor_rating": 0, "heal_amount": 0},
+            {"name": "magic staff",    "hidden": False, "revealed_by": None, "openable": False, "is_open": False, "gold": 0, "damage": 18, "weapon_type": "magic",  "armor_slot": None,     "armor_rating": 0, "heal_amount": 0},
+            {"name": "leather armour", "hidden": False, "revealed_by": None, "openable": False, "is_open": False, "gold": 0, "damage": 0,  "weapon_type": None,     "armor_slot": "chest",  "armor_rating": 5, "heal_amount": 0},
+            {"name": "iron helmet",    "hidden": False, "revealed_by": None, "openable": False, "is_open": False, "gold": 0, "damage": 0,  "weapon_type": None,     "armor_slot": "helmet", "armor_rating": 4, "heal_amount": 0},
+            {"name": "sturdy boots",   "hidden": False, "revealed_by": None, "openable": False, "is_open": False, "gold": 0, "damage": 0,  "weapon_type": None,     "armor_slot": "boots",  "armor_rating": 3, "heal_amount": 0},
+            {"name": "chain gloves",   "hidden": False, "revealed_by": None, "openable": False, "is_open": False, "gold": 0, "damage": 0,  "weapon_type": None,     "armor_slot": "gloves", "armor_rating": 2, "heal_amount": 0},
+            {"name": "health potion",  "hidden": False, "revealed_by": None, "openable": False, "is_open": False, "gold": 0, "damage": 0,  "weapon_type": None,     "armor_slot": None,     "armor_rating": 0, "heal_amount": 50},
+            {"name": "rusty key",      "hidden": False, "revealed_by": None, "openable": False, "is_open": False, "gold": 0, "damage": 0,  "weapon_type": None,     "armor_slot": None,     "armor_rating": 0, "heal_amount": 0},
         ],
-        "health": 100,
+        "health": 50,
         "max_health": 100,
         "status_effects": [],
         "gold": 1000,
-        "equipped_weapon": None,
-        "equipped_armor": {}
+        "equipped_weapon": "golden sword",
+        "equipped_armor": {
+            "chest":  "leather armour",
+            "helmet": "iron helmet",
+            "boots":  "sturdy boots",
+            "gloves": "chain gloves"
+        }
     }
 )
 
