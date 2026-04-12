@@ -11,8 +11,10 @@ from tavily import TavilyClient
 
 from prompts import (
     ROOM_DESCRIPTION_PROMPT, COMMAND_PARSER_PROMPT, NPC_PROMPT,
-    WEB_SEARCH_ROLEPLAY_PROMPT, COMBAT_PROMPT, FLEE_PROMPT, GAME_SYSTEM_PROMPT
+    WEB_SEARCH_ROLEPLAY_PROMPT, COMBAT_PROMPT, FLEE_PROMPT, 
+    GAME_SYSTEM_PROMPT, SHOP_SYSTEM_PROMPT
 )
+
 from utils import invoke_with_system, find_item, visible_items
 from handlers import handle_go, handle_take, handle_examine, handle_open, handle_equip, handle_inventory, handle_room
 
@@ -49,6 +51,7 @@ class NPCData(TypedDict):
     personality: str
     knowledge: str
     can_search_web: bool
+    shop_id: NotRequired[str]
 
 class RoomState(TypedDict, total=False):
     items: List[ItemData]
@@ -92,6 +95,9 @@ llm = ChatOpenAI(model="gpt-4o", temperature=0.5)
 with open(os.path.join("data", "rooms.json"), "r") as f:
     ROOMS = json.load(f)
 
+with open(os.path.join("data", "shop.json"), "r") as f:
+    SHOPS = json.load(f)
+    
 # ── Nodes ────────────────────────────────────────────────────────────────────
 
 def load_room_data(state: AgentState) -> dict:
@@ -216,6 +222,11 @@ def npc_dialogue(state: AgentState) -> dict:
     if not npc:
         print("There's no one here to talk to.")
         return {"force_full_description": False}
+
+    # Route to shop if NPC is a merchant
+    if npc.get("shop_id"):
+        from handlers.shop import handle_shop
+        return handle_shop(state, npc, SHOPS, llm)
 
     print(f"\n{npc['name']}: \"{npc['description']}\"")
     print("(Type 'goodbye' or 'leave' to end the conversation)\n")
@@ -504,11 +515,15 @@ app = graph.compile()
 initial_state_1 = AgentState(
     current_room_id="room_1",
     player={
-        "inventory": [],
+        "inventory": [
+            {"name": "golden sword", "hidden": False, "revealed_by": None, 
+             "openable": False, "is_open": False, "gold": 0, 
+             "damage": 25, "weapon_type": "blade"}
+        ],
         "health": 100,
         "max_health": 100,
         "status_effects": [],
-        "gold": 0,
+        "gold": 1000,
         "equipped_weapon": None
     }
 )

@@ -37,6 +37,14 @@
         "personality": "Speaks with authority on matters of the outside world. Dry, precise, and occasionally sardonic.",
         "knowledge": "Has an uncanny knowledge of American politics, current events, and world affairs.",
         "can_search_web": true
+      },
+      {
+        "name": "Aldous the Peddler",
+        "description": "A stout man buried under layers of coats and belts, every inch of him bristling with weapons, pouches, and things that clink.",
+        "personality": "Enthusiastic, fast-talking, and absolutely relentless. Genuinely believes every item he sells is the greatest thing you will ever own. Takes rejection personally but recovers instantly. Cannot go more than two sentences without mentioning a deal.",
+        "knowledge": "Knows the value of every weapon and piece of armour in the mansion. Has strong opinions about combat tactics and will share them whether asked or not.",
+        "can_search_web": false,
+        "shop_id": "aldous"
       }
     ]
   },
@@ -59,13 +67,6 @@
         "description": "A sleek black cat with luminous amber eyes who sits with the posture of someone who has seen civilizations rise and fall.",
         "personality": "Speaks slowly and cryptically as if imparting ancient wisdom, but everything it says is either completely obvious, total nonsense, or accidentally wrong. Enormously self-confident about all of it.",
         "knowledge": "Thinks it knows everything but is usually wrong. Occasionally stumbles onto something true completely by accident.",
-        "can_search_web": false
-      },
-      {
-        "name": "Aldous the Peddler",
-        "description": "A stout man buried under layers of coats and belts, every inch of him bristling with weapons, pouches, and things that clink.",
-        "personality": "Enthusiastic, fast-talking, and absolutely relentless. Genuinely believes every item he sells is the greatest thing you will ever own. Takes rejection personally but recovers instantly. Cannot go more than two sentences without mentioning a deal.",
-        "knowledge": "Knows the value of every weapon and piece of armour in the mansion. Has strong opinions about combat tactics and will share them whether asked or not.",
         "can_search_web": false
       }
     ]

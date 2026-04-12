@@ -1,0 +1,12 @@
+{
+  "aldous": {
+    "stock": [
+      {"name": "iron sword",     "damage": 12, "weapon_type": "blade",  "price": 30, "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0},
+      {"name": "silver dagger",  "damage": 15, "weapon_type": "silver", "price": 50, "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0},
+      {"name": "magic wand",     "damage": 18, "weapon_type": "magic",  "price": 80, "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0},
+      {"name": "leather armour", "damage": 0,  "weapon_type": null,     "price": 40, "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0},
+      {"name": "health potion",  "damage": 0,  "weapon_type": null,     "price": 20, "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0}
+    ],
+    "sell_multiplier": 0.5
+  }
+}
