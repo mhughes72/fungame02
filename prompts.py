@@ -68,6 +68,7 @@ Rules:
 - If the player types "room", "where am i", "current room", or similar, set action to "room" and target to null.
 - If nothing matches, set action to "unknown" and target to null.
 - If the player types "win", set action to "win" and target to null.
+- If the player wants to unlock a door or exit (unlock, open door), set action to "unlock" and target to the direction (e.g. "north", "down").
 
 Respond with ONLY raw JSON, no markdown, no explanation.
 Format: {{"action": "go", "target": "north"}}

@@ -94,6 +94,15 @@ def handle_room(state) -> dict:
 
     print(f"Monsters: {', '.join(m['name'] for m in room['monsters']) if room['monsters'] else 'none'}")
     print(f"NPCs:     {', '.join(n['name'] for n in room['npcs']) if room['npcs'] else 'none'}")
-    print(f"Exits:    {', '.join(room['exits'].keys())}")
+
+    locked_exits = room.get("locked_exits", {})
+    exits_display = []
+    for direction in room["exits"]:
+        if direction in locked_exits and locked_exits[direction].get("locked"):
+            exits_display.append(f"{direction} (locked)")
+        else:
+            exits_display.append(direction)
+    print(f"Exits:    {', '.join(exits_display)}")
+
     print(f"Armor rating: {total_armor_rating(player, inventory)}")
     return {"force_full_description": False}

@@ -18,6 +18,7 @@ from langchain_openai import ChatOpenAI
 from langgraph.graph import START, StateGraph, END
 from tavily import TavilyClient
 
+from handlers.movement import handle_unlock
 from prompts import (
     ROOM_DESCRIPTION_PROMPT, COMMAND_PARSER_PROMPT, NPC_PROMPT,
     WEB_SEARCH_ROLEPLAY_PROMPT, COMBAT_PROMPT, FLEE_PROMPT, 
@@ -71,18 +72,24 @@ class NPCData(TypedDict):
     can_search_web: bool
     shop_id: NotRequired[str]
 
-class RoomState(TypedDict, total=False):
-    items: List[ItemData]
-    monsters: List[MonsterData]
-    visited: bool
+class LockedExit(TypedDict):
+    required_key: str
+    locked: bool
 
 class RoomData(TypedDict):
     name: str
     description: str
     exits: Dict[str, str]
+    locked_exits: Dict[str, LockedExit]
     items: List[ItemData]
     monsters: List[MonsterData]
     npcs: List[NPCData]
+
+class RoomState(TypedDict, total=False):
+    items: List[ItemData]
+    monsters: List[MonsterData]
+    visited: bool
+    locked_exits: Dict[str, LockedExit]
 
 class PlayerState(TypedDict, total=False):
     inventory: List[ItemData]
@@ -126,13 +133,12 @@ with open(os.path.join("data", "shop.json"), "r") as f:
 
 def load_room_data(state: AgentState) -> dict:
     new_room_id = state["current_room_id"]
-    
-    # previous_room_id should be where we just came FROM
-    # We can tell a room change happened if current_room_data exists 
-    # and its room is different from the new room
+    base_room = ROOMS[new_room_id]
+    room_override = state.get("room_states", {}).get(new_room_id, {})
+
+    # Track previous room
     current_room_data = state.get("current_room_data")
     if current_room_data:
-        # Find the room_id of the current room data by matching name
         old_room_id = next(
             (rid for rid, r in ROOMS.items() if r["name"] == current_room_data["name"]),
             None
@@ -144,15 +150,11 @@ def load_room_data(state: AgentState) -> dict:
     else:
         previous_room_id = state.get("previous_room_id")
 
-    print(f"[DEBUG] load_room_data — new: {new_room_id}, previous: {previous_room_id}")
-
-    base_room = ROOMS[new_room_id]
-    room_override = state.get("room_states", {}).get(new_room_id, {})
-
     room: RoomData = {
         "name": base_room["name"],
         "description": base_room["description"],
         "exits": dict(base_room["exits"]),
+        "locked_exits": dict(room_override.get("locked_exits", base_room.get("locked_exits", {}))),
         "monsters": list(room_override.get("monsters", base_room["monsters"])),
         "items": list(room_override.get("items", base_room["items"])),
         "npcs": list(base_room.get("npcs", [])),
@@ -320,6 +322,7 @@ def resolve_action(state: AgentState) -> dict:
         "unequip":   lambda: handle_unequip(state, target),
         "use": lambda: handle_use(state, target),
         "win": lambda: trigger_win(state),
+        "unlock": lambda: handle_unlock(state, target),
 
     }
 
@@ -421,8 +424,7 @@ initial_state_1 = AgentState(
             {"name": "sturdy boots",   "hidden": False, "revealed_by": None, "openable": False, "is_open": False, "gold": 0, "damage": 0,  "weapon_type": None,     "armor_slot": "boots",  "armor_rating": 3, "heal_amount": 0},
             {"name": "chain gloves",   "hidden": False, "revealed_by": None, "openable": False, "is_open": False, "gold": 0, "damage": 0,  "weapon_type": None,     "armor_slot": "gloves", "armor_rating": 2, "heal_amount": 0},
             {"name": "health potion",  "hidden": False, "revealed_by": None, "openable": False, "is_open": False, "gold": 0, "damage": 0,  "weapon_type": None,     "armor_slot": None,     "armor_rating": 0, "heal_amount": 50},
-            {"name": "rusty key",      "hidden": False, "revealed_by": None, "openable": False, "is_open": False, "gold": 0, "damage": 0,  "weapon_type": None,     "armor_slot": None,     "armor_rating": 0, "heal_amount": 0},
-        ],
+         ],
         "health": 50,
         "max_health": 100,
         "status_effects": [],

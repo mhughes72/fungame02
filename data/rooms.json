@@ -56,19 +56,10 @@
     "name": "Hallway",
     "description": "A narrow hallway lined with cracked mirrors.",
     "exits": {"south": "room_1", "east": "room_3", "west": "room_4", "north": "room_5"},
-       "monsters": [
-        {
-        "name": "vampire",
-        "health": 60,
-        "max_health": 60,
-        "defense": 8,
-        "damage": 18,
-        "damage_variance": 4,
-        "weaknesses": ["blade", "fire"],
-        "drops": {"gold": 40, "item": null},
-        "aggressive": true
-        }
-    ],
+    "locked_exits": {
+        "north": {"required_key": "rusty key", "locked": true}
+    },
+       "monsters": [],
     "items": [],
     "npcs": [
       {
@@ -265,6 +256,9 @@
     "name": "Basement Stairs",
     "description": "A creaky staircase leading down into darkness.",
     "exits": {"east": "room_8", "down": "room_11"},
+    "locked_exits": {
+        "down": {"required_key": "iron key", "locked": true}
+    },
     "monsters": [],
     "items": [],
     "npcs": []
