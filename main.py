@@ -25,7 +25,12 @@ from prompts import (
 )
 
 from utils import invoke_with_system, find_item, visible_items, total_armor_rating
-from handlers import handle_go, handle_take, handle_examine, handle_open, handle_equip, handle_unequip, handle_use, handle_inventory, handle_room
+from handlers import (
+    handle_go, handle_take, handle_examine, handle_open,
+    handle_equip, handle_unequip, handle_use,
+    handle_inventory, handle_room,
+    combat_node, npc_dialogue
+)
 
 load_dotenv()
 
@@ -241,232 +246,6 @@ def parse_command(player_input: str, state: AgentState) -> dict:
         return {"action": "unknown", "target": None}
 
 
-def npc_dialogue(state: AgentState) -> dict:
-    room = state["current_room_data"]
-    player_input = state.get("player_input", "").strip()
-
-    command = parse_command(player_input, state)
-    target = command.get("target", "").lower() if command.get("target") else ""
-
-    npc = next(
-        (n for n in room["npcs"] if n["name"].lower() in target or target in n["name"].lower()),
-        room["npcs"][0] if room["npcs"] else None
-    )
-
-    if not npc:
-        print("There's no one here to talk to.")
-        return {"force_full_description": False}
-
-    # Route to shop if NPC is a merchant
-    if npc.get("shop_id"):
-        from handlers.shop import handle_shop
-        return handle_shop(state, npc, SHOPS, llm)
-
-    print(f"\n{npc['name']}: \"{npc['description']}\"")
-    print("(Type 'goodbye' or 'leave' to end the conversation)\n")
-
-    use_web_search = npc.get("can_search_web", False)
-    tavily_client = TavilyClient(api_key=os.getenv("TAVILY_API_KEY")) if use_web_search else None
-
-    history = []
-    exit_words = ["goodbye", "bye", "leave", "exit", "done", "farewell", "stop"]
-
-    while True:
-        player_msg = input("You: ").strip()
-        history.append(f"Player: {player_msg}")
-
-        if any(word in player_msg.lower() for word in exit_words):
-            print(f"({npc['name']} turns away.)")
-            break
-
-        if use_web_search:
-            search_result = tavily_client.search(player_msg)
-            raw_facts = "\n".join([r["content"] for r in search_result["results"]])
-
-            roleplay_prompt = WEB_SEARCH_ROLEPLAY_PROMPT.format(
-                npc_name=npc["name"],
-                personality=npc["personality"],
-                knowledge=npc["knowledge"],
-                player_msg=player_msg,
-                raw_facts=raw_facts,
-                history=chr(10).join(history),
-            )
-            reply = invoke_with_system(llm, [
-                SystemMessage(content=roleplay_prompt),
-                HumanMessage(content="Respond in character now.")
-            ]).content
-
-        else:
-            prompt = NPC_PROMPT.invoke({
-                "npc_name": npc["name"],
-                "personality": npc["personality"],
-                "knowledge": npc["knowledge"],
-                "room_name": room["name"],
-                "history": "\n".join(history),
-                "player_input": player_msg,
-            })
-            reply = str(invoke_with_system(llm, prompt).content)
-
-        end_conversation = "[END CONVERSATION]" in reply
-        clean_reply = reply.replace("[END CONVERSATION]", "").strip()
-
-        print(f"\n{npc['name']}: {clean_reply}\n")
-        history.append(f"{npc['name']}: {clean_reply}")
-
-        if end_conversation:
-            print(f"({npc['name']} turns away.)")
-            break
-
-    return {"force_full_description": False}
-
-
-def combat_node(state: AgentState) -> dict:
-    target = state.get("combat_target")
-    room = state["current_room_data"]
-    room_id = state["current_room_id"]
-    room_states = dict(state.get("room_states", {}))
-    room_override = dict(room_states.get(room_id, {}))
-    player = dict(state.get("player", {}))
-    inventory = list(player.get("inventory", []))
-
-    monster = next((m for m in room["monsters"] if m["name"] == target), None)
-    if not monster:
-        print(f"There is no {target} here.")
-        return {"force_full_description": False, "route_to": None}
-
-    monster = dict(monster)
-
-    # Find weapon data from inventory
-    equipped_weapon = player.get("equipped_weapon")
-    weapon_data = None
-    if equipped_weapon:
-        weapon_data = next(
-            (i for i in player.get("inventory", []) if i["name"] == equipped_weapon),
-            None
-        )
-
-    print(f"\nYou engage the {monster['name']}!")
-    print(f"Your health: {player['health']}/{player['max_health']}")
-    print(f"Weapon: {equipped_weapon if equipped_weapon else 'bare hands (1 damage)'}\n")
-
-    while monster["health"] > 0 and player["health"] > 0:
-        print(f"\n[{monster['name'].upper()} — HP: {monster['health']}/{monster['max_health']}]")
-        print(f"[YOUR HP: {player['health']}/{player['max_health']}]")
-        print("What do you do? (attack / flee)")
-        combat_input = input("> ").strip().lower()
-
-        if any(word in combat_input for word in ["flee", "run", "escape", "retreat"]):
-            flee_chance = random.randint(1, 100)
-            success = flee_chance > 40
-
-            prompt = FLEE_PROMPT.invoke({
-                "room_name": room["name"],
-                "monster_name": monster["name"],
-                "success": success,
-            })
-            response = invoke_with_system(llm, prompt)
-            print(f"\n{response.content}")
-
-            if success:
-                print("\n[You escaped!]")
-                return {
-                    "player": player,
-                    "route_to": None,
-                    "force_full_description": False,
-                    "skip_description": True
-                }
-            else:
-                monster_dmg = max(0, monster["damage"] - random.randint(0, 3))
-                player["health"] -= monster_dmg
-                print(f"[Failed to flee — {monster['name']} hits you for {monster_dmg} damage]")
-                if player["health"] <= 0:
-                    print("\nYou have been slain. Game over.")
-                    return {
-                        "player": player,
-                        "game_over": True,
-                        "route_to": None
-                    }
-                continue
-
-        base_damage = weapon_data.get("damage", 1) if weapon_data else 1
-        dice_roll = random.randint(1, 6)
-        weakness_bonus = 0
-
-        if weapon_data and weapon_data.get("weapon_type") in monster.get("weaknesses", []):
-            weakness_bonus = 5
-            print(f"[Weakness hit! +{weakness_bonus} bonus damage]")
-
-        player_dmg = max(0, base_damage + dice_roll + weakness_bonus - monster["defense"])
-        monster["health"] -= player_dmg
-
-        monster_dmg = 0
-        if monster["health"] > 0:
-            variance = monster.get("damage_variance", 2)
-            armor = total_armor_rating(player, player.get("inventory", []))
-            raw_dmg = monster["damage"] + random.randint(-variance, variance)
-            damage_reduction = min(0.75, armor * 0.05)
-            monster_dmg = max(1, int(raw_dmg * (1 - damage_reduction)))
-            player["health"] -= monster_dmg
-
-        round_events = f"Player dealt {player_dmg} damage to the {monster['name']}."
-        if monster["health"] > 0:
-            round_events += f" The {monster['name']} struck back for {monster_dmg} damage."
-        else:
-            round_events += f" The {monster['name']} has been defeated."
-
-        prompt = COMBAT_PROMPT.invoke({
-            "room_name": room["name"],
-            "player_health": player["health"],
-            "player_max_health": player["max_health"],
-            "weapon": equipped_weapon if equipped_weapon else "bare hands",
-            "monster_name": monster["name"],
-            "monster_health": max(0, monster["health"]),
-            "monster_max_health": monster["max_health"],
-            "round_events": round_events,
-        })
-        response = invoke_with_system(llm, prompt)
-        print(f"\n{response.content}")
-
-        if player["health"] <= 0:
-            print("\nYou have been slain. Game over.")
-            return {
-                "player": player,
-                "game_over": True,
-                "route_to": None
-            }
-
-    print(f"\n[{monster['name'].upper()} DEFEATED]")
-
-    drops = monster.get("drops", {})
-    gold_drop = drops.get("gold", 0)
-    item_drop = drops.get("item", None)
-
-    if gold_drop > 0:
-        player["gold"] = player.get("gold", 0) + gold_drop
-        print(f"You find {gold_drop} gold coins.")
-
-    if item_drop:
-        drop_item_data = next(
-            (i for i in room["items"] if i["name"] == item_drop),
-            {"name": item_drop, "hidden": False, "revealed_by": None,
-             "openable": False, "is_open": False, "gold": 0,
-             "damage": 0, "weapon_type": None}
-        )
-        inventory.append(drop_item_data)
-        player["inventory"] = inventory
-        print(f"You find: {item_drop}")
-
-    new_monsters = [m for m in room["monsters"] if m["name"] != target]
-    room_override["monsters"] = new_monsters
-    room_states[room_id] = room_override
-
-    return {
-        "room_states": room_states,
-        "player": player,
-        "route_to": None,
-        "force_full_description": False,
-        "skip_description": True
-    }
 
 
 def resolve_action(state: AgentState) -> dict:
@@ -531,8 +310,9 @@ graph.add_node("load_room_data", load_room_data)
 graph.add_node("describe_room", describe_room)
 graph.add_node("get_player_action", get_player_action)
 graph.add_node("resolve_action", resolve_action)
-graph.add_node("npc_dialogue", npc_dialogue)
-graph.add_node("combat", combat_node)
+graph.add_node("combat", lambda state: combat_node(state, ROOMS, llm))
+graph.add_node("npc_dialogue", lambda state: npc_dialogue(state, SHOPS, llm, parse_command))
+
 
 graph.add_edge(START, "load_room_data")
 graph.add_edge("load_room_data", "describe_room")

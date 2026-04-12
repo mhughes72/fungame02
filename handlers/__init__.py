@@ -5,4 +5,5 @@
 from handlers.movement import handle_go
 from handlers.items import handle_take, handle_examine, handle_open, handle_equip, handle_unequip, handle_use
 from handlers.player import handle_inventory, handle_room
-from handlers.shop import handle_shop
+from handlers.combat import combat_node
+from handlers.dialogue import npc_dialogue
