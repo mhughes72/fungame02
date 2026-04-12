@@ -18,7 +18,7 @@ env/
 langchain_cache/
 
 # Generated files
-graph.png
+# graph.png
 
 # VS Code
 .vscode/
