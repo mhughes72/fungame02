@@ -106,3 +106,45 @@ def handle_room(state) -> dict:
 
     print(f"Armor rating: {total_armor_rating(player, inventory)}")
     return {"force_full_description": False}
+
+
+def handle_help() -> dict:
+    print("""
+--- COMMANDS ---
+
+Movement:
+  north / south / east / west / up / down
+  go north / walk south / head east
+
+Items:
+  take [item]       pick up an item
+  examine [item]    examine an item, monster, NPC or the room
+  open [item]       open a container
+  equip [item]      equip a weapon or armour
+  unequip [item]    remove equipped item
+  use [item]        use an item (e.g. health potion)
+  unlock [dir]      unlock a door in that direction
+
+Combat:
+  attack [monster]  attack a monster
+  attack / hit      attack during combat
+  flee / run        attempt to flee combat
+
+NPCs:
+  talk [name]       talk to an NPC or merchant
+  goodbye / bye     end a conversation
+
+Info:
+  inventory         show inventory, equipment and gold
+  room              show full room state
+  look              re-describe the current room
+  help              show this list
+
+Debug:
+  goto room_X       teleport to a room
+  win               trigger win condition
+  quit              exit the game
+""")
+    return {"force_full_description": False}
+
+

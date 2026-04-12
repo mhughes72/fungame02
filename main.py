@@ -30,7 +30,7 @@ from handlers import (
     handle_go, handle_take, handle_examine, handle_open,
     handle_equip, handle_unequip, handle_use,
     handle_inventory, handle_room,
-    combat_node, npc_dialogue
+    combat_node, npc_dialogue, handle_help
 )
 
 load_dotenv()
@@ -323,6 +323,7 @@ def resolve_action(state: AgentState) -> dict:
         "use": lambda: handle_use(state, target),
         "win": lambda: trigger_win(state),
         "unlock": lambda: handle_unlock(state, target),
+        "help": lambda: handle_help(),
 
     }
 
