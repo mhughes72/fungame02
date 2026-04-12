@@ -1,3 +1,12 @@
+# handlers/items.py
+# Handles all item-related player actions.
+# Contains:
+#   handle_take    — pick up a visible item from the room
+#   handle_examine — examine a monster, NPC, item, or the room itself
+#   handle_open    — open a container and collect any gold inside
+#   handle_equip   — equip a weapon or armour piece from inventory
+#   handle_unequip — remove an equipped weapon or armour piece
+
 from utils import find_item, invoke_with_system
 from prompts import EXAMINE_PROMPT
 
@@ -147,13 +156,46 @@ def handle_equip(state, target) -> dict:
         print(f"You don't have {target} in your inventory.")
         return {"force_full_description": False}
 
-    if not item_data.get("weapon_type"):
-        print(f"The {target} is not a weapon.")
-        return {"force_full_description": False}
+    # Weapon
+    if item_data.get("weapon_type"):
+        player["equipped_weapon"] = target
+        print(f"You equip the {target}. ({item_data['weapon_type']}, {item_data['damage']} damage)")
+        return {"player": player, "force_full_description": False}
 
-    player["equipped_weapon"] = target
-    print(f"You equip the {target}. ({item_data['weapon_type']}, {item_data['damage']} damage)")
-    return {
-        "player": player,
-        "force_full_description": False
-    }
+    # Armour
+    if item_data.get("armor_slot"):
+        slot = item_data["armor_slot"]
+        equipped_armor = dict(player.get("equipped_armor", {}))
+
+        # Unequip existing item in that slot
+        if slot in equipped_armor:
+            print(f"You remove the {equipped_armor[slot]}.")
+
+        equipped_armor[slot] = target
+        player["equipped_armor"] = equipped_armor
+        print(f"You equip the {target}. ({slot}, {item_data['armor_rating']} armor rating)")
+        return {"player": player, "force_full_description": False}
+
+    print(f"You can't equip the {target}.")
+    return {"force_full_description": False}
+
+def handle_unequip(state, target) -> dict:
+    player = dict(state.get("player", {}))
+    equipped_armor = dict(player.get("equipped_armor", {}))
+
+    # Check weapon
+    if player.get("equipped_weapon") == target:
+        player["equipped_weapon"] = None
+        print(f"You unequip the {target}.")
+        return {"player": player, "force_full_description": False}
+
+    # Check armour slots
+    for slot, item_name in equipped_armor.items():
+        if item_name == target:
+            del equipped_armor[slot]
+            player["equipped_armor"] = equipped_armor
+            print(f"You remove the {target}.")
+            return {"player": player, "force_full_description": False}
+
+    print(f"You don't have {target} equipped.")
+    return {"force_full_description": False}

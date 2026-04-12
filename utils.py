@@ -1,3 +1,8 @@
+# audio_utils.py
+# Text-to-speech utility for narrating game output.
+# Currently unused (speak() calls are commented out in main.py).
+# Can be re-enabled to have room descriptions and NPC dialogue spoken aloud.
+
 from langchain_core.messages import SystemMessage
 from prompts import GAME_SYSTEM_PROMPT
 
@@ -21,3 +26,14 @@ def invoke_with_system(llm, prompt):
         return llm.invoke(messages)
 
     return llm.invoke([SystemMessage(content=GAME_SYSTEM_PROMPT)] + messages)
+
+def total_armor_rating(player: dict, inventory: list) -> int:
+    """Calculate total armor rating from all equipped armor pieces."""
+    equipped_armor = player.get("equipped_armor", {})
+    total = 0
+    for slot, item_name in equipped_armor.items():
+        item = next((i for i in inventory if i["name"] == item_name), None)
+        if item:
+            total += item.get("armor_rating", 0)
+    return total
+

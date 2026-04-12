@@ -1,3 +1,10 @@
+# prompts.py
+# All LLM prompts used throughout the game.
+# Includes prompts for room description, command parsing, item examination,
+# NPC dialogue, web search roleplay, combat narration, flee attempts,
+# the merchant shop system, and the global game system prompt that sets
+# the gothic tone for all LLM calls.
+
 from langchain_core.prompts import ChatPromptTemplate
 
 GAME_SYSTEM_PROMPT = """You are the narrative engine of a dark gothic text adventure game set in a haunted mansion.
@@ -58,6 +65,8 @@ Rules:
 - For examining or inspecting anything (examine, look at, inspect, study, check) including items, monsters, NPCs, or the room itself, set action to "examine" and target to what is being examined. If the player just says "look" or "look around" with no target, set target to "room".
 - If the player wants to equip or wield a weapon (equip, wield, use, hold), set action to "equip" and target to the weapon name.
 - If the player wants to flee or run away (flee, run, escape, retreat), set action to "attack" and include "flee" in the target so combat handles it.
+- If the player wants to unequip or remove armour or a weapon (unequip, remove, take off), set action to "unequip" and target to the item name.
+
 
 Respond with ONLY raw JSON, no markdown, no explanation.
 Format: {{"action": "go", "target": "north"}}

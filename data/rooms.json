@@ -21,7 +21,9 @@
       {"name": "quill pen",        "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0, "damage": 0, "weapon_type": null},
       {"name": "secret letter",    "hidden": true,  "revealed_by": "old book", "openable": false, "is_open": false, "gold": 0, "damage": 0, "weapon_type": null},
       {"name": "wooden chest",     "hidden": false, "revealed_by": null, "openable": true,  "is_open": false, "gold": 15, "damage": 0, "weapon_type": null},
-      {"name": "letter opener",    "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0, "damage": 3, "weapon_type": "blade"}
+      {"name": "letter opener",    "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0, "damage": 3, "weapon_type": "blade"},
+      {"name": "tattered cloak",  "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0, "damage": 0, "weapon_type": null, "armor_slot": "chest",  "armor_rating": 2}
+
     ],
     "npcs": [
       {
@@ -113,7 +115,9 @@
       {"name": "ancient tome", "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0, "damage": 0, "weapon_type": null},
       {"name": "candle",       "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0, "damage": 0, "weapon_type": null},
       {"name": "hidden note",  "hidden": true,  "revealed_by": "ancient tome", "openable": false, "is_open": false, "gold": 0, "damage": 0, "weapon_type": null},
-      {"name": "fire poker",   "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0, "damage": 6, "weapon_type": "blunt"}
+      {"name": "fire poker",   "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0, "damage": 6, "weapon_type": "blunt"},
+      {"name": "iron helmet",     "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0, "damage": 0, "weapon_type": null, "armor_slot": "helmet", "armor_rating": 3}
+
     ],
     "npcs": [
       {
@@ -175,7 +179,9 @@
     "items": [
       {"name": "strange amulet", "hidden": false, "revealed_by": null,            "openable": false, "is_open": false, "gold": 0, "damage": 0,  "weapon_type": null},
       {"name": "ritual dagger",  "hidden": true,  "revealed_by": "strange amulet","openable": false, "is_open": false, "gold": 0, "damage": 12, "weapon_type": "blade"},
-      {"name": "magic staff",    "hidden": false, "revealed_by": null,            "openable": false, "is_open": false, "gold": 0, "damage": 15, "weapon_type": "magic"}
+      {"name": "magic staff",    "hidden": false, "revealed_by": null,            "openable": false, "is_open": false, "gold": 0, "damage": 15, "weapon_type": "magic"},
+      {"name": "leather boots",   "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0, "damage": 0, "weapon_type": null, "armor_slot": "boots",  "armor_rating": 2}
+
     ],
     "npcs": []
   },
@@ -258,7 +264,9 @@
       {"name": "broken chain",  "hidden": false, "revealed_by": null,           "openable": false, "is_open": false, "gold": 0,  "damage": 0, "weapon_type": null},
       {"name": "locket",        "hidden": true,  "revealed_by": "broken chain", "openable": false, "is_open": false, "gold": 0,  "damage": 0, "weapon_type": null},
       {"name": "rotting satchel","hidden": false, "revealed_by": null,          "openable": true,  "is_open": false, "gold": 12, "damage": 0, "weapon_type": null},
-      {"name": "rusty sword",   "hidden": false, "revealed_by": null,           "openable": false, "is_open": false, "gold": 0,  "damage": 8, "weapon_type": "blade"}
+      {"name": "rusty sword",   "hidden": false, "revealed_by": null,           "openable": false, "is_open": false, "gold": 0,  "damage": 8, "weapon_type": "blade"},
+      {"name": "chain gloves",    "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0, "damage": 0, "weapon_type": null, "armor_slot": "gloves", "armor_rating": 2}
+
     ],
     "npcs": []
   }

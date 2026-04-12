@@ -1,3 +1,8 @@
+# handlers/movement.py
+# Handles player movement between rooms.
+# Contains handle_go which checks if the target direction is a valid exit
+# and returns the new room ID if so.
+
 def handle_go(state, target) -> dict:
     room = state["current_room_data"]
     if target in room["exits"]:

@@ -1,3 +1,12 @@
+# main.py
+# Core game module for the Haunted Mansion text adventure.
+# Defines all game state types (AgentState, PlayerState, RoomData, etc.),
+# initializes the LLM, loads room and shop data from JSON, and contains
+# the main LangGraph nodes: load_room_data, describe_room, get_player_action,
+# parse_command, npc_dialogue, combat_node, and resolve_action.
+# Builds and compiles the LangGraph state graph and starts the game.
+
+
 import os
 import json
 import random
@@ -15,7 +24,7 @@ from prompts import (
     GAME_SYSTEM_PROMPT, SHOP_SYSTEM_PROMPT
 )
 
-from utils import invoke_with_system, find_item, visible_items
+from utils import invoke_with_system, find_item, visible_items, total_armor_rating
 from handlers import handle_go, handle_take, handle_examine, handle_open, handle_equip, handle_inventory, handle_room
 
 load_dotenv()
@@ -44,6 +53,8 @@ class ItemData(TypedDict):
     gold: int
     damage: int
     weapon_type: Optional[str]
+    armor_slot: Optional[str]   # "helmet", "chest", "boots", "gloves"
+    armor_rating: int           # damage reduction
 
 class NPCData(TypedDict):
     name: str
@@ -73,6 +84,7 @@ class PlayerState(TypedDict, total=False):
     status_effects: List[str]
     gold: int
     equipped_weapon: Optional[str]
+    equipped_armor: Dict[str, str]  # slot -> item name
 
 class AgentState(TypedDict):
     current_room_id: str
@@ -367,7 +379,8 @@ def combat_node(state: AgentState) -> dict:
 
         monster_dmg = 0
         if monster["health"] > 0:
-            monster_dmg = max(0, monster["damage"] + random.randint(-2, 2))
+            armor = total_armor_rating(player, player.get("inventory", []))
+            monster_dmg = max(0, monster["damage"] + random.randint(-2, 2) - armor)
             player["health"] -= monster_dmg
 
         round_events = f"Player dealt {player_dmg} damage to the {monster['name']}."
@@ -460,6 +473,7 @@ def resolve_action(state: AgentState) -> dict:
         "talk":      lambda: {"route_to": "npc_dialogue"},
         "attack":    lambda: {"route_to": "combat", "combat_target": target},
         "quit":      lambda: (print("Goodbye.") or {"game_over": True}),
+        "unequip":   lambda: handle_unequip(state, target),
     }
 
     handler = handlers.get(action)
@@ -516,15 +530,17 @@ initial_state_1 = AgentState(
     current_room_id="room_1",
     player={
         "inventory": [
-            {"name": "golden sword", "hidden": False, "revealed_by": None, 
-             "openable": False, "is_open": False, "gold": 0, 
-             "damage": 25, "weapon_type": "blade"}
+            {"name": "golden sword", "hidden": False, "revealed_by": None,
+             "openable": False, "is_open": False, "gold": 0,
+             "damage": 25, "weapon_type": "blade",
+             "armor_slot": None, "armor_rating": 0}
         ],
         "health": 100,
         "max_health": 100,
         "status_effects": [],
         "gold": 1000,
-        "equipped_weapon": None
+        "equipped_weapon": None,
+        "equipped_armor": {}
     }
 )
 

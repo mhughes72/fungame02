@@ -1,3 +1,11 @@
+# handlers/shop.py
+# Handles the merchant shop system using LangChain tools.
+# Contains make_shop_tools which creates tool functions (get_player_gold,
+# get_player_inventory, get_shop_stock, buy_item, sell_item) with current
+# game state baked in, and handle_shop which runs the merchant conversation
+# using an agentic tool-calling loop so the LLM can process transactions
+# in character as Aldous the Peddler.
+
 import json
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
