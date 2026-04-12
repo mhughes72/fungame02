@@ -53,10 +53,13 @@ def handle_take(state, target) -> dict:
 
     item = find_item(room, target)
     if item:
+        if item.get("openable"):
+            print(f"The {target} is too large to carry. Try opening it instead.")
+            return {"force_full_description": False}
         new_items = [i for i in room["items"] if i["name"] != target]
         room_override["items"] = new_items
         room_states[room_id] = room_override
-        inventory.append(item)  # store full ItemData dict
+        inventory.append(item)
         player["inventory"] = inventory
         print(f"You take the {target}.")
         return {
@@ -149,7 +152,7 @@ def handle_open(state, target) -> dict:
     if item.get("is_open"):
         print(f"The {target} is already open.")
         return {"force_full_description": False}
-
+    
     gold_found = item.get("gold", 0)
 
     new_items = []
