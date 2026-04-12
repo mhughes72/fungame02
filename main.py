@@ -19,7 +19,6 @@ from tavily import TavilyClient
 import random
 
 
-from rooms import ROOMS
 from prompts import ROOM_DESCRIPTION_PROMPT, COMMAND_PARSER_PROMPT, EXAMINE_PROMPT, NPC_PROMPT, WEB_SEARCH_ROLEPLAY_PROMPT, COMBAT_PROMPT, FLEE_PROMPT, GAME_SYSTEM_PROMPT
 
 
@@ -103,6 +102,9 @@ class AgentState(TypedDict):
 llm = ChatOpenAI(
     model="gpt-4o", temperature = 0.5)
 
+# Load rooms from JSON at startup
+with open(os.path.join("data", "rooms.json"), "r") as f:
+    ROOMS = json.load(f)
 
 def invoke_with_system(prompt):
     """Invoke LLM with global system prompt prepended."""
