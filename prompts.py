@@ -67,6 +67,7 @@ Rules:
 - For quitting (quit, exit, bye), set action to "quit" and target to null.
 - If the player types "room", "where am i", "current room", or similar, set action to "room" and target to null.
 - If nothing matches, set action to "unknown" and target to null.
+- If the player types "win", set action to "win" and target to null.
 
 Respond with ONLY raw JSON, no markdown, no explanation.
 Format: {{"action": "go", "target": "north"}}
@@ -127,6 +128,20 @@ Player says: {player_input}
 Respond in character. Be concise — 2-4 sentences. 
 If the player tries to end the conversation (says goodbye, leave, exit, done, etc.) 
 end your response with exactly: [END CONVERSATION]
+""")
+
+WIN_PROMPT = ChatPromptTemplate.from_template("""
+You are the narrator of a dark gothic text adventure game.
+The player has won the game.
+
+Player stats:
+- Gold collected: {gold}
+- Health remaining: {health}/{max_health}
+- Items carried: {inventory}
+- Monsters defeated: {monsters_defeated}
+
+Write a dramatic, atmospheric victory narration of 3-4 sentences.
+Make it feel earned and gothic. End with a single triumphant closing line.
 """)
 
 SHOP_SYSTEM_PROMPT = """You are {npc_name} in a gothic text adventure game.

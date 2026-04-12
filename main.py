@@ -21,7 +21,7 @@ from tavily import TavilyClient
 from prompts import (
     ROOM_DESCRIPTION_PROMPT, COMMAND_PARSER_PROMPT, NPC_PROMPT,
     WEB_SEARCH_ROLEPLAY_PROMPT, COMBAT_PROMPT, FLEE_PROMPT, 
-    GAME_SYSTEM_PROMPT, SHOP_SYSTEM_PROMPT
+    GAME_SYSTEM_PROMPT, SHOP_SYSTEM_PROMPT, WIN_PROMPT
 )
 
 from utils import invoke_with_system, find_item, visible_items, total_armor_rating
@@ -101,6 +101,8 @@ class AgentState(TypedDict):
     npc_continue: NotRequired[bool]
     combat_target: NotRequired[str]
     skip_description: NotRequired[bool]
+    game_won: NotRequired[bool]
+
 
 # ── Setup ────────────────────────────────────────────────────────────────────
 
@@ -183,6 +185,24 @@ def describe_room(state: AgentState) -> dict:
     print(short_desc)
     return {"force_full_description": False}
 
+def trigger_win(state: AgentState) -> dict:
+    player = state.get("player", {})
+    inventory = list(player.get("inventory", []))
+
+    prompt = WIN_PROMPT.invoke({
+        "gold": player.get("gold", 0),
+        "health": player.get("health", 100),
+        "max_health": player.get("max_health", 100),
+        "inventory": ", ".join(i["name"] for i in inventory) or "nothing",
+        "monsters_defeated": "unknown",
+    })
+
+    response = invoke_with_system(llm, prompt)
+    print("\n" + "═" * 50)
+    print(response.content)
+    print("═" * 50 + "\n")
+
+    return {"game_won": True, "game_over": True}
 
 def get_player_action(state: AgentState) -> dict:
     player_input = input("\nWhat do you do? ").strip().lower()
@@ -480,6 +500,8 @@ def resolve_action(state: AgentState) -> dict:
         "quit":      lambda: (print("Goodbye.") or {"game_over": True}),
         "unequip":   lambda: handle_unequip(state, target),
         "use": lambda: handle_use(state, target),
+        "win": lambda: trigger_win(state),
+
     }
 
     handler = handlers.get(action)
@@ -492,6 +514,8 @@ def resolve_action(state: AgentState) -> dict:
 
 def next_step(state: AgentState) -> str:
     if state.get("game_over"):
+        return END
+    if state.get("game_won"):
         return END
     if state.get("route_to") == "npc_dialogue":
         return "npc_dialogue"
