@@ -1,4 +1,4 @@
-# The Haunted Mansion — Gothic Text Adventure
+# Fun Game 02 — Text Adventure
 
 A dark, atmospheric text adventure game built with LangGraph and OpenAI.
 Explore a haunted mansion, battle monsters, collect weapons and armour,
