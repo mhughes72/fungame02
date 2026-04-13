@@ -10,6 +10,7 @@ find hidden items, trade with merchants, and converse with mysterious NPCs
 - **LangGraph** — game loop and state management
 - **LangChain + OpenAI GPT-4o** — natural language command parsing, room descriptions, NPC dialogue, combat narration
 - **Tavily** — real-time web search for the Oracle NPC
+- **ElevenLabs** — text to speech (currently disabled)
 - **Python 3.10+**
 
 ## Project Structure
