@@ -140,6 +140,7 @@ Type `help` at any time to see all commands in-game.
 |-------|--------|
 | `talk to aldric` / `speak with oracle` | Start a conversation |
 | `talk to aldous` / `visit the merchant` | Open the shop |
+| `give 20 gold to aldric` / `offer 50 gold` | Bribe an NPC to improve their mood |
 | `goodbye` / `bye` / `farewell` | End a conversation |
 
 ### Player Status
@@ -155,6 +156,7 @@ Type `help` at any time to see all commands in-game.
 |-------|--------|
 | `goto room_6` | Teleport to a specific room |
 | `win` | Trigger the win condition |
+| `clearmemory` | Wipe all NPC memories mid-session |
 | `quit` | Exit the game |
 
 ## Game Systems
@@ -176,6 +178,21 @@ Some exits are locked and require a specific key. Use `unlock [direction]` to un
 
 ### NPCs
 Several NPCs can be found throughout the mansion. Regular NPCs engage in conversation powered by GPT-4o. The Oracle has real-time web search capability via Tavily. Aldous the Peddler runs a shop where you can buy weapons, armour, and health potions using LangChain tools for actual transactions.
+
+### NPC Emotional State
+Every NPC tracks two independent emotional scores that persist across conversations within a session:
+
+**Mood (-100 to +100)** — how much the NPC likes the player. Shifts based on tone: friendly messages push it positive, rude or dismissive ones push it negative. Affects how forthcoming or cold the NPC is in replies.
+
+**Fear (0 to 100)** — how threatened the NPC feels. Shifts based on threatening language or aggressive behaviour. A frightened NPC becomes submissive and over-helpful; a terrified one may volunteer information they'd normally withhold.
+
+Both scores are evaluated by GPT-4o-mini after each message and injected into the system prompt as behavioural overrides, so they influence every response. The scores are independent — an NPC can dislike you but still fear you, producing a different dynamic than one who is simply hostile.
+
+**Aldous and prices** — Aldous's shop prices shift based on his mood and fear scores. Being friendly earns discounts; being rude raises prices. Threatening him produces the steepest discounts of all.
+
+**The Oracle and web search** — if the Oracle's mood drops low enough, she refuses to use her powers for you and delivers an in-character refusal instead of searching the web.
+
+**Bribing NPCs** — offer gold to improve an NPC's mood. Say `give 20 gold to aldric` at any time, including mid-conversation. The mood boost is evaluated by GPT-4o-mini based on the NPC's personality and current mood — a greedy merchant responds very differently to 50 gold than a proud scholar.
 
 ### NPC Memory
 NPCs remember what you tell them across conversations using a RAG (Retrieval-Augmented Generation) pipeline backed by Pinecone.
@@ -215,6 +232,7 @@ State is stored in `AgentState` which tracks:
 - Player stats (health, gold, inventory, equipped weapon and armour)
 - Routing flags for combat, NPC dialogue, and aggressive monster handling
 - Previous room ID for flee routing
+- NPC mood scores (`npc_moods`) and fear scores (`npc_fear`) per NPC name
 
 ## Key Design Decisions
 
@@ -225,6 +243,8 @@ State is stored in `AgentState` which tracks:
 - **Two-step web search** — the Oracle uses Tavily for raw facts then GPT-4o to deliver them in character
 - **NPC memory via RAG** — facts extracted per exchange, embedded and stored in Pinecone per NPC namespace, retrieved via HyDE-rewritten semantic search
 - **Dynamic web search routing** — the Oracle decides per message whether a question requires a live web search or can be answered from memory
+- **NPC emotional state** — dual-axis mood/fear system evaluated by GPT-4o-mini after every message; scores are injected as system-level behavioural overrides
+- **Gold bribing** — mood boosts from bribes are LLM-evaluated based on NPC personality and current attitude, not a fixed formula
 - **Aggressive monsters** — some monsters auto-attack on room entry and block progress until defeated
 - **Persistent monster health** — wounded monsters retain their health between encounters
 
