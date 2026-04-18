@@ -135,8 +135,9 @@ Conversation so far:
 Player says: {player_input}
 
 Respond in character. Be concise — 2-4 sentences.
-If the player tries to end the conversation (says goodbye, leave, exit, done, etc.)
-end your response with exactly: [END CONVERSATION]
+IMPORTANT: Only end the conversation if the player uses an explicit farewell word: goodbye, bye, farewell, leave, exit, done.
+Do NOT end the conversation because the player is rude, aggressive, or threatening — instead react emotionally and stay in the scene.
+If ending, add exactly: [END CONVERSATION]
 """)
 
 WIN_PROMPT = ChatPromptTemplate.from_template("""
