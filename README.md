@@ -5,6 +5,20 @@ Explore a haunted mansion, battle monsters, collect weapons and armour,
 find hidden items, trade with merchants, and converse with mysterious NPCs
 — all through natural language commands powered by an LLM.
 
+## AI Techniques
+
+| Technique | Where Used |
+|-----------|------------|
+| **RAG (Retrieval-Augmented Generation)** | NPC memory — facts extracted from conversations are stored as vector embeddings in Pinecone and retrieved at query time to give NPCs long-term memory |
+| **HyDE (Hypothetical Document Embeddings)** | Memory retrieval — player queries are rewritten as factual statements before embedding, improving semantic match accuracy against stored memories |
+| **LLM-as-judge** | Mood and fear scoring — GPT-4o-mini rates player attitude and threat level after every message as an unconstrained integer |
+| **Tool calling (function calling)** | Merchant shop — Aldous uses a LangChain agentic loop with bound tools (`get_shop_stock`, `buy_item`, `sell_item`, etc.) to process real transactions in character |
+| **Dynamic routing** | Oracle web search — a cheap LLM call decides per message whether a live Tavily search is needed or the question can be answered from context, saving API credits |
+| **Two-step generation** | Oracle responses — raw Tavily search results are passed to GPT-4o to be redelivered in character, separating fact retrieval from roleplay |
+| **Prompt injection via system message** | NPC emotional state — mood and fear behavioural overrides are appended to the system message so they carry authority over personality descriptions in the human turn |
+| **LangGraph state graph** | Game loop — the entire game is a compiled state graph with conditional edges routing between room loading, combat, dialogue, and player input nodes |
+| **Per-exchange fact extraction** | NPC memory — after every player/NPC exchange, GPT-4o-mini extracts discrete facts about the player and upserts them as separate vector embeddings |
+
 ## Tech Stack
 
 - **LangGraph** — game loop and state management
