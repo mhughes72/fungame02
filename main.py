@@ -255,7 +255,8 @@ def trigger_win(state: AgentState) -> dict:
     return {"game_won": True, "game_over": True}
 
 def get_player_action(state: AgentState) -> dict:
-    player_input = input("\nWhat do you do? ").strip().lower()
+    print("\nWhat do you do? ", end="", flush=True)
+    player_input = input().strip().lower()
     return {"player_input": player_input}
 
 

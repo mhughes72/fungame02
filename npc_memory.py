@@ -9,7 +9,7 @@ from utils import debug
 INDEX_NAME = "fungame-npc-memory"
 EMBEDDING_MODEL = "text-embedding-3-small"
 EMBEDDING_DIMS = 1536
-SIMILARITY_THRESHOLD = 0.5
+SIMILARITY_THRESHOLD = 0.3
 
 _index = None
 
