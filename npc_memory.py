@@ -6,12 +6,11 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_core.messages import HumanMessage, SystemMessage
 from utils import debug
 
-QUESTION_STARTERS = ("what", "who", "where", "when", "how", "do", "did", "is", "are", "was", "have", "can", "could", "would", "tell")
 
 INDEX_NAME = "fungame-npc-memory"
 EMBEDDING_MODEL = "text-embedding-3-small"
 EMBEDDING_DIMS = 1536
-SIMILARITY_THRESHOLD = 0.3
+SIMILARITY_THRESHOLD = 0.25
 
 _index = None
 
@@ -107,17 +106,13 @@ def store_memory(npc_name: str, conversation: list[str], llm) -> None:
 
 
 def _hyde_rewrite(query: str, llm) -> str:
-    """If query is a question, generate a hypothetical factual answer to use as the search vector."""
-    is_question = query.strip().endswith("?") or query.lower().startswith(QUESTION_STARTERS)
-    if not is_question:
-        return query
-
+    """Rewrite player input as a factual statement for better embedding similarity against stored memories."""
     response = llm.invoke([
         SystemMessage(content=(
-            "You are helping search a memory database. "
-            "Convert the player's question into a short factual statement that the memory might contain. "
-            "Return ONLY the statement, nothing else. "
-            'Example: "what is my name" → "Player\'s name is [name]"'
+            "You are helping search a memory database of facts about a player. "
+            "Rewrite the player's message as a short factual statement that a matching memory might contain. "
+            "Correct any typos. Return ONLY the statement, nothing else. "
+            'Examples: "wht is my name" → "Player\'s name is [name]" | "I hate dogs" → "Player hates dogs"'
         )),
         HumanMessage(content=query)
     ])
