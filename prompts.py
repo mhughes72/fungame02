@@ -127,13 +127,13 @@ The room you are in: {room_name}
 
 {memory_context}
 
-{mood_tone}
-{fear_tone}
-
 Conversation so far:
 {history}
 
 Player says: {player_input}
+
+{mood_tone}
+{fear_tone}
 
 Respond in character. Be concise — 2-4 sentences.
 IMPORTANT: Only end the conversation if the player uses an explicit farewell word: goodbye, bye, farewell, leave, exit, done.
