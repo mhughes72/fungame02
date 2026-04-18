@@ -53,20 +53,31 @@ def clear_all_memories() -> None:
     debug(f"npc_memory: wiped {len(namespaces)} NPC namespace(s)")
 
 
-def store_memory(npc_name: str, conversation: list[str], llm) -> None:
-    if len(conversation) < 2:
-        debug(f"npc_memory: skipping store for '{npc_name}' — too short")
-        return
+def _upsert_facts(npc_name: str, facts: list[str]) -> None:
+    embeddings = _embeddings()
+    index = _get_index()
+    namespace = _namespace(npc_name)
+    vectors = [
+        {"id": str(uuid.uuid4()), "values": embeddings.embed_query(f), "metadata": {"npc_name": npc_name, "text": f}}
+        for f in facts
+    ]
+    index.upsert(vectors=vectors, namespace=namespace)
+    debug(f"npc_memory: upserted {len(vectors)} vectors to namespace '{namespace}'")
 
-    conv_text = "\n".join(conversation)
+
+def store_exchange(npc_name: str, player_msg: str, npc_reply: str, llm) -> None:
+    """Extract and store facts from a single player/NPC exchange immediately after it happens."""
+    exchange = f"Player: {player_msg}\n{npc_name}: {npc_reply}"
 
     response = llm.invoke([
         SystemMessage(content=(
-            "Extract 2-4 key facts from this conversation about what the player revealed, asked, or did. "
-            "Return ONLY a JSON array of short factual sentences. "
-            'Example: ["Player found the secret letter", "Player is searching for the basement"]'
+            "Extract 1-2 facts about the player from this conversation exchange. "
+            "Only extract facts the player explicitly stated about themselves. "
+            "If there are no clear facts, return an empty array. "
+            "Return ONLY a JSON array. "
+            'Example: ["Player\'s name is The King Dog", "Player likes peanut butter"]'
         )),
-        HumanMessage(content=f"Conversation:\n{conv_text}")
+        HumanMessage(content=exchange)
     ])
 
     try:
@@ -76,33 +87,14 @@ def store_memory(npc_name: str, conversation: list[str], llm) -> None:
             if text.startswith("json"):
                 text = text[4:]
         facts = json.loads(text.strip())
-        if not isinstance(facts, list):
-            raise ValueError("Expected a list")
+        if not isinstance(facts, list) or not facts:
+            return
     except Exception as e:
-        debug(f"npc_memory: fact extraction failed for '{npc_name}' — {e}")
-        return
-
-    if not facts:
-        debug(f"npc_memory: no facts extracted for '{npc_name}'")
+        debug(f"npc_memory: fact extraction failed — {e}")
         return
 
     debug(f"npc_memory: storing {len(facts)} facts for '{npc_name}': {facts}")
-
-    embeddings = _embeddings()
-    index = _get_index()
-    namespace = _namespace(npc_name)
-
-    vectors = []
-    for fact in facts:
-        vector = embeddings.embed_query(fact)
-        vectors.append({
-            "id": str(uuid.uuid4()),
-            "values": vector,
-            "metadata": {"npc_name": npc_name, "text": fact}
-        })
-
-    index.upsert(vectors=vectors, namespace=namespace)
-    debug(f"npc_memory: upserted {len(vectors)} vectors to namespace '{namespace}'")
+    _upsert_facts(npc_name, facts)
 
 
 def _hyde_rewrite(query: str, llm) -> str:

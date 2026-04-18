@@ -9,7 +9,7 @@ from tavily import TavilyClient
 from langchain_core.messages import SystemMessage, HumanMessage
 from utils import invoke_with_system, debug
 from prompts import NPC_PROMPT, WEB_SEARCH_ROLEPLAY_PROMPT
-from npc_memory import store_memory, retrieve_memories
+from npc_memory import store_exchange, retrieve_memories
 
 def npc_dialogue(state, SHOPS, llm, parse_command_fn) -> dict:
     from handlers.shop import handle_shop
@@ -97,11 +97,11 @@ def npc_dialogue(state, SHOPS, llm, parse_command_fn) -> dict:
         print(f"\n{npc['name']}: {clean_reply}\n")
         history.append(f"{npc['name']}: {clean_reply}")
 
+        # Store facts immediately so they're available for the rest of this conversation
+        store_exchange(npc["name"], player_msg, clean_reply, llm)
+
         if end_conversation:
             print(f"({npc['name']} turns away.)")
             break
-
-    # Store memories from this conversation
-    store_memory(npc["name"], history, llm)
 
     return {"force_full_description": False}
