@@ -17,8 +17,10 @@ def combat_node(state, ROOMS, llm) -> dict:
     player = dict(state.get("player", {}))
     inventory = list(player.get("inventory", []))
 
+    debug(f"combat: targeting '{target}' in {room_id}")
     monster = next((m for m in room["monsters"] if m["name"] == target), None)
     if not monster:
+        debug(f"combat: '{target}' not found in room")
         print(f"There is no {target} here.")
         return {"force_full_description": False, "route_to": None}
 
@@ -56,7 +58,7 @@ def combat_node(state, ROOMS, llm) -> dict:
 
             if success:
                 previous_room = state.get("previous_room_id")
-                debug(f"Fleeing to previous room: {previous_room}")
+                debug(f"flee: success | returning to {previous_room}")
 
                 # Save wounded monster back to room state
                 updated_monsters = []
@@ -112,6 +114,8 @@ def combat_node(state, ROOMS, llm) -> dict:
             monster_dmg = max(1, int(raw_dmg * (1 - damage_reduction)))
             player["health"] -= monster_dmg
 
+        debug(f"round: player dealt {player_dmg} (base {base_damage}+d6({dice_roll})+weak({weakness_bonus})-def({monster['defense']})) | {monster['name']} hp: {max(0, monster['health'])}/{monster['max_health']} | monster dealt {monster_dmg} | player hp: {player['health']}/{player['max_health']}")
+
         round_events = f"Player dealt {player_dmg} damage to the {monster['name']}."
         if monster["health"] > 0:
             round_events += f" The {monster['name']} struck back for {monster_dmg} damage."
@@ -145,6 +149,7 @@ def combat_node(state, ROOMS, llm) -> dict:
     gold_drop = drops.get("gold", 0)
     item_drop = drops.get("item", None)
 
+    debug(f"combat: '{target}' defeated | drops: {gold_drop}g, item: {item_drop}")
     if gold_drop > 0:
         player["gold"] = player.get("gold", 0) + gold_drop
         print(f"You find {gold_drop} gold coins.")

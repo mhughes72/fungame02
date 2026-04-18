@@ -10,7 +10,7 @@ DEBUG = True
 
 def debug(msg):
     if DEBUG:
-        print(f"[DEBUG] {msg}")
+        print(f"\033[2m  ▸ {msg}\033[0m")
 
 def visible_items(room):
     return [i for i in room["items"] if not i["hidden"]]

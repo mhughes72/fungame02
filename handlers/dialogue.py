@@ -7,7 +7,7 @@
 import os
 from tavily import TavilyClient
 from langchain_core.messages import SystemMessage, HumanMessage
-from utils import invoke_with_system
+from utils import invoke_with_system, debug
 from prompts import NPC_PROMPT, WEB_SEARCH_ROLEPLAY_PROMPT
 
 def npc_dialogue(state, SHOPS, llm, parse_command_fn) -> dict:
@@ -25,10 +25,12 @@ def npc_dialogue(state, SHOPS, llm, parse_command_fn) -> dict:
     )
 
     if not npc:
+        debug(f"dialogue: no NPC matched target '{target}'")
         print("There's no one here to talk to.")
         return {"force_full_description": False}
 
-    # Route to shop if NPC is a merchant
+    debug(f"dialogue: talking to '{npc['name']}' | shop: {npc.get('shop_id')} | web_search: {npc.get('can_search_web', False)}")
+
     if npc.get("shop_id"):
         return handle_shop(state, npc, SHOPS, llm)
 
@@ -50,8 +52,10 @@ def npc_dialogue(state, SHOPS, llm, parse_command_fn) -> dict:
             break
 
         if use_web_search:
+            debug(f"dialogue: web search query: '{player_msg}'")
             search_result = tavily_client.search(player_msg)
             raw_facts = "\n".join([r["content"] for r in search_result["results"]])
+            debug(f"dialogue: web search returned {len(search_result['results'])} results")
 
             roleplay_prompt = WEB_SEARCH_ROLEPLAY_PROMPT.format(
                 npc_name=npc["name"],

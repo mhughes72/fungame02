@@ -160,6 +160,9 @@ def load_room_data(state: AgentState) -> dict:
         "npcs": list(base_room.get("npcs", [])),
     }
 
+    override_keys = list(room_override.keys()) if room_override else []
+    debug(f"load_room: {new_room_id} ({base_room['name']}) | overrides: {override_keys or 'none'} | prev: {previous_room_id}")
+
     return {
         "current_room_data": room,
         "route_to": None,
@@ -218,7 +221,7 @@ def describe_room(state: AgentState) -> dict:
 
 def check_aggressive(state: AgentState) -> dict:
     # Skip aggressive check if player just fled
-    debug(f"check_aggressive — just_fled: {state.get('just_fled')}")
+    debug(f"check_aggressive | just_fled: {state.get('just_fled')}")
     if state.get("just_fled"):
         return {"route_to": None, "just_fled": False}
     
@@ -281,10 +284,10 @@ def parse_command(player_input: str, state: AgentState) -> dict:
                 text = text[4:]
         text = text.strip()
         parsed = json.loads(text)
-        debug(f"Parsed command: {parsed}")
+        debug(f"parse_command: {parsed}")
         return parsed
     except Exception as e:
-        debug(f"Parse error: {e}, raw response: {response.content}")
+        debug(f"parse_command error: {e} | raw: {response.content}")
         return {"action": "unknown", "target": None}
 
 
@@ -297,15 +300,15 @@ def resolve_action(state: AgentState) -> dict:
     if player_input.startswith("goto "):
         target_room = player_input.split(" ")[1].strip()
         if target_room in ROOMS:
-            debug(f"Teleporting to {target_room}")
+            debug(f"goto: teleporting to {target_room}")
             return {"current_room_id": target_room, "force_full_description": True}
-        debug(f"Room '{target_room}' not found.")
+        debug(f"goto: room '{target_room}' not found")
         return {"force_full_description": False}
 
     command = parse_command(player_input, state)
     action = command.get("action", "unknown")
     target = command.get("target")
-    debug(f"Input: '{player_input}' → action: '{action}', target: '{target}'")
+    debug(f"resolve: '{player_input}' → action: {action} | target: {target}")
 
     handlers = {
         "go":        lambda: handle_go(state, target),
