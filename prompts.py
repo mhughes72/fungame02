@@ -71,10 +71,11 @@ Rules:
 - If the player wants to unlock a door or exit (unlock, open door), set action to "unlock" and target to the direction (e.g. "north", "down").
 - If the player types "help", "commands", or "what can I do", set action to "help" and target to null.
 - If the player types "clearmemory", set action to "clearmemory" and target to null.
-
+- If the player offers gold, coins, or money to an NPC (give gold to, bribe, offer, pay), set action to "bribe", target to the NPC name, and amount to the number of gold mentioned (default 10 if unspecified).
 
 Respond with ONLY raw JSON, no markdown, no explanation.
 Format: {{"action": "go", "target": "north"}}
+For bribe: {{"action": "bribe", "target": "Professor Aldric", "amount": 20}}
 """)
 
 EXAMINE_PROMPT = ChatPromptTemplate.from_template("""
@@ -213,6 +214,18 @@ CRITICAL RULES:
 Conversation so far:
 {history}
 """
+NPC_BRIBE_PROMPT = """You are {npc_name} in a dark gothic text adventure game.
+Personality: {personality}
+
+The player has just offered you {amount} gold coins.
+{mood_tone}
+{fear_tone}
+
+React in character to receiving this money — 1-2 sentences.
+Consider whether the amount is generous, insulting, or somewhere in between given who you are.
+Do not break character or reference game mechanics.
+"""
+
 NPC_FEAR_PROMPT = (
     "Rate how threatening or intimidating the player's message is to an NPC. "
     "Use positive numbers for threatening behaviour (e.g. +10 for a veiled threat, +30 for a direct threat, +50 for extreme menace). "
