@@ -105,14 +105,18 @@ def store_exchange(npc_name: str, player_msg: str, npc_reply: str, llm=None) -> 
     _upsert_facts(npc_name, facts)
 
 
-def _hyde_rewrite(query: str) -> str:
+def _hyde_rewrite(query: str, npc_name: str = "") -> str:
     """Rewrite player input as a factual statement for better embedding similarity against stored memories."""
+    context = f"The player is speaking to {npc_name}. " if npc_name else ""
     response = _get_mini_llm().invoke([
         SystemMessage(content=(
+            f"{context}"
             "You are helping search a memory database of facts about a player. "
             "Rewrite the player's message as a short factual statement that a matching memory might contain. "
+            "Replace pronouns like 'you' and 'your' with the NPC's actual name. "
             "Correct any typos. Return ONLY the statement, nothing else. "
-            'Examples: "wht is my name" → "Player\'s name is [name]" | "I hate dogs" → "Player hates dogs"'
+            'Examples: "wht is my name" → "Player\'s name is [name]" | '
+            '"what do I think of you?" (talking to Aldric) → "Player\'s opinion of Professor Aldric is [opinion]"'
         )),
         HumanMessage(content=query)
     ])
@@ -126,7 +130,7 @@ def retrieve_memories(npc_name: str, query: str, k: int = 3, llm=None) -> list[s
     index = _get_index()
     namespace = _namespace(npc_name)
 
-    search_query = _hyde_rewrite(query)
+    search_query = _hyde_rewrite(query, npc_name)
     query_vector = embeddings.embed_query(search_query)
     results = index.query(
         vector=query_vector,
