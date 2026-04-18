@@ -6,6 +6,8 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_core.messages import HumanMessage, SystemMessage
 from utils import debug
 
+QUESTION_STARTERS = ("what", "who", "where", "when", "how", "do", "did", "is", "are", "was", "have", "can", "could", "would", "tell")
+
 INDEX_NAME = "fungame-npc-memory"
 EMBEDDING_MODEL = "text-embedding-3-small"
 EMBEDDING_DIMS = 1536
@@ -87,12 +89,33 @@ def store_memory(npc_name: str, conversation: list[str], llm) -> None:
     debug(f"npc_memory: upserted {len(vectors)} vectors to namespace '{namespace}'")
 
 
-def retrieve_memories(npc_name: str, query: str, k: int = 3) -> list[str]:
+def _hyde_rewrite(query: str, llm) -> str:
+    """If query is a question, generate a hypothetical factual answer to use as the search vector."""
+    is_question = query.strip().endswith("?") or query.lower().startswith(QUESTION_STARTERS)
+    if not is_question:
+        return query
+
+    response = llm.invoke([
+        SystemMessage(content=(
+            "You are helping search a memory database. "
+            "Convert the player's question into a short factual statement that the memory might contain. "
+            "Return ONLY the statement, nothing else. "
+            'Example: "what is my name" → "Player\'s name is [name]"'
+        )),
+        HumanMessage(content=query)
+    ])
+    rewritten = response.content.strip()
+    debug(f"npc_memory: HyDE rewrite: '{query}' → '{rewritten}'")
+    return rewritten
+
+
+def retrieve_memories(npc_name: str, query: str, k: int = 3, llm=None) -> list[str]:
     embeddings = _embeddings()
     index = _get_index()
     namespace = _namespace(npc_name)
 
-    query_vector = embeddings.embed_query(query)
+    search_query = _hyde_rewrite(query, llm) if llm else query
+    query_vector = embeddings.embed_query(search_query)
     results = index.query(
         vector=query_vector,
         top_k=k,

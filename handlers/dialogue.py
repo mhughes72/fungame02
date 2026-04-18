@@ -53,7 +53,7 @@ def npc_dialogue(state, SHOPS, llm, parse_command_fn) -> dict:
             break
 
         # Retrieve memories relevant to this specific message
-        memories = retrieve_memories(npc["name"], player_msg)
+        memories = retrieve_memories(npc["name"], player_msg, llm=llm)
         if memories:
             memory_context = "What you already know about this player from past conversations:\n" + "\n".join(f"- {m}" for m in memories)
             debug(f"dialogue: injecting {len(memories)} memories for '{npc['name']}'")
