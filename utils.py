@@ -34,17 +34,17 @@ def invoke_with_system(llm, prompt):
     return llm.invoke([SystemMessage(content=GAME_SYSTEM_PROMPT)] + messages)
 
 def mood_tone_for_score(score: int) -> str:
-    """Return a prompt-injectable mood description based on the NPC's mood score."""
+    """Return a prompt-injectable mood instruction based on the NPC's mood score."""
     if score >= 50:
-        return "Current mood toward player: This NPC is genuinely fond of the player. They are warm, forthcoming, and eager to help."
+        return "MOOD INSTRUCTION: You are genuinely fond of this player. Be warm, open, and unusually forthcoming — share more than you normally would."
     elif score >= 20:
-        return "Current mood toward player: This NPC views the player favorably. They are cooperative and pleasant."
-    elif score >= -19:
+        return "MOOD INSTRUCTION: You like this player. Be noticeably cooperative and pleasant, more willing than usual to help."
+    elif score >= -9:
         return ""  # neutral — no injection
-    elif score >= -50:
-        return "Current mood toward player: This NPC is wary of the player. They are guarded and curt."
+    elif score >= -40:
+        return "MOOD INSTRUCTION: You are irritated by this player. Be noticeably short, guarded, and reluctant. Give clipped answers. Make it clear you'd rather not be talking to them."
     else:
-        return "Current mood toward player: This NPC dislikes the player. They are cold, dismissive, and reluctant to help."
+        return "MOOD INSTRUCTION: You strongly dislike this player. Be cold, dismissive, and unhelpful. Refuse to elaborate. Your contempt should be unmistakable."
 
 
 def total_armor_rating(player: dict, inventory: list) -> int:
