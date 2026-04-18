@@ -10,7 +10,7 @@ find hidden items, trade with merchants, and converse with mysterious NPCs
 | Technique | Where Used |
 |-----------|------------|
 | **RAG (Retrieval-Augmented Generation)** | NPC memory — facts extracted from conversations are stored as vector embeddings in Pinecone and retrieved at query time to give NPCs long-term memory |
-| **HyDE (Hypothetical Document Embeddings)** | Memory retrieval — player queries are rewritten as factual statements before embedding, improving semantic match accuracy against stored memories |
+| **HyDE (Hypothetical Document Embeddings)** | Memory retrieval — player queries are rewritten as one or more hypothetical factual statements before embedding. Set `HYDE_NUM_DOCUMENTS` in `npc_memory.py` to generate multiple reformulations and average their embeddings for richer semantic search |
 | **LLM-as-judge** | Mood and fear scoring — GPT-4o-mini rates player attitude and threat level after every message as an unconstrained integer |
 | **Tool calling (function calling)** | Merchant shop — Aldous uses a LangChain agentic loop with bound tools (`get_shop_stock`, `buy_item`, `sell_item`, etc.) to process real transactions in character |
 | **Dynamic routing** | Oracle web search — a cheap LLM call decides per message whether a live Tavily search is needed or the question can be answered from context, saving API credits |
@@ -213,8 +213,11 @@ NPCs remember what you tell them across conversations using a RAG (Retrieval-Aug
 
 **How it works:**
 1. After each exchange, key facts about the player are extracted by GPT-4o-mini and stored as vector embeddings in Pinecone, in a separate namespace per NPC
-2. At each player message, the query is rewritten as a factual statement (HyDE — Hypothetical Document Embeddings) to improve semantic search accuracy, then the top matching memories are retrieved
-3. Retrieved memories are injected into the NPC's prompt so they can reference past conversations naturally
+2. At each player message, the query is rewritten using HyDE (Hypothetical Document Embeddings) to improve semantic search accuracy. By default, one reformulation is generated; you can configure this in `npc_memory.py`:
+   - `HYDE_NUM_DOCUMENTS = 1` — single rewrite (default, token-efficient)
+   - `HYDE_NUM_DOCUMENTS = 3` — generates 3 reformulations and averages embeddings (richer search, higher cost)
+   - Call `_hyde_rewrite(query, npc_name, num_documents=N)` to override per-query
+3. Top matching memories are retrieved and injected into the NPC's prompt so they can reference past conversations naturally
 
 **Example:** Tell Professor Aldric your name in one session, come back later and ask "do you know who I am?" — he'll remember.
 
