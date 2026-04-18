@@ -132,9 +132,6 @@ Conversation so far:
 
 Player says: {player_input}
 
-{mood_tone}
-{fear_tone}
-
 Respond in character. Be concise — 2-4 sentences.
 IMPORTANT: Only end the conversation if the player uses an explicit farewell word: goodbye, bye, farewell, leave, exit, done.
 Do NOT end the conversation because the player is rude, aggressive, or threatening — instead react emotionally and stay in the scene.
