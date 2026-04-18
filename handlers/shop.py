@@ -12,6 +12,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from prompts import GAME_SYSTEM_PROMPT, SHOP_SYSTEM_PROMPT
 from utils import debug
+from npc_memory import store_exchange, retrieve_memories
 
 def make_shop_tools(player: dict, shop_data: dict, shops: dict):
     """Create shop tools with current game state baked in."""
@@ -154,7 +155,13 @@ def handle_shop(state: dict, npc: dict, shops: dict, llm) -> dict:
             print(f"\n{npc['name']}: Safe travels, and remember — Aldous always has the best prices!")
             break
 
-        history.append(HumanMessage(content=player_msg))
+        memories = retrieve_memories(npc["name"], player_msg)
+        if memories:
+            memory_note = "What you know about this player: " + "; ".join(memories)
+            debug(f"shop: injecting {len(memories)} memories for '{npc['name']}'")
+            history.append(HumanMessage(content=f"[{memory_note}]\n{player_msg}"))
+        else:
+            history.append(HumanMessage(content=player_msg))
 
         # Agentic loop — keep calling until no more tool calls
         while True:
@@ -181,6 +188,7 @@ def handle_shop(state: dict, npc: dict, shops: dict, llm) -> dict:
         clean_reply = reply.replace("[END CONVERSATION]", "").strip()
 
         print(f"\n{npc['name']}: {clean_reply}\n")
+        store_exchange(npc["name"], player_msg, clean_reply)
 
         if end_conversation:
             break
