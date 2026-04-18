@@ -47,6 +47,7 @@ fungame/
 - Python 3.10+
 - OpenAI API key
 - Tavily API key (free tier — 1,000 searches/month free)
+- Pinecone API key (free tier — create an index named `fungame-npc-memory`, dimensions: 1536, metric: cosine)
 
 ## Setup
 
