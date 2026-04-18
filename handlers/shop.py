@@ -14,11 +14,26 @@ from prompts import GAME_SYSTEM_PROMPT, SHOP_SYSTEM_PROMPT
 from utils import debug
 from npc_memory import store_exchange, retrieve_memories
 
-def make_shop_tools(player: dict, shop_data: dict, shops: dict):
+def _mood_price_multiplier(mood_score: int) -> float:
+    """Return a price multiplier based on Aldous's mood. Friendlier = cheaper."""
+    if mood_score >= 50:
+        return 0.85
+    elif mood_score >= 20:
+        return 0.92
+    elif mood_score >= -19:
+        return 1.0
+    elif mood_score >= -50:
+        return 1.10
+    else:
+        return 1.20
+
+
+def make_shop_tools(player: dict, shop_data: dict, shops: dict, mood_score: int = 0):
     """Create shop tools with current game state baked in."""
 
     stock = shop_data["stock"]
     sell_multiplier = shop_data.get("sell_multiplier", 0.5)
+    price_multiplier = _mood_price_multiplier(mood_score)
 
     @tool
     def get_player_gold() -> str:
@@ -42,10 +57,11 @@ def make_shop_tools(player: dict, shop_data: dict, shops: dict):
             return "The shop is out of stock."
         lines = []
         for item in available:
+            adjusted_price = max(1, int(item["price"] * price_multiplier))
             if item.get("weapon_type"):
-                lines.append(f"{item['name']} — {item['weapon_type']}, {item['damage']} damage — {item['price']} gold")
+                lines.append(f"{item['name']} — {item['weapon_type']}, {item['damage']} damage — {adjusted_price} gold")
             else:
-                lines.append(f"{item['name']} — {item['price']} gold")
+                lines.append(f"{item['name']} — {adjusted_price} gold")
         lines.append("\nTo buy an item, say 'buy [item name]'")
         lines.append("To sell an item, say 'sell [item name]'")
         lines.append("To check your gold, say 'how much gold do I have'")
@@ -60,7 +76,7 @@ def make_shop_tools(player: dict, shop_data: dict, shops: dict):
         if not shop_item:
             return f"'{item_name}' is not available in the shop."
 
-        price = shop_item["price"]
+        price = max(1, int(shop_item["price"] * price_multiplier))
         if player.get("gold", 0) < price:
             return f"Not enough gold. {item_name} costs {price} gold but you only have {player.get('gold', 0)}."
 
@@ -98,7 +114,7 @@ def make_shop_tools(player: dict, shop_data: dict, shops: dict):
     return [get_player_gold, get_player_inventory, get_shop_stock, buy_item, sell_item]
 
 
-def handle_shop(state: dict, npc: dict, shops: dict, llm) -> dict:
+def handle_shop(state: dict, npc: dict, shops: dict, llm, npc_moods: dict = None) -> dict:
     """Run the merchant shop conversation with LangChain tools."""
     
     shop_id = npc.get("shop_id", "aldous")
@@ -112,7 +128,10 @@ def handle_shop(state: dict, npc: dict, shops: dict, llm) -> dict:
     player = dict(state.get("player", {}))
     player["inventory"] = list(player.get("inventory", []))
 
-    tools = make_shop_tools(player, shop_data, shops)
+    mood_score = (npc_moods or {}).get(npc["name"], 0)
+    debug(f"shop: mood for '{npc['name']}': {mood_score}")
+
+    tools = make_shop_tools(player, shop_data, shops, mood_score)
     shop_llm = llm.bind_tools(tools)
 
     memories = retrieve_memories(npc["name"], "player background and past interactions")
@@ -195,5 +214,6 @@ def handle_shop(state: dict, npc: dict, shops: dict, llm) -> dict:
 
     return {
         "player": player,
+        "npc_moods": npc_moods or {},
         "force_full_description": False
     }

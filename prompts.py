@@ -126,6 +126,8 @@ The room you are in: {room_name}
 
 {memory_context}
 
+{mood_tone}
+
 Conversation so far:
 {history}
 
@@ -198,6 +200,14 @@ CRITICAL RULES:
 Conversation so far:
 {history}
 """
+NPC_MOOD_PROMPT = (
+    "Rate the player's attitude in their most recent message. "
+    "Positive = friendly, respectful, kind. Negative = rude, hostile, dismissive. "
+    "Use larger numbers for stronger reactions — e.g. +20 for very warm, -15 for insulting, +2 for polite. "
+    "Return ONLY an integer, nothing else.\n\n"
+    "Player said: \"{player_msg}\""
+)
+
 NPC_MEMORY_HYDE_PROMPT = (
     "You are helping search a memory database of facts about a player. "
     "The player is speaking to {npc_name}. "

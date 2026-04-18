@@ -96,6 +96,7 @@
     ],
     "items": [
       {"name": "knife",               "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0, "damage": 0, "weapon_type": null},
+      {"name": "silver coin",         "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0, "damage": 0, "weapon_type": null},
       {"name": "loaf of stale bread", "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0, "damage": 0, "weapon_type": null},
       {"name": "battered tin box",    "hidden": false, "revealed_by": null, "openable": true,  "is_open": false, "gold": 8, "damage": 0, "weapon_type": null},
       {"name": "kitchen knife",       "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0, "damage": 5, "weapon_type": "blade"},
@@ -144,7 +145,6 @@
     "exits": {"south": "room_2", "north": "room_8"},
     "monsters": [],
     "items": [
-      {"name": "silver coin", "hidden": false, "revealed_by": null, "openable": false, "is_open": false, "gold": 0, "damage": 0, "weapon_type": null},
       {"name": "ornate box",  "hidden": false, "revealed_by": null, "openable": true,  "is_open": false, "gold": 30, "damage": 0, "weapon_type": null}
     ],
     "npcs": []
@@ -211,7 +211,7 @@
         "damage": 18,
         "damage_variance": 4,
         "weaknesses": ["blade", "fire"],
-        "drops": {"gold": 40, "item": null},
+        "drops": {"gold": 40, "item": "iron key"},
         "aggressive": true
     }
     ],
@@ -280,7 +280,6 @@
       }
     ],
     "items": [
-      {"name": "iron key",      "hidden": false, "revealed_by": null,           "openable": false, "is_open": false, "gold": 0,  "damage": 0, "weapon_type": null},
       {"name": "broken chain",  "hidden": false, "revealed_by": null,           "openable": false, "is_open": false, "gold": 0,  "damage": 0, "weapon_type": null},
       {"name": "locket",        "hidden": true,  "revealed_by": "broken chain", "openable": false, "is_open": false, "gold": 0,  "damage": 0, "weapon_type": null},
       {"name": "rotting satchel","hidden": false, "revealed_by": null,          "openable": true,  "is_open": false, "gold": 12, "damage": 0, "weapon_type": null},
