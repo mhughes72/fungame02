@@ -123,6 +123,7 @@ class AgentState(TypedDict):
 # ── Setup ────────────────────────────────────────────────────────────────────
 
 llm = ChatOpenAI(model="gpt-4o", temperature=0.5)
+mini_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.5)
 
 with open(os.path.join("data", "rooms.json"), "r") as f:
     ROOMS = json.load(f)
@@ -276,7 +277,7 @@ def parse_command(player_input: str, state: AgentState) -> dict:
         "player_input": player_input,
     })
 
-    response = invoke_with_system(llm, prompt)
+    response = invoke_with_system(mini_llm, prompt)
 
     try:
         text = response.content.strip()
@@ -315,7 +316,7 @@ def resolve_action(state: AgentState) -> dict:
     handlers = {
         "go":        lambda: handle_go(state, target),
         "take":      lambda: handle_take(state, target),
-        "examine":   lambda: handle_examine(state, target, llm),
+        "examine":   lambda: handle_examine(state, target, mini_llm),
         "open":      lambda: handle_open(state, target),
         "equip":     lambda: handle_equip(state, target),
         "inventory": lambda: handle_inventory(state),
@@ -366,8 +367,8 @@ graph.add_node("describe_room", describe_room)
 graph.add_node("check_aggressive", check_aggressive)
 graph.add_node("get_player_action", get_player_action)
 graph.add_node("resolve_action", resolve_action)
-graph.add_node("combat", lambda state: combat_node(state, ROOMS, llm))
-graph.add_node("npc_dialogue", lambda state: npc_dialogue(state, SHOPS, llm, parse_command))
+graph.add_node("combat", lambda state: combat_node(state, ROOMS, mini_llm))
+graph.add_node("npc_dialogue", lambda state: npc_dialogue(state, SHOPS, llm, mini_llm, parse_command))
 
 graph.add_edge(START, "load_room_data")
 graph.add_edge("load_room_data", "describe_room")

@@ -11,7 +11,7 @@ from utils import invoke_with_system, debug
 from prompts import NPC_PROMPT, WEB_SEARCH_ROLEPLAY_PROMPT
 from npc_memory import store_exchange, retrieve_memories
 
-def npc_dialogue(state, SHOPS, llm, parse_command_fn) -> dict:
+def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn) -> dict:
     from handlers.shop import handle_shop
 
     room = state["current_room_data"]
@@ -33,7 +33,7 @@ def npc_dialogue(state, SHOPS, llm, parse_command_fn) -> dict:
     debug(f"dialogue: talking to '{npc['name']}' | shop: {npc.get('shop_id')} | web_search: {npc.get('can_search_web', False)}")
 
     if npc.get("shop_id"):
-        return handle_shop(state, npc, SHOPS, llm)
+        return handle_shop(state, npc, SHOPS, mini_llm)
 
     print(f"\n{npc['name']}: \"{npc['description']}\"")
     print("(Type 'goodbye' or 'leave' to end the conversation)\n")
