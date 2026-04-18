@@ -2,7 +2,7 @@ import os
 import json
 import uuid
 from pinecone import Pinecone, ServerlessSpec
-from langchain_openai import OpenAIEmbeddings
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from utils import debug
 
@@ -13,6 +13,13 @@ EMBEDDING_DIMS = 1536
 SIMILARITY_THRESHOLD = 0.25
 
 _index = None
+_mini_llm = None
+
+def _get_mini_llm():
+    global _mini_llm
+    if _mini_llm is None:
+        _mini_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    return _mini_llm
 
 def _get_index():
     global _index
@@ -65,11 +72,11 @@ def _upsert_facts(npc_name: str, facts: list[str]) -> None:
     debug(f"npc_memory: upserted {len(vectors)} vectors to namespace '{namespace}'")
 
 
-def store_exchange(npc_name: str, player_msg: str, npc_reply: str, llm) -> None:
+def store_exchange(npc_name: str, player_msg: str, npc_reply: str, llm=None) -> None:
     """Extract and store facts from a single player/NPC exchange immediately after it happens."""
     exchange = f"Player: {player_msg}\n{npc_name}: {npc_reply}"
 
-    response = llm.invoke([
+    response = _get_mini_llm().invoke([
         SystemMessage(content=(
             "Extract 1-2 facts about the player from this conversation exchange. "
             "Only extract facts the player explicitly stated about themselves. "
@@ -97,9 +104,9 @@ def store_exchange(npc_name: str, player_msg: str, npc_reply: str, llm) -> None:
     _upsert_facts(npc_name, facts)
 
 
-def _hyde_rewrite(query: str, llm) -> str:
+def _hyde_rewrite(query: str) -> str:
     """Rewrite player input as a factual statement for better embedding similarity against stored memories."""
-    response = llm.invoke([
+    response = _get_mini_llm().invoke([
         SystemMessage(content=(
             "You are helping search a memory database of facts about a player. "
             "Rewrite the player's message as a short factual statement that a matching memory might contain. "
@@ -118,7 +125,7 @@ def retrieve_memories(npc_name: str, query: str, k: int = 3, llm=None) -> list[s
     index = _get_index()
     namespace = _namespace(npc_name)
 
-    search_query = _hyde_rewrite(query, llm) if llm else query
+    search_query = _hyde_rewrite(query)
     query_vector = embeddings.embed_query(search_query)
     results = index.query(
         vector=query_vector,
