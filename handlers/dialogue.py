@@ -12,10 +12,13 @@ from utils import invoke_with_system, debug
 from prompts import NPC_PROMPT, WEB_SEARCH_ROLEPLAY_PROMPT, WEB_SEARCH_REQUIRED_PROMPT
 from npc_memory import store_exchange, retrieve_memories
 
-_router_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+_router_llm = None
 
 def _requires_web_search(player_msg: str, llm) -> bool:
-    from langchain_core.messages import HumanMessage, SystemMessage
+    global _router_llm
+    if _router_llm is None:
+        _router_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+    from langchain_core.messages import HumanMessage
     response = _router_llm.invoke([
         HumanMessage(content=WEB_SEARCH_REQUIRED_PROMPT.format(player_msg=player_msg))
     ])
