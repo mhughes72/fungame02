@@ -132,6 +132,7 @@ Combat:
 
 NPCs:
   talk [name]       talk to an NPC or merchant
+  give [n] gold to [name]   bribe an NPC to improve their mood
   goodbye / bye     end a conversation
 
 Info:

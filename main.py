@@ -31,7 +31,7 @@ from handlers import (
     handle_go, handle_take, handle_examine, handle_open,
     handle_equip, handle_unequip, handle_use,
     handle_inventory, handle_room,
-    combat_node, npc_dialogue, handle_help
+    combat_node, npc_dialogue, handle_bribe, handle_help
 )
 
 load_dotenv()
@@ -332,6 +332,7 @@ def resolve_action(state: AgentState) -> dict:
         "win": lambda: trigger_win(state),
         "unlock": lambda: handle_unlock(state, target),
         "help": lambda: handle_help(),
+        "bribe":     lambda: handle_bribe(state, target or "", command.get("amount", 10), llm),
         "clearmemory": lambda: (clear_all_memories() or print("[NPC memories cleared.]")) or {"force_full_description": False},
 
     }

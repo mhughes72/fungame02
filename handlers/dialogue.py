@@ -9,7 +9,7 @@ from tavily import TavilyClient
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_openai import ChatOpenAI
 from utils import invoke_with_system, debug, mood_tone_for_score, fear_tone_for_score
-from prompts import NPC_PROMPT, WEB_SEARCH_ROLEPLAY_PROMPT, WEB_SEARCH_REQUIRED_PROMPT, WEB_SEARCH_REFUSED_PROMPT
+from prompts import NPC_PROMPT, WEB_SEARCH_ROLEPLAY_PROMPT, WEB_SEARCH_REQUIRED_PROMPT, WEB_SEARCH_REFUSED_PROMPT, NPC_BRIBE_PROMPT
 from npc_memory import store_exchange, retrieve_memories, evaluate_mood_delta, evaluate_fear_delta
 
 _router_llm = None
@@ -23,6 +23,62 @@ def _requires_web_search(player_msg: str, llm) -> bool:
         HumanMessage(content=WEB_SEARCH_REQUIRED_PROMPT.format(player_msg=player_msg))
     ])
     return response.content.strip().upper().startswith("YES")
+
+def _bribe_mood_boost(amount: int) -> int:
+    if amount >= 100: return 50
+    if amount >= 50:  return 35
+    if amount >= 25:  return 20
+    if amount >= 10:  return 10
+    return 3
+
+
+def handle_bribe(state: dict, target: str, amount: int, llm) -> dict:
+    room = state["current_room_data"]
+    player = dict(state.get("player", {}))
+    npc_moods = dict(state.get("npc_moods", {}))
+    npc_fear = dict(state.get("npc_fear", {}))
+
+    npc = next(
+        (n for n in room["npcs"] if n["name"].lower() in target.lower() or target.lower() in n["name"].lower()),
+        None
+    )
+    if not npc:
+        print("There's no one here to give gold to.")
+        return {"force_full_description": False}
+
+    gold = player.get("gold", 0)
+    if gold < amount:
+        print(f"You only have {gold} gold.")
+        return {"force_full_description": False}
+
+    player["gold"] = gold - amount
+    boost = _bribe_mood_boost(amount)
+    current_mood = npc_moods.get(npc["name"], 0)
+    current_fear = npc_fear.get(npc["name"], 0)
+    new_mood = max(-100, min(100, current_mood + boost))
+    npc_moods[npc["name"]] = new_mood
+    debug(f"bribe: gave {amount} gold to '{npc['name']}' | mood {current_mood} → {new_mood} (+{boost})")
+
+    prompt = NPC_BRIBE_PROMPT.format(
+        npc_name=npc["name"],
+        personality=npc["personality"],
+        amount=amount,
+        mood_tone=mood_tone_for_score(new_mood),
+        fear_tone=fear_tone_for_score(current_fear),
+    )
+    reply = invoke_with_system(llm, [
+        SystemMessage(content=prompt),
+        HumanMessage(content="React to receiving the gold.")
+    ]).content.strip()
+
+    print(f"\n{npc['name']}: {reply}\n")
+    return {
+        "player": player,
+        "npc_moods": npc_moods,
+        "npc_fear": npc_fear,
+        "force_full_description": False,
+    }
+
 
 def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn) -> dict:
     from handlers.shop import handle_shop
