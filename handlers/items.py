@@ -7,7 +7,7 @@
 #   handle_equip   — equip a weapon or armour piece from inventory
 #   handle_unequip — remove an equipped weapon or armour piece
 
-from utils import find_item, invoke_with_system
+from utils import find_item, invoke_with_system, debug
 from prompts import EXAMINE_PROMPT
 
 def handle_use(state, target) -> dict:
@@ -17,15 +17,16 @@ def handle_use(state, target) -> dict:
     item = next((i for i in inventory if i["name"] == target), None)
 
     if not item:
+        debug(f"use '{target}': not in inventory")
         print(f"You don't have {target} in your inventory.")
         return {"force_full_description": False}
 
-    # Health potion
     if item.get("heal_amount"):
         current_health = player.get("health", 100)
         max_health = player.get("max_health", 100)
 
         if current_health == max_health:
+            debug(f"use '{target}': already at full health")
             print("You are already at full health.")
             return {"force_full_description": False}
 
@@ -33,6 +34,7 @@ def handle_use(state, target) -> dict:
         healed = min(heal_amount, max_health - current_health)
         player["health"] = current_health + healed
         player["inventory"] = [i for i in inventory if i != item]
+        debug(f"use '{target}': healed {healed} | health {current_health} → {player['health']}/{max_health}")
         print(f"You drink the health potion and recover {healed} health.")
         print(f"Health: {player['health']}/{max_health}")
         return {
@@ -40,6 +42,7 @@ def handle_use(state, target) -> dict:
             "force_full_description": False
         }
 
+    debug(f"use '{target}': no effect defined")
     print(f"You can't use the {target}.")
     return {"force_full_description": False}
 
@@ -54,6 +57,7 @@ def handle_take(state, target) -> dict:
     item = find_item(room, target)
     if item:
         if item.get("openable"):
+            debug(f"take '{target}': is a container, blocked")
             print(f"The {target} is too large to carry. Try opening it instead.")
             return {"force_full_description": False}
         new_items = [i for i in room["items"] if i["name"] != target]
@@ -61,12 +65,14 @@ def handle_take(state, target) -> dict:
         room_states[room_id] = room_override
         inventory.append(item)
         player["inventory"] = inventory
+        debug(f"take '{target}': added to inventory | inventory size: {len(inventory)}")
         print(f"You take the {target}.")
         return {
             "room_states": room_states,
             "player": player,
             "force_full_description": False
         }
+    debug(f"take '{target}': not found in {room_id}")
     print(f"There's no {target} here.")
     return {"force_full_description": False}
 
@@ -76,6 +82,8 @@ def handle_examine(state, target, llm) -> dict:
     room_id = state["current_room_id"]
     room_states = dict(state.get("room_states", {}))
     room_override = dict(room_states.get(room_id, {}))
+
+    debug(f"examine '{target}' in {room_id}")
 
     # Monster?
     monster = next((m for m in room["monsters"] if m["name"] == target), None)
@@ -110,6 +118,9 @@ def handle_examine(state, target, llm) -> dict:
     if newly_revealed:
         room_override["items"] = new_items
         room_states[room_id] = room_override
+        debug(f"examine '{target}': revealed {newly_revealed}")
+    else:
+        debug(f"examine '{target}': nothing revealed")
 
     discovery_text = f"The player discovers: {', '.join(newly_revealed)}" if newly_revealed else ""
 
@@ -167,6 +178,7 @@ def handle_open(state, target) -> dict:
 
     if gold_found > 0:
         player["gold"] = player.get("gold", 0) + gold_found
+        debug(f"open '{target}': found {gold_found}g | total gold: {player['gold']}")
         print(f"You open the {target} and find {gold_found} gold coins inside!")
         print(f"You now have {player['gold']} gold.")
         return {
@@ -175,6 +187,7 @@ def handle_open(state, target) -> dict:
             "force_full_description": False
         }
 
+    debug(f"open '{target}': empty")
     print(f"You open the {target} but find nothing of value inside.")
     return {
         "room_states": room_states,
@@ -192,26 +205,26 @@ def handle_equip(state, target) -> dict:
         print(f"You don't have {target} in your inventory.")
         return {"force_full_description": False}
 
-    # Weapon
     if item_data.get("weapon_type"):
+        prev = player.get("equipped_weapon")
         player["equipped_weapon"] = target
+        debug(f"equip weapon: '{target}' ({item_data['weapon_type']}, {item_data['damage']} dmg) | replaced: {prev}")
         print(f"You equip the {target}. ({item_data['weapon_type']}, {item_data['damage']} damage)")
         return {"player": player, "force_full_description": False}
 
-    # Armour
     if item_data.get("armor_slot"):
         slot = item_data["armor_slot"]
         equipped_armor = dict(player.get("equipped_armor", {}))
-
-        # Unequip existing item in that slot
-        if slot in equipped_armor:
-            print(f"You remove the {equipped_armor[slot]}.")
-
+        prev = equipped_armor.get(slot)
+        if prev:
+            print(f"You remove the {prev}.")
         equipped_armor[slot] = target
         player["equipped_armor"] = equipped_armor
+        debug(f"equip armor: '{target}' → slot '{slot}' ({item_data['armor_rating']} rating) | replaced: {prev}")
         print(f"You equip the {target}. ({slot}, {item_data['armor_rating']} armor rating)")
         return {"player": player, "force_full_description": False}
 
+    debug(f"equip '{target}': not a weapon or armor")
     print(f"You can't equip the {target}.")
     return {"force_full_description": False}
 
@@ -219,19 +232,20 @@ def handle_unequip(state, target) -> dict:
     player = dict(state.get("player", {}))
     equipped_armor = dict(player.get("equipped_armor", {}))
 
-    # Check weapon
     if player.get("equipped_weapon") == target:
         player["equipped_weapon"] = None
+        debug(f"unequip weapon: '{target}'")
         print(f"You unequip the {target}.")
         return {"player": player, "force_full_description": False}
 
-    # Check armour slots
     for slot, item_name in equipped_armor.items():
         if item_name == target:
             del equipped_armor[slot]
             player["equipped_armor"] = equipped_armor
+            debug(f"unequip armor: '{target}' from slot '{slot}'")
             print(f"You remove the {target}.")
             return {"player": player, "force_full_description": False}
 
+    debug(f"unequip '{target}': not currently equipped")
     print(f"You don't have {target} equipped.")
     return {"force_full_description": False}

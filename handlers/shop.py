@@ -11,6 +11,7 @@ from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from prompts import GAME_SYSTEM_PROMPT, SHOP_SYSTEM_PROMPT
+from utils import debug
 
 def make_shop_tools(player: dict, shop_data: dict, shops: dict):
     """Create shop tools with current game state baked in."""
@@ -134,7 +135,9 @@ def handle_shop(state: dict, npc: dict, shops: dict, llm) -> dict:
         for tool_call in response.tool_calls:
             tool_fn = next((t for t in tools if t.name == tool_call["name"]), None)
             if tool_fn:
+                debug(f"shop tool: {tool_call['name']}({tool_call['args']})")
                 result = tool_fn.invoke(tool_call["args"])
+                debug(f"shop tool result: {result}")
                 history.append(ToolMessage(
                     content=str(result),
                     tool_call_id=tool_call["id"]
@@ -165,7 +168,9 @@ def handle_shop(state: dict, npc: dict, shops: dict, llm) -> dict:
             for tool_call in response.tool_calls:
                 tool_fn = next((t for t in tools if t.name == tool_call["name"]), None)
                 if tool_fn:
+                    debug(f"shop tool: {tool_call['name']}({tool_call['args']})")
                     result = tool_fn.invoke(tool_call["args"])
+                    debug(f"shop tool result: {result}")
                     history.append(ToolMessage(
                         content=str(result),
                         tool_call_id=tool_call["id"]
