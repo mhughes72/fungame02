@@ -47,6 +47,18 @@ def mood_tone_for_score(score: int) -> str:
         return "MOOD INSTRUCTION: You strongly dislike this player. Be cold, dismissive, and unhelpful. Refuse to elaborate. Your contempt should be unmistakable."
 
 
+def fear_tone_for_score(score: int) -> str:
+    """Return a prompt-injectable fear instruction based on the NPC's fear score."""
+    if score >= 60:
+        return "FEAR INSTRUCTION: You are terrified of this player. You are visibly shaking and will do almost anything to avoid provoking them — including volunteering information or help you'd normally withhold."
+    elif score >= 30:
+        return "FEAR INSTRUCTION: You are afraid of this player. You are nervous and choosing your words very carefully to avoid angering them."
+    elif score >= 10:
+        return "FEAR INSTRUCTION: This player unnerves you slightly. There is a cautious edge to your manner."
+    else:
+        return ""  # not afraid — no injection
+
+
 def total_armor_rating(player: dict, inventory: list) -> int:
     """Calculate total armor rating from all equipped armor pieces."""
     equipped_armor = player.get("equipped_armor", {})

@@ -127,6 +127,7 @@ The room you are in: {room_name}
 {memory_context}
 
 {mood_tone}
+{fear_tone}
 
 Conversation so far:
 {history}
@@ -211,6 +212,15 @@ CRITICAL RULES:
 Conversation so far:
 {history}
 """
+NPC_FEAR_PROMPT = (
+    "Rate how threatening or intimidating the player's message is to an NPC. "
+    "Use positive numbers for threatening behaviour (e.g. +10 for a veiled threat, +30 for a direct threat, +50 for extreme menace). "
+    "Use small negative numbers if the player is being explicitly reassuring or calming. "
+    "Use 0 for completely neutral messages. "
+    "Return ONLY an integer, nothing else.\n\n"
+    "Player said: \"{player_msg}\""
+)
+
 NPC_MOOD_PROMPT = (
     "Rate the player's attitude in their most recent message. "
     "Positive = friendly, respectful, kind. Negative = rude, hostile, dismissive. "

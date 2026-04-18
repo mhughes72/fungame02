@@ -28,12 +28,22 @@ def _mood_price_multiplier(mood_score: int) -> float:
         return 1.20
 
 
-def make_shop_tools(player: dict, shop_data: dict, shops: dict, mood_score: int = 0):
+def make_shop_tools(player: dict, shop_data: dict, shops: dict, mood_score: int = 0, fear_score: int = 0):
     """Create shop tools with current game state baked in."""
 
     stock = shop_data["stock"]
     sell_multiplier = shop_data.get("sell_multiplier", 0.5)
-    price_multiplier = _mood_price_multiplier(mood_score)
+    def _fear_price_multiplier(fear: int) -> float:
+        if fear >= 60:
+            return 0.70  # terrified — steep discount
+        elif fear >= 30:
+            return 0.82  # afraid — noticeable discount
+        elif fear >= 10:
+            return 0.93  # unnerved — slight discount
+        return 1.0
+
+    # Use whichever gives the lower price (best deal for the player)
+    price_multiplier = min(_mood_price_multiplier(mood_score), _fear_price_multiplier(fear_score))
 
     @tool
     def get_player_gold() -> str:
@@ -114,7 +124,7 @@ def make_shop_tools(player: dict, shop_data: dict, shops: dict, mood_score: int 
     return [get_player_gold, get_player_inventory, get_shop_stock, buy_item, sell_item]
 
 
-def handle_shop(state: dict, npc: dict, shops: dict, llm, npc_moods: dict = None) -> dict:
+def handle_shop(state: dict, npc: dict, shops: dict, llm, npc_moods: dict = None, npc_fear: dict = None) -> dict:
     """Run the merchant shop conversation with LangChain tools."""
     
     shop_id = npc.get("shop_id", "aldous")
@@ -129,9 +139,10 @@ def handle_shop(state: dict, npc: dict, shops: dict, llm, npc_moods: dict = None
     player["inventory"] = list(player.get("inventory", []))
 
     mood_score = (npc_moods or {}).get(npc["name"], 0)
-    debug(f"shop: mood for '{npc['name']}': {mood_score}")
+    fear_score = (npc_fear or {}).get(npc["name"], 0)
+    debug(f"shop: mood for '{npc['name']}': {mood_score} | fear: {fear_score}")
 
-    tools = make_shop_tools(player, shop_data, shops, mood_score)
+    tools = make_shop_tools(player, shop_data, shops, mood_score, fear_score)
     shop_llm = llm.bind_tools(tools)
 
     memories = retrieve_memories(npc["name"], "player background and past interactions")
@@ -215,5 +226,6 @@ def handle_shop(state: dict, npc: dict, shops: dict, llm, npc_moods: dict = None
     return {
         "player": player,
         "npc_moods": npc_moods or {},
+        "npc_fear": npc_fear or {},
         "force_full_description": False
     }
