@@ -78,11 +78,12 @@ def store_exchange(npc_name: str, player_msg: str, npc_reply: str, llm=None) -> 
 
     response = _get_mini_llm().invoke([
         SystemMessage(content=(
-            "Extract 1-2 facts about the player from this conversation exchange. "
+            "Extract ALL facts about the player from this conversation exchange. "
             "Only extract facts the player explicitly stated about themselves. "
+            "Capture every distinct fact — do not summarise or combine them. "
             "If there are no clear facts, return an empty array. "
             "Return ONLY a JSON array. "
-            'Example: ["Player\'s name is The King Dog", "Player likes peanut butter"]'
+            'Example: ["Player\'s name is Matthew", "Player likes dogs", "Player\'s nickname is Thomas"]'
         )),
         HumanMessage(content=exchange)
     ])
