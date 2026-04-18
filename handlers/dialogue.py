@@ -7,9 +7,19 @@
 import os
 from tavily import TavilyClient
 from langchain_core.messages import SystemMessage, HumanMessage
+from langchain_openai import ChatOpenAI
 from utils import invoke_with_system, debug
-from prompts import NPC_PROMPT, WEB_SEARCH_ROLEPLAY_PROMPT
+from prompts import NPC_PROMPT, WEB_SEARCH_ROLEPLAY_PROMPT, WEB_SEARCH_REQUIRED_PROMPT
 from npc_memory import store_exchange, retrieve_memories
+
+_router_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
+
+def _requires_web_search(player_msg: str, llm) -> bool:
+    from langchain_core.messages import HumanMessage, SystemMessage
+    response = _router_llm.invoke([
+        HumanMessage(content=WEB_SEARCH_REQUIRED_PROMPT.format(player_msg=player_msg))
+    ])
+    return response.content.strip().upper().startswith("YES")
 
 def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn) -> dict:
     from handlers.shop import handle_shop
@@ -61,24 +71,39 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn) -> dict:
             memory_context = ""
 
         if use_web_search:
-            debug(f"dialogue: web search query: '{player_msg}'")
-            search_result = tavily_client.search(player_msg)
-            raw_facts = "\n".join([r["content"] for r in search_result["results"]])
-            debug(f"dialogue: web search returned {len(search_result['results'])} results")
+            needs_search = _requires_web_search(player_msg, llm)
+            debug(f"dialogue: web search required: {needs_search}")
 
-            roleplay_prompt = WEB_SEARCH_ROLEPLAY_PROMPT.format(
-                npc_name=npc["name"],
-                personality=npc["personality"],
-                knowledge=npc["knowledge"],
-                memory_context=memory_context,
-                player_msg=player_msg,
-                raw_facts=raw_facts,
-                history=chr(10).join(history),
-            )
-            reply = invoke_with_system(llm, [
-                SystemMessage(content=roleplay_prompt),
-                HumanMessage(content="Respond in character now.")
-            ]).content
+            if needs_search:
+                debug(f"dialogue: web search query: '{player_msg}'")
+                search_result = tavily_client.search(player_msg)
+                raw_facts = "\n".join([r["content"] for r in search_result["results"]])
+                debug(f"dialogue: web search returned {len(search_result['results'])} results")
+
+                roleplay_prompt = WEB_SEARCH_ROLEPLAY_PROMPT.format(
+                    npc_name=npc["name"],
+                    personality=npc["personality"],
+                    knowledge=npc["knowledge"],
+                    memory_context=memory_context,
+                    player_msg=player_msg,
+                    raw_facts=raw_facts,
+                    history=chr(10).join(history),
+                )
+                reply = invoke_with_system(llm, [
+                    SystemMessage(content=roleplay_prompt),
+                    HumanMessage(content="Respond in character now.")
+                ]).content
+            else:
+                prompt = NPC_PROMPT.invoke({
+                    "npc_name": npc["name"],
+                    "personality": npc["personality"],
+                    "knowledge": npc["knowledge"],
+                    "room_name": room["name"],
+                    "memory_context": memory_context,
+                    "history": "\n".join(history),
+                    "player_input": player_msg,
+                })
+                reply = str(invoke_with_system(llm, prompt).content)
 
         else:
             prompt = NPC_PROMPT.invoke({

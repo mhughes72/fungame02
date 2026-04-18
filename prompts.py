@@ -164,6 +164,13 @@ To check your gold, say 'how much gold do I have'
 When the player says goodbye or is done, end with exactly: [END CONVERSATION]
 """
 
+WEB_SEARCH_REQUIRED_PROMPT = (
+    "Does answering this question require searching for current real-world information "
+    "(news, facts, events, people, dates, places) or can it be answered from personal "
+    "context and conversation history alone? Reply with just YES or NO.\n\n"
+    "Question: {player_msg}"
+)
+
 WEB_SEARCH_ROLEPLAY_PROMPT = """You are {npc_name}, a character in a gothic text adventure game who has mystical awareness of the outside world.
 
 Personality: {personality}
