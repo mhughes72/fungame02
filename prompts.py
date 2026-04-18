@@ -214,6 +214,18 @@ CRITICAL RULES:
 Conversation so far:
 {history}
 """
+NPC_BRIBE_BOOST_PROMPT = (
+    "An NPC in a gothic text adventure has just been given {amount} gold coins by the player.\n"
+    "NPC personality: {personality}\n"
+    "NPC's current mood toward the player (scale -100 to +100): {current_mood}\n\n"
+    "Rate how much this changes the NPC's mood toward the player as an integer.\n"
+    "Consider: is this amount generous or insulting for this character? "
+    "A proud scholar may care little for money; a greedy merchant may be very moved. "
+    "A hostile NPC may be less swayed than a neutral one. "
+    "Use 0 if the NPC is offended or unmoved. Use negative if it backfires.\n"
+    "Return ONLY an integer, nothing else."
+)
+
 NPC_BRIBE_PROMPT = """You are {npc_name} in a dark gothic text adventure game.
 Personality: {personality}
 

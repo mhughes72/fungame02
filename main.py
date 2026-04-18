@@ -332,7 +332,7 @@ def resolve_action(state: AgentState) -> dict:
         "win": lambda: trigger_win(state),
         "unlock": lambda: handle_unlock(state, target),
         "help": lambda: handle_help(),
-        "bribe":     lambda: handle_bribe(state, target or "", command.get("amount", 10), llm),
+        "bribe":     lambda: handle_bribe(state, target or "", command.get("amount", 10), llm, mini_llm),
         "clearmemory": lambda: (clear_all_memories() or print("[NPC memories cleared.]")) or {"force_full_description": False},
 
     }
