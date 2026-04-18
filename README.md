@@ -8,7 +8,9 @@ find hidden items, trade with merchants, and converse with mysterious NPCs
 ## Tech Stack
 
 - **LangGraph** — game loop and state management
-- **LangChain + OpenAI GPT-4o** — natural language command parsing, room descriptions, NPC dialogue, combat narration
+- **LangChain + OpenAI GPT-4o** — room descriptions, NPC dialogue, win narration
+- **OpenAI GPT-4o-mini** — command parsing, combat narration, item examination, shop, NPC memory operations
+- **Pinecone** — vector database for NPC memory (RAG)
 - **Tavily** — real-time web search for the Oracle NPC
 - **ElevenLabs** — text to speech (currently disabled)
 - **Python 3.10+**
@@ -74,11 +76,13 @@ pip install -r requirements.txt
 ```
 OPENAI_API_KEY=your-openai-api-key-here
 TAVILY_API_KEY=your-tavily-api-key-here
+PINECONE_API_KEY=your-pinecone-api-key-here
 ```
 
 **Getting API keys:**
 - OpenAI: https://platform.openai.com → API Keys
 - Tavily: https://tavily.com → Sign up free
+- Pinecone: https://pinecone.io → Sign up free → Create index named `fungame-npc-memory` (dimensions: 1536, metric: cosine)
 
 ### 5. Run the game
 ```bash
@@ -172,6 +176,20 @@ Some exits are locked and require a specific key. Use `unlock [direction]` to un
 ### NPCs
 Several NPCs can be found throughout the mansion. Regular NPCs engage in conversation powered by GPT-4o. The Oracle has real-time web search capability via Tavily. Aldous the Peddler runs a shop where you can buy weapons, armour, and health potions using LangChain tools for actual transactions.
 
+### NPC Memory
+NPCs remember what you tell them across conversations using a RAG (Retrieval-Augmented Generation) pipeline backed by Pinecone.
+
+**How it works:**
+1. After each exchange, key facts about the player are extracted by GPT-4o-mini and stored as vector embeddings in Pinecone, in a separate namespace per NPC
+2. At each player message, the query is rewritten as a factual statement (HyDE — Hypothetical Document Embeddings) to improve semantic search accuracy, then the top matching memories are retrieved
+3. Retrieved memories are injected into the NPC's prompt so they can reference past conversations naturally
+
+**Example:** Tell Professor Aldric your name in one session, come back later and ask "do you know who I am?" — he'll remember.
+
+**Memory is wiped at the start of every new game.** Use the `clearmemory` debug command to wipe manually mid-session.
+
+The Oracle uses an additional routing step — a cheap LLM call determines whether a question requires a live web search (current events, facts, news) or can be answered from memory and conversation context alone, saving Tavily API credits on personal questions.
+
 ### Health Potions
 Health potions restore a set amount of health when used. Different potions restore different amounts. They can be found in rooms or purchased from Aldous.
 
@@ -204,6 +222,8 @@ State is stored in `AgentState` which tracks:
 - **Room state overrides** — base room data lives in JSON, changes (items taken, monsters wounded, doors unlocked) are stored as overrides in game state
 - **LangChain tools for the shop** — Aldous uses an agentic tool-calling loop to process real transactions in character
 - **Two-step web search** — the Oracle uses Tavily for raw facts then GPT-4o to deliver them in character
+- **NPC memory via RAG** — facts extracted per exchange, embedded and stored in Pinecone per NPC namespace, retrieved via HyDE-rewritten semantic search
+- **Dynamic web search routing** — the Oracle decides per message whether a question requires a live web search or can be answered from memory
 - **Aggressive monsters** — some monsters auto-attack on room entry and block progress until defeated
 - **Persistent monster health** — wounded monsters retain their health between encounters
 

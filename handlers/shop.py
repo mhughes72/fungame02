@@ -12,6 +12,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from prompts import GAME_SYSTEM_PROMPT, SHOP_SYSTEM_PROMPT
 from utils import debug
+from npc_memory import store_exchange, retrieve_memories
 
 def make_shop_tools(player: dict, shop_data: dict, shops: dict):
     """Create shop tools with current game state baked in."""
@@ -114,10 +115,16 @@ def handle_shop(state: dict, npc: dict, shops: dict, llm) -> dict:
     tools = make_shop_tools(player, shop_data, shops)
     shop_llm = llm.bind_tools(tools)
 
+    memories = retrieve_memories(npc["name"], "player background and past interactions")
+    memory_context = ""
+    if memories:
+        memory_context = "\nWhat you already know about this player:\n" + "\n".join(f"- {m}" for m in memories)
+        debug(f"shop: injecting {len(memories)} memories for '{npc['name']}'")
+
     system_prompt = SHOP_SYSTEM_PROMPT.format(
         npc_name=npc["name"],
         personality=npc["personality"],
-    )
+    ) + memory_context
 
     print(f"\n{npc['name']}: \"{npc['description']}\"")
     print("(Type 'goodbye' to leave the shop)\n")
@@ -181,6 +188,7 @@ def handle_shop(state: dict, npc: dict, shops: dict, llm) -> dict:
         clean_reply = reply.replace("[END CONVERSATION]", "").strip()
 
         print(f"\n{npc['name']}: {clean_reply}\n")
+        store_exchange(npc["name"], player_msg, clean_reply)
 
         if end_conversation:
             break

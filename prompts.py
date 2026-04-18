@@ -70,6 +70,7 @@ Rules:
 - If the player types "win", set action to "win" and target to null.
 - If the player wants to unlock a door or exit (unlock, open door), set action to "unlock" and target to the direction (e.g. "north", "down").
 - If the player types "help", "commands", or "what can I do", set action to "help" and target to null.
+- If the player types "clearmemory", set action to "clearmemory" and target to null.
 
 
 Respond with ONLY raw JSON, no markdown, no explanation.
@@ -123,13 +124,15 @@ Your personality: {personality}
 Your knowledge: {knowledge}
 The room you are in: {room_name}
 
+{memory_context}
+
 Conversation so far:
 {history}
 
 Player says: {player_input}
 
-Respond in character. Be concise — 2-4 sentences. 
-If the player tries to end the conversation (says goodbye, leave, exit, done, etc.) 
+Respond in character. Be concise — 2-4 sentences.
+If the player tries to end the conversation (says goodbye, leave, exit, done, etc.)
 end your response with exactly: [END CONVERSATION]
 """)
 
@@ -161,10 +164,19 @@ To check your gold, say 'how much gold do I have'
 When the player says goodbye or is done, end with exactly: [END CONVERSATION]
 """
 
+WEB_SEARCH_REQUIRED_PROMPT = (
+    "Does answering this question require searching for current real-world information "
+    "(news, facts, events, people, dates, places) or can it be answered from personal "
+    "context and conversation history alone? Reply with just YES or NO.\n\n"
+    "Question: {player_msg}"
+)
+
 WEB_SEARCH_ROLEPLAY_PROMPT = """You are {npc_name}, a character in a gothic text adventure game who has mystical awareness of the outside world.
 
 Personality: {personality}
 Knowledge: {knowledge}
+
+{memory_context}
 
 The player asked: "{player_msg}"
 
@@ -186,6 +198,25 @@ CRITICAL RULES:
 Conversation so far:
 {history}
 """
+NPC_MEMORY_HYDE_PROMPT = (
+    "You are helping search a memory database of facts about a player. "
+    "The player is speaking to {npc_name}. "
+    "Rewrite the player's message as a short factual statement that a matching memory might contain. "
+    "Replace pronouns like 'you' and 'your' with the NPC's actual name. "
+    "Correct any typos. Return ONLY the statement, nothing else. "
+    'Examples: "wht is my name" → "Player\'s name is [name]" | '
+    '"what do I think of you?" (talking to Aldric) → "Player\'s opinion of Professor Aldric is [opinion]"'
+)
+
+NPC_MEMORY_EXTRACT_PROMPT = (
+    "Extract ALL facts about the player from this conversation exchange. "
+    "Only extract facts the player explicitly stated about themselves. "
+    "Capture every distinct fact — do not summarise or combine them. "
+    "If there are no clear facts, return an empty array. "
+    "Return ONLY a JSON array. "
+    'Example: ["Player\'s name is Matthew", "Player likes dogs", "Player\'s nickname is Thomas"]'
+)
+
 NPC_EMAIL_PROMPT = """You are {npc_name} in a gothic text adventure game.
 Personality: {personality}
 
