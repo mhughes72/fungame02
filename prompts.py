@@ -189,6 +189,25 @@ CRITICAL RULES:
 Conversation so far:
 {history}
 """
+NPC_MEMORY_HYDE_PROMPT = (
+    "You are helping search a memory database of facts about a player. "
+    "The player is speaking to {npc_name}. "
+    "Rewrite the player's message as a short factual statement that a matching memory might contain. "
+    "Replace pronouns like 'you' and 'your' with the NPC's actual name. "
+    "Correct any typos. Return ONLY the statement, nothing else. "
+    'Examples: "wht is my name" → "Player\'s name is [name]" | '
+    '"what do I think of you?" (talking to Aldric) → "Player\'s opinion of Professor Aldric is [opinion]"'
+)
+
+NPC_MEMORY_EXTRACT_PROMPT = (
+    "Extract ALL facts about the player from this conversation exchange. "
+    "Only extract facts the player explicitly stated about themselves. "
+    "Capture every distinct fact — do not summarise or combine them. "
+    "If there are no clear facts, return an empty array. "
+    "Return ONLY a JSON array. "
+    'Example: ["Player\'s name is Matthew", "Player likes dogs", "Player\'s nickname is Thomas"]'
+)
+
 NPC_EMAIL_PROMPT = """You are {npc_name} in a gothic text adventure game.
 Personality: {personality}
 

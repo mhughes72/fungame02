@@ -5,6 +5,7 @@ from pinecone import Pinecone, ServerlessSpec
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from utils import debug
+from prompts import NPC_MEMORY_HYDE_PROMPT, NPC_MEMORY_EXTRACT_PROMPT
 
 
 INDEX_NAME = "fungame-npc-memory"
@@ -77,14 +78,7 @@ def store_exchange(npc_name: str, player_msg: str, npc_reply: str, llm=None) -> 
     exchange = f"Player: {player_msg}\n{npc_name}: {npc_reply}"
 
     response = _get_mini_llm().invoke([
-        SystemMessage(content=(
-            "Extract ALL facts about the player from this conversation exchange. "
-            "Only extract facts the player explicitly stated about themselves. "
-            "Capture every distinct fact — do not summarise or combine them. "
-            "If there are no clear facts, return an empty array. "
-            "Return ONLY a JSON array. "
-            'Example: ["Player\'s name is Matthew", "Player likes dogs", "Player\'s nickname is Thomas"]'
-        )),
+        SystemMessage(content=NPC_MEMORY_EXTRACT_PROMPT),
         HumanMessage(content=exchange)
     ])
 
@@ -107,17 +101,8 @@ def store_exchange(npc_name: str, player_msg: str, npc_reply: str, llm=None) -> 
 
 def _hyde_rewrite(query: str, npc_name: str = "") -> str:
     """Rewrite player input as a factual statement for better embedding similarity against stored memories."""
-    context = f"The player is speaking to {npc_name}. " if npc_name else ""
     response = _get_mini_llm().invoke([
-        SystemMessage(content=(
-            f"{context}"
-            "You are helping search a memory database of facts about a player. "
-            "Rewrite the player's message as a short factual statement that a matching memory might contain. "
-            "Replace pronouns like 'you' and 'your' with the NPC's actual name. "
-            "Correct any typos. Return ONLY the statement, nothing else. "
-            'Examples: "wht is my name" → "Player\'s name is [name]" | '
-            '"what do I think of you?" (talking to Aldric) → "Player\'s opinion of Professor Aldric is [opinion]"'
-        )),
+        SystemMessage(content=NPC_MEMORY_HYDE_PROMPT.format(npc_name=npc_name or "the NPC")),
         HumanMessage(content=query)
     ])
     rewritten = response.content.strip()
