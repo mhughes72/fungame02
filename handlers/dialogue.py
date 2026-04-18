@@ -9,7 +9,7 @@ from tavily import TavilyClient
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_openai import ChatOpenAI
 from utils import invoke_with_system, debug, mood_tone_for_score, fear_tone_for_score
-from prompts import NPC_PROMPT, WEB_SEARCH_ROLEPLAY_PROMPT, WEB_SEARCH_REQUIRED_PROMPT, WEB_SEARCH_REFUSED_PROMPT, NPC_BRIBE_PROMPT, NPC_BRIBE_BOOST_PROMPT
+from prompts import GAME_SYSTEM_PROMPT, NPC_PROMPT, WEB_SEARCH_ROLEPLAY_PROMPT, WEB_SEARCH_REQUIRED_PROMPT, WEB_SEARCH_REFUSED_PROMPT, NPC_BRIBE_PROMPT, NPC_BRIBE_BOOST_PROMPT
 from npc_memory import store_exchange, retrieve_memories, evaluate_mood_delta, evaluate_fear_delta
 
 _router_llm = None
@@ -23,6 +23,27 @@ def _requires_web_search(player_msg: str, llm) -> bool:
         HumanMessage(content=WEB_SEARCH_REQUIRED_PROMPT.format(player_msg=player_msg))
     ])
     return response.content.strip().upper().startswith("YES")
+
+def _invoke_npc(llm, npc, room, memory_context, history, player_msg, mood_tone, fear_tone):
+    """Invoke NPC response with mood/fear injected into the system message."""
+    system = GAME_SYSTEM_PROMPT
+    if mood_tone:
+        system += f"\n\n{mood_tone}"
+    if fear_tone:
+        system += f"\n{fear_tone}"
+
+    prompt = NPC_PROMPT.invoke({
+        "npc_name": npc["name"],
+        "personality": npc["personality"],
+        "knowledge": npc["knowledge"],
+        "room_name": room["name"],
+        "memory_context": memory_context,
+        "history": "\n".join(history),
+        "player_input": player_msg,
+    })
+    messages = prompt.to_messages()
+    return llm.invoke([SystemMessage(content=system)] + messages)
+
 
 def handle_bribe(state: dict, target: str, amount: int, llm, mini_llm) -> dict:
     room = state["current_room_data"]
@@ -199,32 +220,10 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn) -> dict:
                     HumanMessage(content="Respond in character now.")
                 ]).content
             else:
-                prompt = NPC_PROMPT.invoke({
-                    "npc_name": npc["name"],
-                    "personality": npc["personality"],
-                    "knowledge": npc["knowledge"],
-                    "room_name": room["name"],
-                    "memory_context": memory_context,
-                    "mood_tone": mood_tone,
-                    "fear_tone": fear_tone,
-                    "history": "\n".join(history),
-                    "player_input": player_msg,
-                })
-                reply = str(invoke_with_system(llm, prompt).content)
+                reply = str(_invoke_npc(llm, npc, room, memory_context, history, player_msg, mood_tone, fear_tone).content)
 
         else:
-            prompt = NPC_PROMPT.invoke({
-                "npc_name": npc["name"],
-                "personality": npc["personality"],
-                "knowledge": npc["knowledge"],
-                "room_name": room["name"],
-                "memory_context": memory_context,
-                "mood_tone": mood_tone,
-                "fear_tone": fear_tone,
-                "history": "\n".join(history),
-                "player_input": player_msg,
-            })
-            reply = str(invoke_with_system(llm, prompt).content)
+            reply = str(_invoke_npc(llm, npc, room, memory_context, history, player_msg, mood_tone, fear_tone).content)
 
         end_conversation = "[END CONVERSATION]" in reply
         clean_reply = reply.replace("[END CONVERSATION]", "").strip()
