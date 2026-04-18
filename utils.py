@@ -33,6 +33,20 @@ def invoke_with_system(llm, prompt):
 
     return llm.invoke([SystemMessage(content=GAME_SYSTEM_PROMPT)] + messages)
 
+def mood_tone_for_score(score: int) -> str:
+    """Return a prompt-injectable mood description based on the NPC's mood score."""
+    if score >= 50:
+        return "Current mood toward player: This NPC is genuinely fond of the player. They are warm, forthcoming, and eager to help."
+    elif score >= 20:
+        return "Current mood toward player: This NPC views the player favorably. They are cooperative and pleasant."
+    elif score >= -19:
+        return ""  # neutral — no injection
+    elif score >= -50:
+        return "Current mood toward player: This NPC is wary of the player. They are guarded and curt."
+    else:
+        return "Current mood toward player: This NPC dislikes the player. They are cold, dismissive, and reluctant to help."
+
+
 def total_armor_rating(player: dict, inventory: list) -> int:
     """Calculate total armor rating from all equipped armor pieces."""
     equipped_armor = player.get("equipped_armor", {})

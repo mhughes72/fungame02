@@ -8,9 +8,9 @@ import os
 from tavily import TavilyClient
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_openai import ChatOpenAI
-from utils import invoke_with_system, debug
+from utils import invoke_with_system, debug, mood_tone_for_score
 from prompts import NPC_PROMPT, WEB_SEARCH_ROLEPLAY_PROMPT, WEB_SEARCH_REQUIRED_PROMPT
-from npc_memory import store_exchange, retrieve_memories
+from npc_memory import store_exchange, retrieve_memories, evaluate_mood_delta
 
 _router_llm = None
 
@@ -46,7 +46,8 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn) -> dict:
     debug(f"dialogue: talking to '{npc['name']}' | shop: {npc.get('shop_id')} | web_search: {npc.get('can_search_web', False)}")
 
     if npc.get("shop_id"):
-        return handle_shop(state, npc, SHOPS, mini_llm)
+        npc_moods = dict(state.get("npc_moods", {}))
+        return handle_shop(state, npc, SHOPS, mini_llm, npc_moods)
 
     print(f"\n{npc['name']}: \"{npc['description']}\"")
     print("(Type 'goodbye' or 'leave' to end the conversation)\n")
@@ -57,6 +58,10 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn) -> dict:
     history = []
     exit_words = ["goodbye", "bye", "leave", "exit", "done", "farewell", "stop"]
 
+    npc_moods = dict(state.get("npc_moods", {}))
+    current_mood = npc_moods.get(npc["name"], 0)
+    debug(f"dialogue: mood for '{npc['name']}': {current_mood}")
+
     while True:
         player_msg = input("You: ").strip()
         history.append(f"Player: {player_msg}")
@@ -65,6 +70,12 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn) -> dict:
             print(f"({npc['name']} turns away.)")
             break
 
+        # Evaluate attitude and update mood
+        delta = evaluate_mood_delta(player_msg)
+        current_mood = max(-100, min(100, current_mood + delta))
+        npc_moods[npc["name"]] = current_mood
+        debug(f"dialogue: mood delta for '{npc['name']}': {delta:+d} → total: {current_mood}")
+
         # Retrieve memories relevant to this specific message
         memories = retrieve_memories(npc["name"], player_msg)
         if memories:
@@ -72,6 +83,8 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn) -> dict:
             debug(f"dialogue: injecting {len(memories)} memories for '{npc['name']}'")
         else:
             memory_context = ""
+
+        mood_tone = mood_tone_for_score(current_mood)
 
         if use_web_search:
             needs_search = _requires_web_search(player_msg, llm)
@@ -103,6 +116,7 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn) -> dict:
                     "knowledge": npc["knowledge"],
                     "room_name": room["name"],
                     "memory_context": memory_context,
+                    "mood_tone": mood_tone,
                     "history": "\n".join(history),
                     "player_input": player_msg,
                 })
@@ -115,6 +129,7 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn) -> dict:
                 "knowledge": npc["knowledge"],
                 "room_name": room["name"],
                 "memory_context": memory_context,
+                "mood_tone": mood_tone,
                 "history": "\n".join(history),
                 "player_input": player_msg,
             })
@@ -133,4 +148,4 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn) -> dict:
             print(f"({npc['name']} turns away.)")
             break
 
-    return {"force_full_description": False}
+    return {"npc_moods": npc_moods, "force_full_description": False}
