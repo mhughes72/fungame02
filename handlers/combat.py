@@ -5,7 +5,7 @@
 # armor reduction, weakness bonuses, and monster drop handling.
 
 import random
-from utils import invoke_with_system, total_armor_rating
+from utils import invoke_with_system, total_armor_rating, debug
 from prompts import COMBAT_PROMPT, FLEE_PROMPT
 
 def combat_node(state, ROOMS, llm) -> dict:
@@ -56,7 +56,7 @@ def combat_node(state, ROOMS, llm) -> dict:
 
             if success:
                 previous_room = state.get("previous_room_id")
-                print(f"[DEBUG] Fleeing to previous room: {previous_room}")
+                debug(f"Fleeing to previous room: {previous_room}")
 
                 # Save wounded monster back to room state
                 updated_monsters = []

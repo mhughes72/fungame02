@@ -25,7 +25,7 @@ from prompts import (
     GAME_SYSTEM_PROMPT, SHOP_SYSTEM_PROMPT, WIN_PROMPT
 )
 
-from utils import invoke_with_system, find_item, visible_items, total_armor_rating
+from utils import invoke_with_system, find_item, visible_items, total_armor_rating, debug
 from handlers import (
     handle_go, handle_take, handle_examine, handle_open,
     handle_equip, handle_unequip, handle_use,
@@ -218,7 +218,7 @@ def describe_room(state: AgentState) -> dict:
 
 def check_aggressive(state: AgentState) -> dict:
     # Skip aggressive check if player just fled
-    print(f"[DEBUG] check_aggressive — just_fled: {state.get('just_fled')}")
+    debug(f"check_aggressive — just_fled: {state.get('just_fled')}")
     if state.get("just_fled"):
         return {"route_to": None, "just_fled": False}
     
@@ -281,10 +281,10 @@ def parse_command(player_input: str, state: AgentState) -> dict:
                 text = text[4:]
         text = text.strip()
         parsed = json.loads(text)
-        print(f"[DEBUG] Parsed command: {parsed}")
+        debug(f"Parsed command: {parsed}")
         return parsed
     except Exception as e:
-        print(f"[DEBUG] Parse error: {e}, raw response: {response.content}")
+        debug(f"Parse error: {e}, raw response: {response.content}")
         return {"action": "unknown", "target": None}
 
 
@@ -297,15 +297,15 @@ def resolve_action(state: AgentState) -> dict:
     if player_input.startswith("goto "):
         target_room = player_input.split(" ")[1].strip()
         if target_room in ROOMS:
-            print(f"[DEBUG] Teleporting to {target_room}")
+            debug(f"Teleporting to {target_room}")
             return {"current_room_id": target_room, "force_full_description": True}
-        print(f"[DEBUG] Room '{target_room}' not found.")
+        debug(f"Room '{target_room}' not found.")
         return {"force_full_description": False}
 
     command = parse_command(player_input, state)
     action = command.get("action", "unknown")
     target = command.get("target")
-    print(f"\n[Input: '{player_input}' → action: '{action}', target: '{target}']")
+    debug(f"Input: '{player_input}' → action: '{action}', target: '{target}'")
 
     handlers = {
         "go":        lambda: handle_go(state, target),

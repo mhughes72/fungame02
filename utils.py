@@ -6,6 +6,12 @@
 from langchain_core.messages import SystemMessage
 from prompts import GAME_SYSTEM_PROMPT
 
+DEBUG = True
+
+def debug(msg):
+    if DEBUG:
+        print(f"[DEBUG] {msg}")
+
 def visible_items(room):
     return [i for i in room["items"] if not i["hidden"]]
 
