@@ -70,6 +70,7 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn) -> dict:
                 npc_name=npc["name"],
                 personality=npc["personality"],
                 knowledge=npc["knowledge"],
+                memory_context=memory_context,
                 player_msg=player_msg,
                 raw_facts=raw_facts,
                 history=chr(10).join(history),

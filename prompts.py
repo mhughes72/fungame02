@@ -169,6 +169,8 @@ WEB_SEARCH_ROLEPLAY_PROMPT = """You are {npc_name}, a character in a gothic text
 Personality: {personality}
 Knowledge: {knowledge}
 
+{memory_context}
+
 The player asked: "{player_msg}"
 
 You have just perceived the following facts through your mystical awareness:
