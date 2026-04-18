@@ -117,6 +117,7 @@ class AgentState(TypedDict):
     game_won: NotRequired[bool]
     previous_room_id: NotRequired[str]
     just_fled: NotRequired[bool]
+    npc_moods: NotRequired[Dict[str, int]]
 
 
 
@@ -423,6 +424,7 @@ initial_state_1 = AgentState(
 # Testing state — fully loaded
 initial_state_1 = AgentState(
     current_room_id="room_1",
+    npc_moods={},
     player={
         "inventory": [
             {"name": "golden sword",   "hidden": False, "revealed_by": None, "openable": False, "is_open": False, "gold": 0, "damage": 25, "weapon_type": "blade",  "armor_slot": None,     "armor_rating": 0, "heal_amount": 0},
