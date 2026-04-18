@@ -5,6 +5,7 @@
 # and routing to the merchant shop for NPCs with a shop_id.
 
 import os
+import re
 from tavily import TavilyClient
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_openai import ChatOpenAI
@@ -27,10 +28,15 @@ def _requires_web_search(player_msg: str, llm) -> bool:
 def _invoke_npc(llm, npc, room, memory_context, history, player_msg, mood_tone, fear_tone):
     """Invoke NPC response with mood/fear injected into the system message."""
     system = GAME_SYSTEM_PROMPT
+    overrides = []
     if mood_tone:
-        system += f"\n\n{mood_tone}"
+        overrides.append(mood_tone)
     if fear_tone:
-        system += f"\n{fear_tone}"
+        overrides.append(fear_tone)
+    if overrides:
+        system += "\n\nBEHAVIORAL OVERRIDES — these supersede personality and must be reflected in every sentence:\n" + "\n".join(overrides)
+
+    debug(f"npc system tail: ...{system[-200:]!r}")
 
     prompt = NPC_PROMPT.invoke({
         "npc_name": npc["name"],
@@ -144,6 +150,7 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn) -> dict:
     npc_fear = dict(state.get("npc_fear", {}))
     current_mood = npc_moods.get(npc["name"], 0)
     current_fear = npc_fear.get(npc["name"], 0)
+    player = dict(state.get("player", {}))
     debug(f"dialogue: mood for '{npc['name']}': {current_mood} | fear: {current_fear}")
 
     while True:
@@ -153,6 +160,48 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn) -> dict:
         if any(word in player_msg.lower() for word in exit_words):
             print(f"({npc['name']} turns away.)")
             break
+
+        # Detect bribe inside conversation
+        bribe_match = re.search(r'\b(?:give|offer|bribe|pay)\b.*?(\d+)\s*gold', player_msg.lower())
+        if bribe_match:
+            amount = int(bribe_match.group(1))
+            gold = player.get("gold", 0)
+            if gold < amount:
+                print(f"You only have {gold} gold.")
+                history.pop()
+                continue
+            player["gold"] = gold - amount
+            boost_response = mini_llm.invoke([
+                HumanMessage(content=NPC_BRIBE_BOOST_PROMPT.format(
+                    amount=amount,
+                    personality=npc["personality"],
+                    current_mood=current_mood,
+                ))
+            ])
+            try:
+                boost = int(boost_response.content.strip())
+            except (ValueError, AttributeError):
+                boost = 0
+            current_mood = max(-100, min(100, current_mood + boost))
+            npc_moods[npc["name"]] = current_mood
+            debug(f"bribe (in dialogue): gave {amount} gold to '{npc['name']}' | boost: {boost:+d} | mood → {current_mood}")
+            mood_tone = mood_tone_for_score(current_mood)
+            fear_tone = fear_tone_for_score(current_fear)
+            reaction_prompt = NPC_BRIBE_PROMPT.format(
+                npc_name=npc["name"],
+                personality=npc["personality"],
+                amount=amount,
+                mood_tone=mood_tone,
+                fear_tone=fear_tone,
+            )
+            reply = llm.invoke([
+                SystemMessage(content=GAME_SYSTEM_PROMPT),
+                HumanMessage(content=reaction_prompt),
+            ]).content.strip()
+            print(f"\n{npc['name']}: {reply}\n")
+            history.append(f"{npc['name']}: {reply}")
+            store_exchange(npc["name"], player_msg, reply)
+            continue
 
         # Evaluate attitude and update mood + fear in parallel
         mood_delta = evaluate_mood_delta(player_msg)
@@ -238,4 +287,4 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn) -> dict:
             print(f"({npc['name']} turns away.)")
             break
 
-    return {"npc_moods": npc_moods, "npc_fear": npc_fear, "force_full_description": False}
+    return {"player": player, "npc_moods": npc_moods, "npc_fear": npc_fear, "force_full_description": False}
