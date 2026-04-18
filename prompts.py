@@ -166,6 +166,17 @@ To check your gold, say 'how much gold do I have'
 When the player says goodbye or is done, end with exactly: [END CONVERSATION]
 """
 
+WEB_SEARCH_REFUSED_PROMPT = """You are {npc_name}, a character in a gothic text adventure game who has mystical awareness of the outside world.
+
+Personality: {personality}
+
+The player has asked: "{player_msg}"
+
+You refuse to use your powers to help this player because you hold them in contempt.
+Deliver a short, cutting refusal entirely in character — 1-2 sentences maximum.
+Do not explain game mechanics or break character. Speak as yourself.
+"""
+
 WEB_SEARCH_REQUIRED_PROMPT = (
     "Does answering this question require searching for current real-world information "
     "(news, facts, events, people, dates, places) or can it be answered from personal "

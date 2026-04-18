@@ -9,7 +9,7 @@ from tavily import TavilyClient
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_openai import ChatOpenAI
 from utils import invoke_with_system, debug, mood_tone_for_score
-from prompts import NPC_PROMPT, WEB_SEARCH_ROLEPLAY_PROMPT, WEB_SEARCH_REQUIRED_PROMPT
+from prompts import NPC_PROMPT, WEB_SEARCH_ROLEPLAY_PROMPT, WEB_SEARCH_REQUIRED_PROMPT, WEB_SEARCH_REFUSED_PROMPT
 from npc_memory import store_exchange, retrieve_memories, evaluate_mood_delta
 
 _router_llm = None
@@ -87,6 +87,27 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn) -> dict:
         mood_tone = mood_tone_for_score(current_mood)
 
         if use_web_search:
+            if current_mood <= -30:
+                debug(f"dialogue: web search blocked — mood too low ({current_mood})")
+                refusal_prompt = WEB_SEARCH_REFUSED_PROMPT.format(
+                    npc_name=npc["name"],
+                    personality=npc["personality"],
+                    player_msg=player_msg,
+                )
+                reply = invoke_with_system(llm, [
+                    SystemMessage(content=refusal_prompt),
+                    HumanMessage(content="Refuse in character now.")
+                ]).content
+                end_conversation = "[END CONVERSATION]" in reply
+                clean_reply = reply.replace("[END CONVERSATION]", "").strip()
+                print(f"\n{npc['name']}: {clean_reply}\n")
+                history.append(f"{npc['name']}: {clean_reply}")
+                store_exchange(npc["name"], player_msg, clean_reply)
+                if end_conversation:
+                    print(f"({npc['name']} turns away.)")
+                    break
+                continue
+
             needs_search = _requires_web_search(player_msg, llm)
             debug(f"dialogue: web search required: {needs_search}")
 
