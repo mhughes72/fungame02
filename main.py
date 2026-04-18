@@ -26,6 +26,7 @@ from prompts import (
 )
 
 from utils import invoke_with_system, find_item, visible_items, total_armor_rating, debug
+from npc_memory import clear_all_memories
 from handlers import (
     handle_go, handle_take, handle_examine, handle_open,
     handle_equip, handle_unequip, handle_use,
@@ -328,6 +329,7 @@ def resolve_action(state: AgentState) -> dict:
         "win": lambda: trigger_win(state),
         "unlock": lambda: handle_unlock(state, target),
         "help": lambda: handle_help(),
+        "clearmemory": lambda: (clear_all_memories() or print("[NPC memories cleared.]")) or {"force_full_description": False},
 
     }
 
@@ -444,6 +446,7 @@ initial_state_1 = AgentState(
     }
 )
 
+clear_all_memories()
 app.invoke(initial_state_1)
 
 # Draw the graph

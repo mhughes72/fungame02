@@ -37,6 +37,23 @@ def _namespace(npc_name: str) -> str:
 def _embeddings():
     return OpenAIEmbeddings(model=EMBEDDING_MODEL)
 
+def clear_all_memories() -> None:
+    """Wipe all NPC memories from Pinecone. Called at game start for a fresh playthrough."""
+    index = _get_index()
+    stats = index.describe_index_stats()
+    namespaces = list(stats.namespaces.keys())
+
+    if not namespaces:
+        debug("npc_memory: no memories to clear")
+        return
+
+    for ns in namespaces:
+        index.delete(delete_all=True, namespace=ns)
+        debug(f"npc_memory: cleared namespace '{ns}'")
+
+    debug(f"npc_memory: wiped {len(namespaces)} NPC namespace(s)")
+
+
 def store_memory(npc_name: str, conversation: list[str], llm) -> None:
     if len(conversation) < 2:
         debug(f"npc_memory: skipping store for '{npc_name}' — too short")

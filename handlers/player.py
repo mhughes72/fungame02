@@ -143,6 +143,7 @@ Info:
 Debug:
   goto room_X       teleport to a room
   win               trigger win condition
+  clearmemory       wipe all NPC memories
   quit              exit the game
 """)
     return {"force_full_description": False}
