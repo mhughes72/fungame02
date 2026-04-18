@@ -6,7 +6,9 @@
 from langchain_core.messages import SystemMessage
 from prompts import GAME_SYSTEM_PROMPT
 
-DEBUG = True
+import os
+
+DEBUG = os.getenv("DEBUG", "true").lower() == "true"
 
 def debug(msg):
     if DEBUG:
@@ -57,6 +59,25 @@ def fear_tone_for_score(score: int) -> str:
         return "FEAR INSTRUCTION: This player unnerves you slightly. There is a cautious edge to your manner."
     else:
         return ""  # not afraid — no injection
+
+
+CONVERSATION_EXIT_WORDS = ["goodbye", "bye", "leave", "exit", "done", "farewell", "stop"]
+
+# Combat constants
+FLEE_SUCCESS_THRESHOLD = 40       # d100 roll must exceed this to flee
+WEAKNESS_BONUS_DAMAGE = 5         # extra damage when weapon type matches weakness
+ARMOR_REDUCTION_RATE = 0.05       # damage reduction per armor point
+ARMOR_REDUCTION_CAP = 0.75        # maximum damage reduction (75%)
+
+
+def parse_llm_json(text: str) -> str:
+    """Strip markdown code fences from LLM output before JSON parsing."""
+    text = text.strip()
+    if "```" in text:
+        text = text.split("```")[1]
+        if text.startswith("json"):
+            text = text[4:]
+    return text.strip()
 
 
 def total_armor_rating(player: dict, inventory: list) -> int:

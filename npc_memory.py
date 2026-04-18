@@ -4,7 +4,7 @@ import uuid
 from pinecone import Pinecone, ServerlessSpec
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
-from utils import debug
+from utils import debug, parse_llm_json
 from prompts import NPC_MEMORY_HYDE_PROMPT, NPC_MEMORY_EXTRACT_PROMPT, NPC_MOOD_PROMPT, NPC_FEAR_PROMPT
 
 
@@ -83,12 +83,7 @@ def store_exchange(npc_name: str, player_msg: str, npc_reply: str, llm=None) -> 
     ])
 
     try:
-        text = response.content.strip()
-        if "```" in text:
-            text = text.split("```")[1]
-            if text.startswith("json"):
-                text = text[4:]
-        facts = json.loads(text.strip())
+        facts = json.loads(parse_llm_json(response.content))
         if not isinstance(facts, list) or not facts:
             return
     except Exception as e:

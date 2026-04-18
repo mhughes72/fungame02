@@ -9,7 +9,7 @@ import re
 from tavily import TavilyClient
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_openai import ChatOpenAI
-from utils import invoke_with_system, debug, mood_tone_for_score, fear_tone_for_score
+from utils import invoke_with_system, debug, mood_tone_for_score, fear_tone_for_score, CONVERSATION_EXIT_WORDS
 from prompts import GAME_SYSTEM_PROMPT, NPC_PROMPT, WEB_SEARCH_ROLEPLAY_PROMPT, WEB_SEARCH_REQUIRED_PROMPT, WEB_SEARCH_REFUSED_PROMPT, NPC_BRIBE_PROMPT, NPC_BRIBE_BOOST_PROMPT
 from npc_memory import store_exchange, retrieve_memories, evaluate_mood_delta, evaluate_fear_delta
 
@@ -144,7 +144,6 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn) -> dict:
     tavily_client = TavilyClient(api_key=os.getenv("TAVILY_API_KEY")) if use_web_search else None
 
     history = []
-    exit_words = ["goodbye", "bye", "leave", "exit", "done", "farewell", "stop"]
 
     npc_moods = dict(state.get("npc_moods", {}))
     npc_fear = dict(state.get("npc_fear", {}))
@@ -157,7 +156,7 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn) -> dict:
         player_msg = input("You: ").strip()
         history.append(f"Player: {player_msg}")
 
-        if any(word in player_msg.lower() for word in exit_words):
+        if any(word in player_msg.lower() for word in CONVERSATION_EXIT_WORDS):
             print(f"({npc['name']} turns away.)")
             break
 

@@ -20,12 +20,11 @@ from tavily import TavilyClient
 
 from handlers.movement import handle_unlock
 from prompts import (
-    ROOM_DESCRIPTION_PROMPT, COMMAND_PARSER_PROMPT, NPC_PROMPT,
-    WEB_SEARCH_ROLEPLAY_PROMPT, COMBAT_PROMPT, FLEE_PROMPT, 
-    GAME_SYSTEM_PROMPT, SHOP_SYSTEM_PROMPT, WIN_PROMPT
+    ROOM_DESCRIPTION_PROMPT, COMMAND_PARSER_PROMPT,
+    COMBAT_PROMPT, FLEE_PROMPT, GAME_SYSTEM_PROMPT, WIN_PROMPT
 )
 
-from utils import invoke_with_system, find_item, visible_items, total_armor_rating, debug
+from utils import invoke_with_system, find_item, visible_items, total_armor_rating, debug, parse_llm_json
 from npc_memory import clear_all_memories
 from handlers import (
     handle_go, handle_take, handle_examine, handle_open,
@@ -282,13 +281,7 @@ def parse_command(player_input: str, state: AgentState) -> dict:
     response = invoke_with_system(mini_llm, prompt)
 
     try:
-        text = response.content.strip()
-        if "```" in text:
-            text = text.split("```")[1]
-            if text.startswith("json"):
-                text = text[4:]
-        text = text.strip()
-        parsed = json.loads(text)
+        parsed = json.loads(parse_llm_json(response.content))
         debug(f"parse_command: {parsed}")
         return parsed
     except Exception as e:
@@ -428,7 +421,7 @@ initial_state_1 = AgentState(
     current_room_id="room_1",
     npc_moods={
         # Preset for testing mood effects — remove or zero out for a normal run
-        "Professor Aldric": 0,
+        "Professor Aldric": -50,
         "The Oracle":       0,
         "Lady Vespera":     0,
         "Aldous the Peddler": 0,
@@ -440,7 +433,7 @@ initial_state_1 = AgentState(
         "The Oracle":       0,
         "Lady Vespera":     0,
         "Aldous the Peddler": 0,
-        "Shadow":           0,
+        "Shadow":           90,
     },
     player={
         "inventory": [

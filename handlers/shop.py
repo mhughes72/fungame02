@@ -11,7 +11,7 @@ from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from prompts import GAME_SYSTEM_PROMPT, SHOP_SYSTEM_PROMPT
-from utils import debug
+from utils import debug, CONVERSATION_EXIT_WORDS
 from npc_memory import store_exchange, retrieve_memories
 
 def _mood_price_multiplier(mood_score: int) -> float:
@@ -182,12 +182,10 @@ def handle_shop(state: dict, npc: dict, shops: dict, llm, npc_moods: dict = None
 
     print(f"\n{npc['name']}: {response.content}\n")
 
-    exit_words = ["goodbye", "bye", "leave", "exit", "done", "farewell", "stop"]
-
     while True:
         player_msg = input("You: ").strip()
 
-        if any(word in player_msg.lower() for word in exit_words):
+        if any(word in player_msg.lower() for word in CONVERSATION_EXIT_WORDS):
             print(f"\n{npc['name']}: Safe travels, and remember — Aldous always has the best prices!")
             break
 

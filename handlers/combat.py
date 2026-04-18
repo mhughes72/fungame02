@@ -5,7 +5,9 @@
 # armor reduction, weakness bonuses, and monster drop handling.
 
 import random
-from utils import invoke_with_system, total_armor_rating, debug
+from utils import (invoke_with_system, total_armor_rating, debug,
+                   FLEE_SUCCESS_THRESHOLD, WEAKNESS_BONUS_DAMAGE,
+                   ARMOR_REDUCTION_RATE, ARMOR_REDUCTION_CAP)
 from prompts import COMBAT_PROMPT, FLEE_PROMPT
 
 def combat_node(state, ROOMS, llm) -> dict:
@@ -46,7 +48,7 @@ def combat_node(state, ROOMS, llm) -> dict:
 
         if any(word in combat_input for word in ["flee", "run", "escape", "retreat"]):
             flee_chance = random.randint(1, 100)
-            success = flee_chance > 40
+            success = flee_chance > FLEE_SUCCESS_THRESHOLD
 
             prompt = FLEE_PROMPT.invoke({
                 "room_name": room["name"],
@@ -99,7 +101,7 @@ def combat_node(state, ROOMS, llm) -> dict:
         weakness_bonus = 0
 
         if weapon_data and weapon_data.get("weapon_type") in monster.get("weaknesses", []):
-            weakness_bonus = 5
+            weakness_bonus = WEAKNESS_BONUS_DAMAGE
             print(f"[Weakness hit! +{weakness_bonus} bonus damage]")
 
         player_dmg = max(0, base_damage + dice_roll + weakness_bonus - monster["defense"])
@@ -110,7 +112,7 @@ def combat_node(state, ROOMS, llm) -> dict:
             variance = monster.get("damage_variance", 2)
             armor = total_armor_rating(player, player.get("inventory", []))
             raw_dmg = monster["damage"] + random.randint(-variance, variance)
-            damage_reduction = min(0.75, armor * 0.05)
+            damage_reduction = min(ARMOR_REDUCTION_CAP, armor * ARMOR_REDUCTION_RATE)
             monster_dmg = max(1, int(raw_dmg * (1 - damage_reduction)))
             player["health"] -= monster_dmg
 
