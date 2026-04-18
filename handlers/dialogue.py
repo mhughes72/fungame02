@@ -9,7 +9,7 @@ from tavily import TavilyClient
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_openai import ChatOpenAI
 from utils import invoke_with_system, debug, mood_tone_for_score, fear_tone_for_score
-from prompts import NPC_PROMPT, WEB_SEARCH_ROLEPLAY_PROMPT, WEB_SEARCH_REQUIRED_PROMPT, WEB_SEARCH_REFUSED_PROMPT, NPC_BRIBE_PROMPT
+from prompts import NPC_PROMPT, WEB_SEARCH_ROLEPLAY_PROMPT, WEB_SEARCH_REQUIRED_PROMPT, WEB_SEARCH_REFUSED_PROMPT, NPC_BRIBE_PROMPT, NPC_BRIBE_BOOST_PROMPT
 from npc_memory import store_exchange, retrieve_memories, evaluate_mood_delta, evaluate_fear_delta
 
 _router_llm = None
@@ -24,15 +24,7 @@ def _requires_web_search(player_msg: str, llm) -> bool:
     ])
     return response.content.strip().upper().startswith("YES")
 
-def _bribe_mood_boost(amount: int) -> int:
-    if amount >= 100: return 50
-    if amount >= 50:  return 35
-    if amount >= 25:  return 20
-    if amount >= 10:  return 10
-    return 3
-
-
-def handle_bribe(state: dict, target: str, amount: int, llm) -> dict:
+def handle_bribe(state: dict, target: str, amount: int, llm, mini_llm) -> dict:
     room = state["current_room_data"]
     player = dict(state.get("player", {}))
     npc_moods = dict(state.get("npc_moods", {}))
@@ -52,12 +44,24 @@ def handle_bribe(state: dict, target: str, amount: int, llm) -> dict:
         return {"force_full_description": False}
 
     player["gold"] = gold - amount
-    boost = _bribe_mood_boost(amount)
     current_mood = npc_moods.get(npc["name"], 0)
     current_fear = npc_fear.get(npc["name"], 0)
+
+    boost_response = mini_llm.invoke([
+        HumanMessage(content=NPC_BRIBE_BOOST_PROMPT.format(
+            amount=amount,
+            personality=npc["personality"],
+            current_mood=current_mood,
+        ))
+    ])
+    try:
+        boost = int(boost_response.content.strip())
+    except (ValueError, AttributeError):
+        boost = 0
+
     new_mood = max(-100, min(100, current_mood + boost))
     npc_moods[npc["name"]] = new_mood
-    debug(f"bribe: gave {amount} gold to '{npc['name']}' | mood {current_mood} → {new_mood} (+{boost})")
+    debug(f"bribe: gave {amount} gold to '{npc['name']}' | boost: {boost:+d} | mood {current_mood} → {new_mood}")
 
     prompt = NPC_BRIBE_PROMPT.format(
         npc_name=npc["name"],
