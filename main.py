@@ -118,6 +118,7 @@ class AgentState(TypedDict):
     previous_room_id: NotRequired[str]
     just_fled: NotRequired[bool]
     npc_moods: NotRequired[Dict[str, int]]
+    npc_fear: NotRequired[Dict[str, int]]
 
 
 
@@ -424,7 +425,22 @@ initial_state_1 = AgentState(
 # Testing state — fully loaded
 initial_state_1 = AgentState(
     current_room_id="room_1",
-    npc_moods={},
+    npc_moods={
+        # Preset for testing mood effects — remove or zero out for a normal run
+        "Professor Aldric": 0,
+        "The Oracle":       0,
+        "Lady Vespera":     0,
+        "Aldous the Peddler": 0,
+        "Shadow":           0,
+    },
+    npc_fear={
+        # Preset for testing fear effects — remove or zero out for a normal run
+        "Professor Aldric": 0,
+        "The Oracle":       0,
+        "Lady Vespera":     0,
+        "Aldous the Peddler": 0,
+        "Shadow":           0,
+    },
     player={
         "inventory": [
             {"name": "golden sword",   "hidden": False, "revealed_by": None, "openable": False, "is_open": False, "gold": 0, "damage": 25, "weapon_type": "blade",  "armor_slot": None,     "armor_rating": 0, "heal_amount": 0},

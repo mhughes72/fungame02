@@ -8,9 +8,9 @@ import os
 from tavily import TavilyClient
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_openai import ChatOpenAI
-from utils import invoke_with_system, debug, mood_tone_for_score
+from utils import invoke_with_system, debug, mood_tone_for_score, fear_tone_for_score
 from prompts import NPC_PROMPT, WEB_SEARCH_ROLEPLAY_PROMPT, WEB_SEARCH_REQUIRED_PROMPT, WEB_SEARCH_REFUSED_PROMPT
-from npc_memory import store_exchange, retrieve_memories, evaluate_mood_delta
+from npc_memory import store_exchange, retrieve_memories, evaluate_mood_delta, evaluate_fear_delta
 
 _router_llm = None
 
@@ -47,7 +47,8 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn) -> dict:
 
     if npc.get("shop_id"):
         npc_moods = dict(state.get("npc_moods", {}))
-        return handle_shop(state, npc, SHOPS, mini_llm, npc_moods)
+        npc_fear = dict(state.get("npc_fear", {}))
+        return handle_shop(state, npc, SHOPS, mini_llm, npc_moods, npc_fear)
 
     print(f"\n{npc['name']}: \"{npc['description']}\"")
     print("(Type 'goodbye' or 'leave' to end the conversation)\n")
@@ -59,8 +60,10 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn) -> dict:
     exit_words = ["goodbye", "bye", "leave", "exit", "done", "farewell", "stop"]
 
     npc_moods = dict(state.get("npc_moods", {}))
+    npc_fear = dict(state.get("npc_fear", {}))
     current_mood = npc_moods.get(npc["name"], 0)
-    debug(f"dialogue: mood for '{npc['name']}': {current_mood}")
+    current_fear = npc_fear.get(npc["name"], 0)
+    debug(f"dialogue: mood for '{npc['name']}': {current_mood} | fear: {current_fear}")
 
     while True:
         player_msg = input("You: ").strip()
@@ -70,11 +73,15 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn) -> dict:
             print(f"({npc['name']} turns away.)")
             break
 
-        # Evaluate attitude and update mood
-        delta = evaluate_mood_delta(player_msg)
-        current_mood = max(-100, min(100, current_mood + delta))
+        # Evaluate attitude and update mood + fear in parallel
+        mood_delta = evaluate_mood_delta(player_msg)
+        fear_delta = evaluate_fear_delta(player_msg)
+        current_mood = max(-100, min(100, current_mood + mood_delta))
+        current_fear = max(0, min(100, current_fear + fear_delta))
         npc_moods[npc["name"]] = current_mood
-        debug(f"dialogue: mood delta for '{npc['name']}': {delta:+d} → total: {current_mood}")
+        npc_fear[npc["name"]] = current_fear
+        debug(f"dialogue: mood delta for '{npc['name']}': {mood_delta:+d} → total: {current_mood}")
+        debug(f"dialogue: fear delta for '{npc['name']}': {fear_delta:+d} → total: {current_fear}")
 
         # Retrieve memories relevant to this specific message
         memories = retrieve_memories(npc["name"], player_msg)
@@ -85,6 +92,7 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn) -> dict:
             memory_context = ""
 
         mood_tone = mood_tone_for_score(current_mood)
+        fear_tone = fear_tone_for_score(current_fear)
 
         if use_web_search:
             if current_mood <= -30:
@@ -138,6 +146,7 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn) -> dict:
                     "room_name": room["name"],
                     "memory_context": memory_context,
                     "mood_tone": mood_tone,
+                    "fear_tone": fear_tone,
                     "history": "\n".join(history),
                     "player_input": player_msg,
                 })
@@ -151,6 +160,7 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn) -> dict:
                 "room_name": room["name"],
                 "memory_context": memory_context,
                 "mood_tone": mood_tone,
+                "fear_tone": fear_tone,
                 "history": "\n".join(history),
                 "player_input": player_msg,
             })
@@ -169,4 +179,4 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn) -> dict:
             print(f"({npc['name']} turns away.)")
             break
 
-    return {"npc_moods": npc_moods, "force_full_description": False}
+    return {"npc_moods": npc_moods, "npc_fear": npc_fear, "force_full_description": False}

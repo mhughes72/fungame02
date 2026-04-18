@@ -5,7 +5,7 @@ from pinecone import Pinecone, ServerlessSpec
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from utils import debug
-from prompts import NPC_MEMORY_HYDE_PROMPT, NPC_MEMORY_EXTRACT_PROMPT, NPC_MOOD_PROMPT
+from prompts import NPC_MEMORY_HYDE_PROMPT, NPC_MEMORY_EXTRACT_PROMPT, NPC_MOOD_PROMPT, NPC_FEAR_PROMPT
 
 
 INDEX_NAME = "fungame-npc-memory"
@@ -108,6 +108,18 @@ def _hyde_rewrite(query: str, npc_name: str = "") -> str:
     rewritten = response.content.strip()
     debug(f"npc_memory: HyDE rewrite: '{query}' → '{rewritten}'")
     return rewritten
+
+
+def evaluate_fear_delta(player_msg: str) -> int:
+    """Ask gpt-4o-mini to rate how threatening the player's message is as an unconstrained integer."""
+    response = _get_mini_llm().invoke([
+        HumanMessage(content=NPC_FEAR_PROMPT.format(player_msg=player_msg))
+    ])
+    try:
+        return int(response.content.strip())
+    except (ValueError, AttributeError):
+        debug("npc_memory: fear delta parse failed, defaulting to 0")
+        return 0
 
 
 def evaluate_mood_delta(player_msg: str) -> int:
