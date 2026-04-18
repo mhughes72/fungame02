@@ -123,13 +123,15 @@ Your personality: {personality}
 Your knowledge: {knowledge}
 The room you are in: {room_name}
 
+{memory_context}
+
 Conversation so far:
 {history}
 
 Player says: {player_input}
 
-Respond in character. Be concise — 2-4 sentences. 
-If the player tries to end the conversation (says goodbye, leave, exit, done, etc.) 
+Respond in character. Be concise — 2-4 sentences.
+If the player tries to end the conversation (says goodbye, leave, exit, done, etc.)
 end your response with exactly: [END CONVERSATION]
 """)
 

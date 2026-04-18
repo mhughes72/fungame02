@@ -9,6 +9,7 @@ from tavily import TavilyClient
 from langchain_core.messages import SystemMessage, HumanMessage
 from utils import invoke_with_system, debug
 from prompts import NPC_PROMPT, WEB_SEARCH_ROLEPLAY_PROMPT
+from npc_memory import store_memory, retrieve_memories
 
 def npc_dialogue(state, SHOPS, llm, parse_command_fn) -> dict:
     from handlers.shop import handle_shop
@@ -39,6 +40,14 @@ def npc_dialogue(state, SHOPS, llm, parse_command_fn) -> dict:
 
     use_web_search = npc.get("can_search_web", False)
     tavily_client = TavilyClient(api_key=os.getenv("TAVILY_API_KEY")) if use_web_search else None
+
+    # Retrieve relevant memories for this NPC
+    memories = retrieve_memories(npc["name"], f"conversation with player about {room['name']}")
+    if memories:
+        memory_context = "What you already know about this player from past conversations:\n" + "\n".join(f"- {m}" for m in memories)
+        debug(f"dialogue: injecting {len(memories)} memories for '{npc['name']}'")
+    else:
+        memory_context = ""
 
     history = []
     exit_words = ["goodbye", "bye", "leave", "exit", "done", "farewell", "stop"]
@@ -76,6 +85,7 @@ def npc_dialogue(state, SHOPS, llm, parse_command_fn) -> dict:
                 "personality": npc["personality"],
                 "knowledge": npc["knowledge"],
                 "room_name": room["name"],
+                "memory_context": memory_context,
                 "history": "\n".join(history),
                 "player_input": player_msg,
             })
@@ -90,5 +100,8 @@ def npc_dialogue(state, SHOPS, llm, parse_command_fn) -> dict:
         if end_conversation:
             print(f"({npc['name']} turns away.)")
             break
+
+    # Store memories from this conversation
+    store_memory(npc["name"], history, llm)
 
     return {"force_full_description": False}
