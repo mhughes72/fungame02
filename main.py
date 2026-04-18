@@ -100,6 +100,21 @@ class PlayerState(TypedDict, total=False):
     equipped_weapon: Optional[str]
     equipped_armor: Dict[str, str]  # slot -> item name
 
+class HandlerResult(TypedDict, total=False):
+    player: PlayerState
+    room_states: Dict[str, RoomState]
+    force_full_description: bool
+    route_to: Optional[str]
+    current_room_id: str
+    combat_target: Optional[str]
+    game_over: bool
+    game_won: bool
+    npc_moods: Dict[str, int]
+    npc_fear: Dict[str, int]
+    skip_description: bool
+    just_fled: bool
+    previous_room_id: str
+
 class AgentState(TypedDict):
     current_room_id: str
     current_room_data: NotRequired[RoomData]
@@ -131,6 +146,33 @@ with open(os.path.join("data", "rooms.json"), "r") as f:
 
 with open(os.path.join("data", "shop.json"), "r") as f:
     SHOPS = json.load(f)
+
+
+def validate_game_data(rooms: dict, shops: dict) -> None:
+    """Check referential integrity of rooms.json and shop.json at startup."""
+    all_room_ids = set(rooms.keys())
+    all_shop_ids = set(shops.keys())
+    errors = []
+
+    for room_id, room in rooms.items():
+        for direction, dest in room.get("exits", {}).items():
+            if dest not in all_room_ids:
+                errors.append(f"{room_id}: exit '{direction}' → '{dest}' (room not found)")
+        for npc in room.get("npcs", []):
+            shop_id = npc.get("shop_id")
+            if shop_id and shop_id not in all_shop_ids:
+                errors.append(f"{room_id}: NPC '{npc['name']}' references shop_id '{shop_id}' (not found)")
+        for direction, lock in room.get("locked_exits", {}).items():
+            if direction not in room.get("exits", {}):
+                errors.append(f"{room_id}: locked_exit '{direction}' has no matching exit")
+
+    if errors:
+        raise ValueError("Game data validation failed:\n" + "\n".join(f"  - {e}" for e in errors))
+
+    debug(f"validate: {len(rooms)} rooms, {len(shops)} shops — OK")
+
+
+validate_game_data(ROOMS, SHOPS)
     
 # ── Nodes ────────────────────────────────────────────────────────────────────
 
@@ -421,11 +463,11 @@ initial_state_1 = AgentState(
     current_room_id="room_1",
     npc_moods={
         # Preset for testing mood effects — remove or zero out for a normal run
-        "Professor Aldric": -50,
-        "The Oracle":       0,
-        "Lady Vespera":     0,
-        "Aldous the Peddler": 0,
-        "Shadow":           0,
+        "Professor Aldric": 100,
+        "The Oracle":       100,
+        "Lady Vespera":     100,
+        "Aldous the Peddler": 100,
+        "Shadow":           100,
     },
     npc_fear={
         # Preset for testing fear effects — remove or zero out for a normal run

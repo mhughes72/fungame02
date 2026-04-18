@@ -11,39 +11,15 @@ from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from prompts import GAME_SYSTEM_PROMPT, SHOP_SYSTEM_PROMPT
-from utils import debug, CONVERSATION_EXIT_WORDS
+from utils import debug, CONVERSATION_EXIT_WORDS, mood_price_multiplier, fear_price_multiplier
 from npc_memory import store_exchange, retrieve_memories
-
-def _mood_price_multiplier(mood_score: int) -> float:
-    """Return a price multiplier based on Aldous's mood. Friendlier = cheaper."""
-    if mood_score >= 50:
-        return 0.85
-    elif mood_score >= 20:
-        return 0.92
-    elif mood_score >= -19:
-        return 1.0
-    elif mood_score >= -50:
-        return 1.10
-    else:
-        return 1.20
-
 
 def make_shop_tools(player: dict, shop_data: dict, shops: dict, mood_score: int = 0, fear_score: int = 0):
     """Create shop tools with current game state baked in."""
 
     stock = shop_data["stock"]
     sell_multiplier = shop_data.get("sell_multiplier", 0.5)
-    def _fear_price_multiplier(fear: int) -> float:
-        if fear >= 60:
-            return 0.70  # terrified — steep discount
-        elif fear >= 30:
-            return 0.82  # afraid — noticeable discount
-        elif fear >= 10:
-            return 0.93  # unnerved — slight discount
-        return 1.0
-
-    # Use whichever gives the lower price (best deal for the player)
-    price_multiplier = min(_mood_price_multiplier(mood_score), _fear_price_multiplier(fear_score))
+    price_multiplier = min(mood_price_multiplier(mood_score), fear_price_multiplier(fear_score))
 
     @tool
     def get_player_gold() -> str:

@@ -51,6 +51,45 @@ def _invoke_npc(llm, npc, room, memory_context, history, player_msg, mood_tone, 
     return llm.invoke([SystemMessage(content=system)] + messages)
 
 
+def _execute_bribe(npc: dict, amount: int, player: dict, npc_moods: dict,
+                   current_fear: int, llm, mini_llm) -> tuple[str, int]:
+    """Deduct gold, evaluate boost, update mood, generate NPC reaction.
+
+    Returns (reply_text, new_mood). Caller is responsible for updating state.
+    """
+    current_mood = npc_moods.get(npc["name"], 0)
+
+    boost_response = mini_llm.invoke([
+        HumanMessage(content=NPC_BRIBE_BOOST_PROMPT.format(
+            amount=amount,
+            personality=npc["personality"],
+            current_mood=current_mood,
+        ))
+    ])
+    try:
+        boost = int(boost_response.content.strip())
+    except (ValueError, AttributeError):
+        boost = 0
+
+    new_mood = max(-100, min(100, current_mood + boost))
+    npc_moods[npc["name"]] = new_mood
+    debug(f"bribe: gave {amount} gold to '{npc['name']}' | boost: {boost:+d} | mood {current_mood} → {new_mood}")
+
+    reaction_prompt = NPC_BRIBE_PROMPT.format(
+        npc_name=npc["name"],
+        personality=npc["personality"],
+        amount=amount,
+        mood_tone=mood_tone_for_score(new_mood),
+        fear_tone=fear_tone_for_score(current_fear),
+    )
+    reply = llm.invoke([
+        SystemMessage(content=GAME_SYSTEM_PROMPT),
+        HumanMessage(content=reaction_prompt),
+    ]).content.strip()
+
+    return reply, new_mood
+
+
 def handle_bribe(state: dict, target: str, amount: int, llm, mini_llm) -> dict:
     room = state["current_room_data"]
     player = dict(state.get("player", {}))
@@ -71,44 +110,9 @@ def handle_bribe(state: dict, target: str, amount: int, llm, mini_llm) -> dict:
         return {"force_full_description": False}
 
     player["gold"] = gold - amount
-    current_mood = npc_moods.get(npc["name"], 0)
-    current_fear = npc_fear.get(npc["name"], 0)
-
-    boost_response = mini_llm.invoke([
-        HumanMessage(content=NPC_BRIBE_BOOST_PROMPT.format(
-            amount=amount,
-            personality=npc["personality"],
-            current_mood=current_mood,
-        ))
-    ])
-    try:
-        boost = int(boost_response.content.strip())
-    except (ValueError, AttributeError):
-        boost = 0
-
-    new_mood = max(-100, min(100, current_mood + boost))
-    npc_moods[npc["name"]] = new_mood
-    debug(f"bribe: gave {amount} gold to '{npc['name']}' | boost: {boost:+d} | mood {current_mood} → {new_mood}")
-
-    prompt = NPC_BRIBE_PROMPT.format(
-        npc_name=npc["name"],
-        personality=npc["personality"],
-        amount=amount,
-        mood_tone=mood_tone_for_score(new_mood),
-        fear_tone=fear_tone_for_score(current_fear),
-    )
-    reply = invoke_with_system(llm, [
-        SystemMessage(content=prompt),
-        HumanMessage(content="React to receiving the gold.")
-    ]).content.strip()
-
+    reply, _ = _execute_bribe(npc, amount, player, npc_moods, npc_fear.get(npc["name"], 0), llm, mini_llm)
     print(f"\n{npc['name']}: {reply}\n")
-    return {
-        "player": player,
-        "npc_moods": npc_moods,
-        "npc_fear": npc_fear,
-        "force_full_description": False,
-    }
+    return {"player": player, "npc_moods": npc_moods, "npc_fear": npc_fear, "force_full_description": False}
 
 
 def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn) -> dict:
@@ -164,39 +168,12 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn) -> dict:
         bribe_match = re.search(r'\b(?:give|offer|bribe|pay)\b.*?(\d+)\s*gold', player_msg.lower())
         if bribe_match:
             amount = int(bribe_match.group(1))
-            gold = player.get("gold", 0)
-            if gold < amount:
-                print(f"You only have {gold} gold.")
+            if player.get("gold", 0) < amount:
+                print(f"You only have {player.get('gold', 0)} gold.")
                 history.pop()
                 continue
-            player["gold"] = gold - amount
-            boost_response = mini_llm.invoke([
-                HumanMessage(content=NPC_BRIBE_BOOST_PROMPT.format(
-                    amount=amount,
-                    personality=npc["personality"],
-                    current_mood=current_mood,
-                ))
-            ])
-            try:
-                boost = int(boost_response.content.strip())
-            except (ValueError, AttributeError):
-                boost = 0
-            current_mood = max(-100, min(100, current_mood + boost))
-            npc_moods[npc["name"]] = current_mood
-            debug(f"bribe (in dialogue): gave {amount} gold to '{npc['name']}' | boost: {boost:+d} | mood → {current_mood}")
-            mood_tone = mood_tone_for_score(current_mood)
-            fear_tone = fear_tone_for_score(current_fear)
-            reaction_prompt = NPC_BRIBE_PROMPT.format(
-                npc_name=npc["name"],
-                personality=npc["personality"],
-                amount=amount,
-                mood_tone=mood_tone,
-                fear_tone=fear_tone,
-            )
-            reply = llm.invoke([
-                SystemMessage(content=GAME_SYSTEM_PROMPT),
-                HumanMessage(content=reaction_prompt),
-            ]).content.strip()
+            player["gold"] = player.get("gold", 0) - amount
+            reply, current_mood = _execute_bribe(npc, amount, player, npc_moods, current_fear, llm, mini_llm)
             print(f"\n{npc['name']}: {reply}\n")
             history.append(f"{npc['name']}: {reply}")
             store_exchange(npc["name"], player_msg, reply)

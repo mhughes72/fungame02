@@ -63,6 +63,23 @@ def fear_tone_for_score(score: int) -> str:
 
 CONVERSATION_EXIT_WORDS = ["goodbye", "bye", "leave", "exit", "done", "farewell", "stop"]
 
+
+def mood_price_multiplier(score: int) -> float:
+    """Shop price multiplier based on NPC mood. Friendlier = cheaper."""
+    if score >= 50:  return 0.85
+    elif score >= 20: return 0.92
+    elif score >= -19: return 1.0
+    elif score >= -50: return 1.10
+    else:            return 1.20
+
+
+def fear_price_multiplier(score: int) -> float:
+    """Shop price multiplier based on NPC fear. More scared = steeper discount."""
+    if score >= 60:  return 0.70
+    elif score >= 30: return 0.82
+    elif score >= 10: return 0.93
+    else:            return 1.0
+
 # Combat constants
 FLEE_SUCCESS_THRESHOLD = 40       # d100 roll must exceed this to flee
 WEAKNESS_BONUS_DAMAGE = 5         # extra damage when weapon type matches weakness
