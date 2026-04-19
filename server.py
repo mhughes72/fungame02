@@ -71,6 +71,16 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                 import json as _json
                 data = _json.loads(msg[len("__statejson__"):])
                 await websocket.send_json({"type": "state", **data})
+            elif msg.startswith("__encounter_start__"):
+                import json as _json
+                data = _json.loads(msg[len("__encounter_start__"):])
+                await websocket.send_json({"type": "encounter_start", **data})
+            elif msg.startswith("__encounter_end__"):
+                await websocket.send_json({"type": "encounter_end"})
+            elif msg.startswith("__encounter_state__"):
+                import json as _json
+                data = _json.loads(msg[len("__encounter_state__"):])
+                await websocket.send_json({"type": "encounter_state", **data})
             else:
                 await websocket.send_json({"type": "message", "text": msg})
 

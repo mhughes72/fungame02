@@ -108,6 +108,7 @@ def handle_shop(state: dict, npc: dict, shops: dict, llm, npc_moods: dict = None
 
     if not shop_data:
         io.send(f"{npc['name']}: I'm afraid I have nothing to sell right now.")
+        io.send("__encounter_end__")
         return {"force_full_description": False}
 
     # Make mutable copy of player state
@@ -198,6 +199,7 @@ def handle_shop(state: dict, npc: dict, shops: dict, llm, npc_moods: dict = None
             break
 
     emit_player_state(player, state["current_room_id"], io)
+    io.send("__encounter_end__")
 
     return {
         "player": player,

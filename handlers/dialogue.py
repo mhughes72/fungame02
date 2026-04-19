@@ -4,6 +4,7 @@
 # regular NPC chat, web search via Tavily for knowledge-enabled NPCs,
 # and routing to the merchant shop for NPCs with a shop_id.
 
+import json
 import os
 import re
 from tavily import TavilyClient
@@ -136,6 +137,11 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn, io) -> dict:
 
     debug(f"dialogue: talking to '{npc['name']}' | shop: {npc.get('shop_id')} | web_search: {npc.get('can_search_web', False)}")
 
+    npc_slug = npc['name'].lower().replace(' ', '_').replace("'", '').replace('-', '_')
+    _moods = state.get("npc_moods", {})
+    _fear = state.get("npc_fear", {})
+    io.send(f"__encounter_start__{json.dumps({'encounter_type': 'dialogue', 'target_name': npc['name'], 'target_slug': npc_slug, 'npc_mood': _moods.get(npc['name'], 0), 'npc_fear': _fear.get(npc['name'], 0)})}")
+
     if npc.get("shop_id"):
         npc_moods = dict(state.get("npc_moods", {}))
         npc_fear = dict(state.get("npc_fear", {}))
@@ -162,6 +168,7 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn, io) -> dict:
 
         if any(word in player_msg.lower() for word in CONVERSATION_EXIT_WORDS):
             io.send(f"({npc['name']} turns away.)")
+            io.send("__encounter_end__")
             break
 
         # Detect bribe inside conversation
@@ -177,6 +184,7 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn, io) -> dict:
             io.send(f"\n{npc['name']}: {reply}\n")
             history.append(f"{npc['name']}: {reply}")
             store_exchange(npc["name"], player_msg, reply)
+            io.send(f"__encounter_state__{json.dumps({'npc_mood': current_mood, 'npc_fear': current_fear})}")
             continue
 
         # Evaluate attitude and update mood + fear in parallel
@@ -188,6 +196,7 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn, io) -> dict:
         npc_fear[npc["name"]] = current_fear
         debug(f"dialogue: mood delta for '{npc['name']}': {mood_delta:+d} → total: {current_mood}")
         debug(f"dialogue: fear delta for '{npc['name']}': {fear_delta:+d} → total: {current_fear}")
+        io.send(f"__encounter_state__{json.dumps({'npc_mood': current_mood, 'npc_fear': current_fear})}")
 
         # Retrieve memories relevant to this specific message
         memories = retrieve_memories(npc["name"], player_msg)
@@ -219,6 +228,7 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn, io) -> dict:
                 store_exchange(npc["name"], player_msg, clean_reply)
                 if end_conversation:
                     io.send(f"({npc['name']} turns away.)")
+                    io.send("__encounter_end__")
                     break
                 continue
 
@@ -261,6 +271,7 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn, io) -> dict:
 
         if end_conversation:
             io.send(f"({npc['name']} turns away.)")
+            io.send("__encounter_end__")
             break
 
     return {"player": player, "npc_moods": npc_moods, "npc_fear": npc_fear, "force_full_description": False}

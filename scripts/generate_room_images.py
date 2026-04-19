@@ -19,6 +19,8 @@ import requests
 from dotenv import load_dotenv
 from openai import OpenAI
 
+from image_cache import load_checksums, save_checksums, hash_prompt, should_generate
+
 load_dotenv()
 
 STYLE_PREFIX = (
@@ -68,13 +70,13 @@ def generate_image(client: OpenAI, room_id: str, out_path: Path) -> None:
     image_url = response.data[0].url
     img_data = requests.get(image_url, timeout=30).content
     out_path.write_bytes(img_data)
-    print(f"  Saved → {out_path}")
+    print(f"  Saved to {out_path}")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generate room images via DALL-E 3")
     parser.add_argument("--room", help="Generate a single room (e.g. room_3)")
-    parser.add_argument("--overwrite", action="store_true", help="Regenerate existing images")
+    parser.add_argument("--overwrite", action="store_true", help="Regenerate all images (ignores checksums)")
     args = parser.parse_args()
 
     api_key = os.getenv("OPENAI_API_KEY")
@@ -86,24 +88,39 @@ def main() -> None:
     out_dir = Path("static/rooms")
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    rooms = [args.room] if args.room else sorted(ROOM_PROMPTS.keys())
+    cache_path = Path("scripts/.room_checksums.json")
+    checksums = load_checksums(cache_path)
 
-    for i, room_id in enumerate(rooms):
+    rooms = [args.room] if args.room else sorted(ROOM_PROMPTS.keys())
+    to_generate = []
+
+    for room_id in rooms:
         if room_id not in ROOM_PROMPTS:
             print(f"Unknown room: {room_id}")
             continue
 
-        out_path = out_dir / f"{room_id}.png"
-        if out_path.exists() and not args.overwrite:
-            print(f"  Skipping {room_id} (already exists, use --overwrite to regenerate)")
-            continue
+        prompt = f"{STYLE_PREFIX}. Scene: {ROOM_PROMPTS[room_id]}"
+        if should_generate(room_id, prompt, checksums, args.overwrite):
+            to_generate.append((room_id, prompt))
+        else:
+            print(f"  Skipping {room_id} (unchanged)")
 
+    if not to_generate:
+        print("All rooms up to date.")
+        return
+
+    print(f"Generating {len(to_generate)} room(s)...\n")
+
+    for i, (room_id, prompt) in enumerate(to_generate):
+        out_path = out_dir / f"{room_id}.png"
         generate_image(client, room_id, out_path)
+        checksums[room_id] = hash_prompt(prompt)
 
         # Stay under DALL-E rate limits (5 images/min on tier 1)
-        if i < len(rooms) - 1:
+        if i < len(to_generate) - 1:
             time.sleep(13)
 
+    save_checksums(cache_path, checksums)
     print("Done.")
 
 

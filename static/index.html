@@ -419,6 +419,143 @@
       color: #6a5a4a;
       font-style: italic;
     }
+
+    /* Encounter panel (replaces map during combat / dialogue) */
+    #encounter-section {
+      display: none;
+      flex-direction: column;
+      flex-shrink: 0;
+      border-bottom: 1px solid #3d3d3d;
+    }
+
+    #encounter-section.active { display: flex; }
+
+    #encounter-image-wrap {
+      position: relative;
+      background: #0d0d0d;
+      overflow: hidden;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 200px;
+      max-height: 360px;
+    }
+
+    #encounter-image {
+      width: 100%;
+      height: 100%;
+      display: block;
+      opacity: 0;
+      transition: opacity 0.8s ease;
+      object-fit: cover;
+      object-position: center;
+    }
+
+    #encounter-image.loaded { opacity: 1; }
+
+    #encounter-image-placeholder {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      color: #3d3530;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    #encounter-image-placeholder .enc-placeholder-name {
+      color: #5a4a3a;
+      font-size: 12px;
+      letter-spacing: 1px;
+    }
+
+    #encounter-stats-wrap {
+      padding: 8px 10px;
+      font-size: 11px;
+      line-height: 1.7;
+      overflow-y: auto;
+      max-height: 158px;
+      scrollbar-width: thin;
+      scrollbar-color: #3d3d3d #1a1a1a;
+    }
+
+    .enc-section-title {
+      color: #a89060;
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin: 6px 0 3px;
+      border-bottom: 1px solid #3a3a3a;
+      padding-bottom: 2px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+
+    .enc-section-title:first-child { margin-top: 0; }
+
+    .enc-debug-tag {
+      color: #4a3a1a;
+      font-size: 9px;
+      letter-spacing: 1px;
+    }
+
+    .enc-bar-row {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin: 2px 0;
+    }
+
+    .enc-bar-label {
+      color: #8b6f47;
+      width: 34px;
+      flex-shrink: 0;
+      font-size: 10px;
+    }
+
+    .enc-bar-track {
+      flex: 1;
+      height: 7px;
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      overflow: hidden;
+    }
+
+    .enc-bar-fill {
+      height: 100%;
+      transition: width 0.3s ease;
+    }
+
+    .enc-bar-fill.hp-good  { background: #2a5a2a; }
+    .enc-bar-fill.hp-warn  { background: #5a5a1a; }
+    .enc-bar-fill.hp-low   { background: #6a2a1a; }
+    .enc-bar-fill.mood-pos { background: #1a4a3a; }
+    .enc-bar-fill.mood-neg { background: #5a2020; }
+    .enc-bar-fill.fear     { background: #5a1a5a; }
+    .enc-bar-fill.monster  { background: #6a2020; }
+
+    .enc-bar-value {
+      color: #c8a96e;
+      font-size: 10px;
+      white-space: nowrap;
+      min-width: 38px;
+      text-align: right;
+    }
+
+    .enc-stat-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 1px 0;
+    }
+
+    .enc-stat-label { color: #8b6f47; }
+    .enc-stat-value { color: #c8b878; }
   </style>
 </head>
 <body>
@@ -453,6 +590,17 @@
   </div>
 
   <div id="sidebar">
+    <div id="encounter-section">
+      <div class="sidebar-section-label" id="encounter-label"></div>
+      <div id="encounter-image-wrap">
+        <img id="encounter-image" src="" alt="">
+        <div id="encounter-image-placeholder">
+          <span>NO IMAGE</span>
+          <span class="enc-placeholder-name" id="encounter-placeholder-name"></span>
+        </div>
+      </div>
+      <div id="encounter-stats-wrap"></div>
+    </div>
     <div id="map-section" class="sidebar-section">
       <div class="sidebar-section-label">Map</div>
       <canvas id="map-canvas" width="280" height="340"></canvas>
@@ -510,6 +658,14 @@ OTHER
   let roomPositions = {};
   let visitedRooms = new Set();
 
+  // Encounter state
+  let inEncounter = false;
+  let encounterData = {};
+  let currentPlayerState = {
+    health: 100, max_health: 100, gold: 0,
+    inventory: [], equipped_weapon: null, equipped_armor: {}
+  };
+
   /**
    * Initialize WebSocket connection
    */
@@ -561,7 +717,21 @@ OTHER
     } else if (msg.type === 'prompt') {
       document.getElementById('loading').classList.remove('active');
       appendOutput(msg.text, 'prompt', msg.text);
+    } else if (msg.type === 'encounter_start') {
+      showEncounter(msg);
+    } else if (msg.type === 'encounter_end') {
+      hideEncounter();
+    } else if (msg.type === 'encounter_state') {
+      updateEncounterState(msg);
     } else if (msg.type === 'state') {
+      Object.assign(currentPlayerState, {
+        health: msg.health,
+        max_health: msg.max_health,
+        gold: msg.gold,
+        inventory: msg.inventory || currentPlayerState.inventory,
+        equipped_weapon: msg.equipped_weapon,
+        equipped_armor: msg.equipped_armor || {}
+      });
       if (msg.room_id) {
         currentRoomId = msg.room_id;
         visitedRooms.add(msg.room_id);
@@ -570,6 +740,7 @@ OTHER
       }
       updateInventoryTab(msg);
       updateHeaderStats(msg);
+      if (inEncounter) renderEncounterStats(encounterData);
     } else if (msg.type === 'game_over') {
       isGameOver = true;
       inputField.disabled = true;
@@ -651,6 +822,117 @@ OTHER
     scrollToBottom();
   }
 
+
+  /**
+   * Encounter panel — show/hide and render
+   */
+  function showEncounter(data) {
+    inEncounter = true;
+    encounterData = Object.assign({}, data);
+
+    document.getElementById('map-section').style.display = 'none';
+    const section = document.getElementById('encounter-section');
+    section.classList.add('active');
+
+    document.getElementById('encounter-label').textContent = data.target_name.toUpperCase();
+
+    const folder = data.encounter_type === 'combat' ? 'monsters' : 'npcs';
+    const url = `/static/${folder}/${data.target_slug}.png`;
+    const img = document.getElementById('encounter-image');
+    const placeholder = document.getElementById('encounter-image-placeholder');
+    const nameEl = document.getElementById('encounter-placeholder-name');
+    nameEl.textContent = data.target_name;
+    img.classList.remove('loaded');
+    img.src = '';
+    placeholder.style.display = 'flex';
+
+    const probe = new Image();
+    probe.onload = () => {
+      img.src = url;
+      placeholder.style.display = 'none';
+      requestAnimationFrame(() => img.classList.add('loaded'));
+    };
+    probe.onerror = () => { img.src = ''; placeholder.style.display = 'flex'; };
+    probe.src = url;
+
+    renderEncounterStats(encounterData);
+  }
+
+  function hideEncounter() {
+    inEncounter = false;
+    encounterData = {};
+    document.getElementById('encounter-section').classList.remove('active');
+    document.getElementById('map-section').style.display = '';
+  }
+
+  function updateEncounterState(data) {
+    Object.assign(encounterData, data);
+    if (inEncounter) renderEncounterStats(encounterData);
+  }
+
+  function encBar(label, value, max, fillClass, displayText) {
+    const pct = max > 0 ? Math.max(0, Math.min(100, (value / max) * 100)) : 0;
+    return `<div class="enc-bar-row">
+      <span class="enc-bar-label">${label}</span>
+      <div class="enc-bar-track"><div class="enc-bar-fill ${fillClass}" style="width:${pct}%"></div></div>
+      <span class="enc-bar-value">${displayText}</span>
+    </div>`;
+  }
+
+  function encRow(label, value) {
+    return `<div class="enc-stat-row"><span class="enc-stat-label">${label}</span><span class="enc-stat-value">${value}</span></div>`;
+  }
+
+  function renderEncounterStats(data) {
+    const wrap = document.getElementById('encounter-stats-wrap');
+    if (!wrap) return;
+    let html = '';
+
+    // ── Target (debug) first ──────────────────────────────
+    if (data.encounter_type === 'combat') {
+      html += `<div class="enc-section-title"><span>${data.target_name}</span><span class="enc-debug-tag">DEBUG</span></div>`;
+      const mhp  = data.monster_health     ?? 0;
+      const mmhp = data.monster_max_health ?? 1;
+      html += encBar('HP', mhp, mmhp, 'monster', `${mhp}/${mmhp}`);
+      html += encRow('Damage',  data.monster_damage  ?? '?');
+      html += encRow('Defense', data.monster_defense ?? 0);
+      const weaknesses = data.monster_weaknesses || [];
+      html += encRow('Weak to', weaknesses.length ? weaknesses.join(', ') : 'none');
+    } else {
+      html += `<div class="enc-section-title"><span>${data.target_name}</span><span class="enc-debug-tag">DEBUG</span></div>`;
+      const mood = data.npc_mood ?? 0;
+      const fear = data.npc_fear ?? 0;
+      const moodClass = mood >= 0 ? 'mood-pos' : 'mood-neg';
+      html += encBar('Mood', mood + 100, 200, moodClass, (mood >= 0 ? '+' : '') + mood);
+      html += encBar('Fear', fear, 100, 'fear', String(fear));
+    }
+
+    // ── Player ────────────────────────────────────────────
+    html += '<div class="enc-section-title"><span>Player</span></div>';
+
+    const hp    = currentPlayerState.health    ?? 100;
+    const maxHp = currentPlayerState.max_health ?? 100;
+    const hpPct = maxHp > 0 ? hp / maxHp : 0;
+    const hpClass = hpPct > 0.5 ? 'hp-good' : hpPct > 0.25 ? 'hp-warn' : 'hp-low';
+    html += encBar('HP', hp, maxHp, hpClass, `${hp}/${maxHp}`);
+    html += encRow('Gold', currentPlayerState.gold ?? 0);
+
+    const wName = currentPlayerState.equipped_weapon;
+    if (wName) {
+      const wItem = (currentPlayerState.inventory || []).find(i => i.name === wName);
+      html += encRow('Weapon', wName + (wItem ? ` (${wItem.damage}dmg)` : ''));
+    } else {
+      html += encRow('Weapon', 'bare hands (1dmg)');
+    }
+
+    const armorMap = currentPlayerState.equipped_armor || {};
+    const totalArmor = (currentPlayerState.inventory || [])
+      .filter(i => Object.values(armorMap).includes(i.name))
+      .reduce((s, i) => s + (i.armor_rating || 0), 0);
+    html += encRow('Armor', Object.keys(armorMap).length ? `${totalArmor} def` : 'none');
+
+    wrap.innerHTML = html;
+  }
 
   /**
    * Compute BFS layout for room positions

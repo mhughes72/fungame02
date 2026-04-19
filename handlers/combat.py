@@ -4,6 +4,7 @@
 # player attacks, monster retaliation, flee attempts, weapon damage,
 # armor reduction, weakness bonuses, and monster drop handling.
 
+import json
 import random
 from utils import (invoke_with_system, total_armor_rating, debug,
                    FLEE_SUCCESS_THRESHOLD, WEAKNESS_BONUS_DAMAGE,
@@ -27,6 +28,9 @@ def combat_node(state, ROOMS, llm, io) -> dict:
         return {"force_full_description": False, "route_to": None}
 
     monster = dict(monster)
+
+    monster_slug = monster['name'].lower().replace(' ', '_').replace("'", '').replace('-', '_')
+    io.send(f"__encounter_start__{json.dumps({'encounter_type': 'combat', 'target_name': monster['name'], 'target_slug': monster_slug, 'monster_health': monster['health'], 'monster_max_health': monster['max_health'], 'monster_damage': monster['damage'], 'monster_defense': monster['defense'], 'monster_weaknesses': monster.get('weaknesses', [])})}")
 
     equipped_weapon = player.get("equipped_weapon")
     weapon_data = None
@@ -73,6 +77,7 @@ def combat_node(state, ROOMS, llm, io) -> dict:
                 room_states[room_id] = room_override
 
                 io.send("\n[You escaped back the way you came!]")
+                io.send("__encounter_end__")
                 return {
                     "player": player,
                     "route_to": None,
@@ -89,6 +94,7 @@ def combat_node(state, ROOMS, llm, io) -> dict:
                 io.send(f"[Failed to flee — {monster['name']} hits you for {monster_dmg} damage]")
                 if player["health"] <= 0:
                     io.send("\nYou have been slain. Game over.")
+                    io.send("__encounter_end__")
                     return {
                         "player": player,
                         "game_over": True,
@@ -136,9 +142,11 @@ def combat_node(state, ROOMS, llm, io) -> dict:
         })
         response = invoke_with_system(llm, prompt)
         io.send(f"\n{response.content}")
+        io.send(f"__encounter_state__{json.dumps({'player_health': player['health'], 'player_max_health': player['max_health'], 'monster_health': max(0, monster['health']), 'monster_max_health': monster['max_health']})}")
 
         if player["health"] <= 0:
             io.send("\nYou have been slain. Game over.")
+            io.send("__encounter_end__")
             return {
                 "player": player,
                 "game_over": True,
@@ -146,6 +154,7 @@ def combat_node(state, ROOMS, llm, io) -> dict:
             }
 
     io.send(f"\n[{monster['name'].upper()} DEFEATED]")
+    io.send("__encounter_end__")
 
     drops = monster.get("drops", {})
     gold_drop = drops.get("gold", 0)
