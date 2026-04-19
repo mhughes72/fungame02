@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Haunted Mansion — A Gothic Text Adventure</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: #0d0d0d;
+      color: #c8a96e;
+      font-family: 'Courier New', Courier, monospace;
+      padding: 0;
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Header with title and stats */
+    .header {
+      background: #1a1a1a;
+      border-bottom: 2px solid #3d3d3d;
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .header-left {
+      font-size: 18px;
+      font-weight: bold;
+      letter-spacing: 2px;
+      color: #d4a574;
+      text-shadow: 0 0 10px rgba(196, 137, 74, 0.3);
+    }
+
+    .header-right {
+      display: flex;
+      gap: 24px;
+      font-size: 12px;
+    }
+
+    .stat-label {
+      color: #8b6f47;
+      margin-right: 4px;
+    }
+
+    .stat-value {
+      color: #c8a96e;
+    }
+
+    /* Main output panel */
+    #output {
+      flex: 1;
+      overflow-y: auto;
+      border: 1px solid #3d3d3d;
+      padding: 16px;
+      margin: 12px 20px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-size: 14px;
+      line-height: 1.6;
+      background: #0d0d0d;
+      color: #c8a96e;
+      scrollbar-width: thin;
+      scrollbar-color: #3d3d3d #1a1a1a;
+    }
+
+    #output::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    #output::-webkit-scrollbar-track {
+      background: #1a1a1a;
+    }
+
+    #output::-webkit-scrollbar-thumb {
+      background: #3d3d3d;
+      border-radius: 4px;
+    }
+
+    #output::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
+
+    /* Message types */
+    .message {
+      color: #c8a96e;
+    }
+
+    .prompt {
+      color: #8b7355;
+      font-style: italic;
+      opacity: 0.8;
+    }
+
+    .command {
+      color: #5a8a5a;
+      font-weight: normal;
+    }
+
+    .game-over {
+      color: #8b4545;
+      font-style: italic;
+      margin-top: 8px;
+      opacity: 0.9;
+    }
+
+    .connecting {
+      color: #7a6b52;
+      font-style: italic;
+    }
+
+    .error {
+      color: #a85555;
+    }
+
+    /* Input container */
+    .input-container {
+      display: flex;
+      gap: 8px;
+      padding: 12px 20px;
+      background: #1a1a1a;
+      border-top: 2px solid #3d3d3d;
+      flex-shrink: 0;
+    }
+
+    .input-prefix {
+      color: #8b6f47;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+    }
+
+    #input {
+      flex: 1;
+      background: #1a1a1a;
+      color: #c8a96e;
+      border: 1px solid #3d3d3d;
+      padding: 8px 12px;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    #input:focus {
+      border-color: #6b5a3d;
+    }
+
+    #input::placeholder {
+      color: #5a4a3a;
+    }
+
+    #input:disabled {
+      background: #0d0d0d;
+      color: #5a4a3a;
+      border-color: #2a2a2a;
+      cursor: not-allowed;
+    }
+
+    button {
+      background: #2a2520;
+      color: #c8a96e;
+      border: 1px solid #3d3d3d;
+      padding: 8px 16px;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 12px;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+
+    button:hover:not(:disabled) {
+      background: #3d3530;
+      border-color: #6b5a3d;
+      box-shadow: 0 0 8px rgba(196, 137, 74, 0.2);
+    }
+
+    button:active:not(:disabled) {
+      background: #1a1512;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">⚰ HAUNTED MANSION ⚰</div>
+  <div class="header-right">
+    <div>
+      <span class="stat-label">Health:</span>
+      <span class="stat-value" id="health">100</span>
+    </div>
+    <div>
+      <span class="stat-label">Gold:</span>
+      <span class="stat-value" id="gold">0</span>
+    </div>
+  </div>
+</div>
+
+<div id="output"></div>
+
+<div class="input-container">
+  <span class="input-prefix">&gt;</span>
+  <input id="input" type="text" placeholder="What do you do?" autofocus>
+  <button id="send-btn">Send</button>
+</div>
+
+<script>
+  const outputDiv = document.getElementById('output');
+  const inputField = document.getElementById('input');
+  const sendBtn = document.getElementById('send-btn');
+  const healthSpan = document.getElementById('health');
+  const goldSpan = document.getElementById('gold');
+
+  let ws = null;
+  let isGameOver = false;
+  let isConnected = false;
+
+  /**
+   * Initialize WebSocket connection
+   */
+  function initWebSocket() {
+    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = protocol + '//' + location.host + '/ws';
+
+    ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+      isConnected = true;
+      isGameOver = false;
+      inputField.disabled = false;
+      sendBtn.disabled = false;
+      appendOutput('', 'connecting', '[Connecting to the mansion...]\n');
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        handleMessage(msg);
+      } catch (e) {
+        appendOutput('', 'error', '[Error parsing message]\n');
+        console.error('WebSocket message parse error:', e);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+      appendOutput('', 'error', '[WebSocket error]\n');
+    };
+
+    ws.onclose = () => {
+      isConnected = false;
+      if (!isGameOver) {
+        inputField.disabled = true;
+        sendBtn.disabled = true;
+        appendOutput('', 'error', '[Connection lost. Refresh the page to reconnect.]\n');
+      }
+    };
+  }
+
+  /**
+   * Handle incoming WebSocket messages
+   */
+  function handleMessage(msg) {
+    if (msg.type === 'message') {
+      appendOutput(msg.text, 'message', msg.text + '\n');
+    } else if (msg.type === 'prompt') {
+      appendOutput(msg.text, 'prompt', msg.text);
+    } else if (msg.type === 'game_over') {
+      isGameOver = true;
+      inputField.disabled = true;
+      sendBtn.disabled = true;
+      appendOutput('[The mansion falls silent...]\n', 'game-over', '\n[The mansion falls silent...]\n');
+    }
+
+    // Auto-scroll to bottom
+    scrollToBottom();
+
+    // Update health and gold from message text (simple regex parsing)
+    updateStats(msg.text || '');
+  }
+
+  /**
+   * Append text to output with styling
+   */
+  function appendOutput(text, className, displayText) {
+    const span = document.createElement('span');
+    if (className) {
+      span.className = className;
+    }
+    span.textContent = displayText;
+    outputDiv.appendChild(span);
+  }
+
+  /**
+   * Scroll output to bottom
+   */
+  function scrollToBottom() {
+    outputDiv.scrollTop = outputDiv.scrollHeight;
+  }
+
+  /**
+   * Update health and gold stats from game output
+   * Simple heuristic: look for patterns like "Health: 85" or "Gold: 150"
+   */
+  function updateStats(text) {
+    const healthMatch = text.match(/Health[:\s]+(\d+)/i);
+    if (healthMatch) {
+      healthSpan.textContent = healthMatch[1];
+    }
+
+    const goldMatch = text.match(/Gold[:\s]+(\d+)/i);
+    if (goldMatch) {
+      goldSpan.textContent = goldMatch[1];
+    }
+  }
+
+  /**
+   * Send command to server
+   */
+  function send() {
+    const text = inputField.value.trim();
+
+    if (!text) {
+      return;
+    }
+
+    if (!isConnected || ws.readyState !== WebSocket.OPEN) {
+      appendOutput('', 'error', '[Not connected]\n');
+      return;
+    }
+
+    // Echo player command in a distinct color
+    appendOutput('> ' + text, 'command', '> ' + text + '\n');
+
+    // Send to server
+    ws.send(text);
+
+    // Clear input
+    inputField.value = '';
+    inputField.focus();
+
+    // Scroll to bottom
+    scrollToBottom();
+  }
+
+  /**
+   * Event listeners
+   */
+  sendBtn.addEventListener('click', send);
+
+  inputField.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      send();
+    }
+  });
+
+  // Initialize on page load
+  initWebSocket();
+</script>
+
+</body>
+</html>

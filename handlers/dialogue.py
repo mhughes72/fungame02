@@ -90,7 +90,7 @@ def _execute_bribe(npc: dict, amount: int, player: dict, npc_moods: dict,
     return reply, new_mood
 
 
-def handle_bribe(state: dict, target: str, amount: int, llm, mini_llm) -> dict:
+def handle_bribe(state: dict, target: str, amount: int, llm, mini_llm, io) -> dict:
     room = state["current_room_data"]
     player = dict(state.get("player", {}))
     npc_moods = dict(state.get("npc_moods", {}))
@@ -101,21 +101,21 @@ def handle_bribe(state: dict, target: str, amount: int, llm, mini_llm) -> dict:
         None
     )
     if not npc:
-        print("There's no one here to give gold to.")
+        io.send("There's no one here to give gold to.")
         return {"force_full_description": False}
 
     gold = player.get("gold", 0)
     if gold < amount:
-        print(f"You only have {gold} gold.")
+        io.send(f"You only have {gold} gold.")
         return {"force_full_description": False}
 
     player["gold"] = gold - amount
     reply, _ = _execute_bribe(npc, amount, player, npc_moods, npc_fear.get(npc["name"], 0), llm, mini_llm)
-    print(f"\n{npc['name']}: {reply}\n")
+    io.send(f"\n{npc['name']}: {reply}\n")
     return {"player": player, "npc_moods": npc_moods, "npc_fear": npc_fear, "force_full_description": False}
 
 
-def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn) -> dict:
+def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn, io) -> dict:
     from handlers.shop import handle_shop
 
     room = state["current_room_data"]
@@ -131,7 +131,7 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn) -> dict:
 
     if not npc:
         debug(f"dialogue: no NPC matched target '{target}'")
-        print("There's no one here to talk to.")
+        io.send("There's no one here to talk to.")
         return {"force_full_description": False}
 
     debug(f"dialogue: talking to '{npc['name']}' | shop: {npc.get('shop_id')} | web_search: {npc.get('can_search_web', False)}")
@@ -139,10 +139,10 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn) -> dict:
     if npc.get("shop_id"):
         npc_moods = dict(state.get("npc_moods", {}))
         npc_fear = dict(state.get("npc_fear", {}))
-        return handle_shop(state, npc, SHOPS, mini_llm, npc_moods, npc_fear)
+        return handle_shop(state, npc, SHOPS, mini_llm, npc_moods, npc_fear, io)
 
-    print(f"\n{npc['name']}: \"{npc['description']}\"")
-    print("(Type 'goodbye' or 'leave' to end the conversation)\n")
+    io.send(f"\n{npc['name']}: \"{npc['description']}\"")
+    io.send("(Type 'goodbye' or 'leave' to end the conversation)\n")
 
     use_web_search = npc.get("can_search_web", False)
     tavily_client = TavilyClient(api_key=os.getenv("TAVILY_API_KEY")) if use_web_search else None
@@ -157,11 +157,11 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn) -> dict:
     debug(f"dialogue: mood for '{npc['name']}': {current_mood} | fear: {current_fear}")
 
     while True:
-        player_msg = input("You: ").strip()
+        player_msg = io.recv("You: ")
         history.append(f"Player: {player_msg}")
 
         if any(word in player_msg.lower() for word in CONVERSATION_EXIT_WORDS):
-            print(f"({npc['name']} turns away.)")
+            io.send(f"({npc['name']} turns away.)")
             break
 
         # Detect bribe inside conversation
@@ -169,12 +169,12 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn) -> dict:
         if bribe_match:
             amount = int(bribe_match.group(1))
             if player.get("gold", 0) < amount:
-                print(f"You only have {player.get('gold', 0)} gold.")
+                io.send(f"You only have {player.get('gold', 0)} gold.")
                 history.pop()
                 continue
             player["gold"] = player.get("gold", 0) - amount
             reply, current_mood = _execute_bribe(npc, amount, player, npc_moods, current_fear, llm, mini_llm)
-            print(f"\n{npc['name']}: {reply}\n")
+            io.send(f"\n{npc['name']}: {reply}\n")
             history.append(f"{npc['name']}: {reply}")
             store_exchange(npc["name"], player_msg, reply)
             continue
@@ -214,11 +214,11 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn) -> dict:
                 ]).content
                 end_conversation = "[END CONVERSATION]" in reply
                 clean_reply = reply.replace("[END CONVERSATION]", "").strip()
-                print(f"\n{npc['name']}: {clean_reply}\n")
+                io.send(f"\n{npc['name']}: {clean_reply}\n")
                 history.append(f"{npc['name']}: {clean_reply}")
                 store_exchange(npc["name"], player_msg, clean_reply)
                 if end_conversation:
-                    print(f"({npc['name']} turns away.)")
+                    io.send(f"({npc['name']} turns away.)")
                     break
                 continue
 
@@ -253,14 +253,14 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn) -> dict:
         end_conversation = "[END CONVERSATION]" in reply
         clean_reply = reply.replace("[END CONVERSATION]", "").strip()
 
-        print(f"\n{npc['name']}: {clean_reply}\n")
+        io.send(f"\n{npc['name']}: {clean_reply}\n")
         history.append(f"{npc['name']}: {clean_reply}")
 
         # Store facts immediately so they're available for the rest of this conversation
         store_exchange(npc["name"], player_msg, clean_reply)
 
         if end_conversation:
-            print(f"({npc['name']} turns away.)")
+            io.send(f"({npc['name']} turns away.)")
             break
 
     return {"player": player, "npc_moods": npc_moods, "npc_fear": npc_fear, "force_full_description": False}
