@@ -7,7 +7,7 @@
 #   handle_equip   — equip a weapon or armour piece from inventory
 #   handle_unequip — remove an equipped weapon or armour piece
 
-from utils import find_item, invoke_with_system, debug
+from utils import find_item, invoke_with_system, debug, emit_player_state
 from prompts import EXAMINE_PROMPT
 
 def handle_use(state, target, io) -> dict:
@@ -37,6 +37,7 @@ def handle_use(state, target, io) -> dict:
         debug(f"use '{target}': healed {healed} | health {current_health} → {player['health']}/{max_health}")
         io.send(f"You drink the health potion and recover {healed} health.")
         io.send(f"Health: {player['health']}/{max_health}")
+        emit_player_state(player, state["current_room_id"], io)
         return {
             "player": player,
             "force_full_description": False
@@ -67,6 +68,7 @@ def handle_take(state, target, io) -> dict:
         player["inventory"] = inventory
         debug(f"take '{target}': added to inventory | inventory size: {len(inventory)}")
         io.send(f"You take the {target}.")
+        emit_player_state(player, room_id, io)
         return {
             "room_states": room_states,
             "player": player,
@@ -181,6 +183,7 @@ def handle_open(state, target, io) -> dict:
         debug(f"open '{target}': found {gold_found}g | total gold: {player['gold']}")
         io.send(f"You open the {target} and find {gold_found} gold coins inside!")
         io.send(f"You now have {player['gold']} gold.")
+        emit_player_state(player, room_id, io)
         return {
             "room_states": room_states,
             "player": player,
@@ -210,6 +213,7 @@ def handle_equip(state, target, io) -> dict:
         player["equipped_weapon"] = target
         debug(f"equip weapon: '{target}' ({item_data['weapon_type']}, {item_data['damage']} dmg) | replaced: {prev}")
         io.send(f"You equip the {target}. ({item_data['weapon_type']}, {item_data['damage']} damage)")
+        emit_player_state(player, state["current_room_id"], io)
         return {"player": player, "force_full_description": False}
 
     if item_data.get("armor_slot"):
@@ -222,6 +226,7 @@ def handle_equip(state, target, io) -> dict:
         player["equipped_armor"] = equipped_armor
         debug(f"equip armor: '{target}' → slot '{slot}' ({item_data['armor_rating']} rating) | replaced: {prev}")
         io.send(f"You equip the {target}. ({slot}, {item_data['armor_rating']} armor rating)")
+        emit_player_state(player, state["current_room_id"], io)
         return {"player": player, "force_full_description": False}
 
     debug(f"equip '{target}': not a weapon or armor")
@@ -236,6 +241,7 @@ def handle_unequip(state, target, io) -> dict:
         player["equipped_weapon"] = None
         debug(f"unequip weapon: '{target}'")
         io.send(f"You unequip the {target}.")
+        emit_player_state(player, state["current_room_id"], io)
         return {"player": player, "force_full_description": False}
 
     for slot, item_name in equipped_armor.items():
@@ -244,6 +250,7 @@ def handle_unequip(state, target, io) -> dict:
             player["equipped_armor"] = equipped_armor
             debug(f"unequip armor: '{target}' from slot '{slot}'")
             io.send(f"You remove the {target}.")
+            emit_player_state(player, state["current_room_id"], io)
             return {"player": player, "force_full_description": False}
 
     debug(f"unequip '{target}': not currently equipped")

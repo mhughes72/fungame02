@@ -26,7 +26,7 @@ from prompts import (
     COMBAT_PROMPT, FLEE_PROMPT, GAME_SYSTEM_PROMPT, WIN_PROMPT
 )
 
-from utils import invoke_with_system, find_item, visible_items, total_armor_rating, debug, parse_llm_json
+from utils import invoke_with_system, find_item, visible_items, total_armor_rating, debug, parse_llm_json, emit_player_state
 from npc_memory import clear_all_memories
 from handlers import (
     handle_go, handle_take, handle_examine, handle_open,
@@ -218,7 +218,7 @@ def load_room_data(state: AgentState) -> dict:
     override_keys = list(room_override.keys()) if room_override else []
     debug(f"load_room: {new_room_id} ({base_room['name']}) | overrides: {override_keys or 'none'} | prev: {previous_room_id}")
 
-    io_ctx().send(f"__state__room_id={new_room_id}")
+    emit_player_state(state.get("player", {}), new_room_id, io_ctx())
 
     return {
         "current_room_data": room,

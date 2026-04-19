@@ -107,6 +107,42 @@
       background: #555;
     }
 
+    /* Room image banner */
+    #room-image-container {
+      flex-shrink: 0;
+      height: 200px;
+      margin: 12px 20px 0 20px;
+      overflow: hidden;
+      border: 1px solid #3d3d3d;
+      background: #0d0d0d;
+      position: relative;
+    }
+
+    #room-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      display: block;
+      opacity: 0;
+      transition: opacity 0.8s ease;
+    }
+
+    #room-image.loaded {
+      opacity: 1;
+    }
+
+    #room-image-placeholder {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #3d3530;
+      font-size: 11px;
+      letter-spacing: 2px;
+    }
+
     /* Message types */
     .message {
       color: #c8a96e;
@@ -284,6 +320,46 @@
       background: #0d0d0d;
       border: 1px solid #3d3d3d;
     }
+
+    /* Inventory tab */
+    #tab-inventory {
+      font-size: 11px;
+      line-height: 1.7;
+      color: #8a7a5a;
+    }
+
+    .inv-section-title {
+      color: #6b5a3d;
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin: 10px 0 4px 0;
+      border-bottom: 1px solid #2a2a2a;
+      padding-bottom: 2px;
+    }
+
+    .inv-section-title:first-child {
+      margin-top: 0;
+    }
+
+    .inv-item {
+      padding: 2px 0;
+      color: #a89060;
+    }
+
+    .inv-item.equipped {
+      color: #c8a96e;
+    }
+
+    .inv-item .inv-tag {
+      color: #5a7a5a;
+      font-size: 10px;
+    }
+
+    .inv-empty {
+      color: #4a3a2a;
+      font-style: italic;
+    }
   </style>
 </head>
 <body>
@@ -304,6 +380,10 @@
 
 <div class="main-content">
   <div class="game-container">
+    <div id="room-image-container">
+      <img id="room-image" src="" alt="">
+      <div id="room-image-placeholder">HAUNTED MANSION</div>
+    </div>
     <div id="output"></div>
     <div class="input-container">
       <span class="input-prefix">&gt;</span>
@@ -316,6 +396,7 @@
     <div id="tab-bar">
       <button class="tab active" data-tab="help">Help</button>
       <button class="tab" data-tab="map">Map</button>
+      <button class="tab" data-tab="inventory">Inv</button>
     </div>
     <div id="tab-help" class="tab-content active">MOVEMENT
   go [direction]   — north, south, east, west
@@ -346,6 +427,7 @@ OTHER
     <div id="tab-map" class="tab-content">
       <canvas id="map-canvas" width="260" height="400"></canvas>
     </div>
+    <div id="tab-inventory" class="tab-content"></div>
   </div>
 </div>
 
@@ -414,11 +496,13 @@ OTHER
     } else if (msg.type === 'prompt') {
       appendOutput(msg.text, 'prompt', msg.text);
     } else if (msg.type === 'state') {
-      // Handle state messages (e.g., room change)
       if (msg.room_id) {
         currentRoomId = msg.room_id;
         drawMap();
+        updateRoomImage(msg.room_id);
       }
+      updateInventoryTab(msg);
+      updateHeaderStats(msg);
     } else if (msg.type === 'game_over') {
       isGameOver = true;
       inputField.disabled = true;
@@ -663,6 +747,76 @@ OTHER
       send();
     }
   });
+
+  /**
+   * Update header health/gold from a state message (replaces regex parsing)
+   */
+  function updateHeaderStats(state) {
+    if (state.health !== undefined) healthSpan.textContent = state.health;
+    if (state.gold !== undefined) goldSpan.textContent = state.gold;
+  }
+
+  /**
+   * Render the inventory sidebar tab from a state message
+   */
+  function updateInventoryTab(state) {
+    const tab = document.getElementById('tab-inventory');
+    if (!tab) return;
+
+    const inventory = state.inventory || [];
+    const equippedWeapon = state.equipped_weapon || null;
+    const equippedArmor = state.equipped_armor || {};
+    const equippedNames = new Set([equippedWeapon, ...Object.values(equippedArmor)].filter(Boolean));
+
+    const weapons = inventory.filter(i => i.weapon_type);
+    const armor = inventory.filter(i => i.armor_slot);
+    const other = inventory.filter(i => !i.weapon_type && !i.armor_slot);
+
+    function itemLine(item) {
+      const isEquipped = equippedNames.has(item.name);
+      let tag = '';
+      if (item.weapon_type) tag = `<span class="inv-tag">[${item.weapon_type}, ${item.damage} dmg]</span>`;
+      else if (item.armor_slot) tag = `<span class="inv-tag">[${item.armor_slot}, ${item.armor_rating} def]</span>`;
+      return `<div class="inv-item${isEquipped ? ' equipped' : ''}">${isEquipped ? '▶ ' : '  '}${item.name} ${tag}</div>`;
+    }
+
+    let html = '';
+
+    html += `<div class="inv-section-title">Weapons</div>`;
+    html += weapons.length ? weapons.map(itemLine).join('') : '<div class="inv-empty">  none</div>';
+
+    html += `<div class="inv-section-title">Armour</div>`;
+    html += armor.length ? armor.map(itemLine).join('') : '<div class="inv-empty">  none</div>';
+
+    html += `<div class="inv-section-title">Items</div>`;
+    html += other.length ? other.map(itemLine).join('') : '<div class="inv-empty">  none</div>';
+
+    tab.innerHTML = html;
+  }
+
+  /**
+   * Swap the room image banner with a fade transition
+   */
+  function updateRoomImage(roomId) {
+    const img = document.getElementById('room-image');
+    const placeholder = document.getElementById('room-image-placeholder');
+    const url = `/static/rooms/${roomId}.png`;
+
+    img.classList.remove('loaded');
+    const next = new Image();
+    next.onload = () => {
+      img.src = url;
+      placeholder.style.display = 'none';
+      // Small delay so the CSS transition fires after src swap
+      requestAnimationFrame(() => img.classList.add('loaded'));
+    };
+    next.onerror = () => {
+      // Image not generated yet — keep placeholder visible
+      img.src = '';
+      placeholder.style.display = 'flex';
+    };
+    next.src = url;
+  }
 
   // Initialize on page load
   setupTabSwitching();

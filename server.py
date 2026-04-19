@@ -67,10 +67,9 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
             elif msg.startswith("__prompt__"):
                 prompt = msg[len("__prompt__"):]
                 await websocket.send_json({"type": "prompt", "text": prompt})
-            elif msg.startswith("__state__"):
-                payload = msg[len("__state__"):]
-                # parse key=value pairs: "room_id=room_1"
-                data = dict(kv.split("=", 1) for kv in payload.split(",") if "=" in kv)
+            elif msg.startswith("__statejson__"):
+                import json as _json
+                data = _json.loads(msg[len("__statejson__"):])
                 await websocket.send_json({"type": "state", **data})
             else:
                 await websocket.send_json({"type": "message", "text": msg})

@@ -87,6 +87,31 @@ ARMOR_REDUCTION_RATE = 0.05       # damage reduction per armor point
 ARMOR_REDUCTION_CAP = 0.75        # maximum damage reduction (75%)
 
 
+def emit_player_state(player: dict, room_id: str, io) -> None:
+    """Send a structured player state update to the frontend via the IO context."""
+    import json
+    inventory = player.get("inventory", [])
+    data = {
+        "room_id": room_id,
+        "health": player.get("health", 100),
+        "max_health": player.get("max_health", 100),
+        "gold": player.get("gold", 0),
+        "equipped_weapon": player.get("equipped_weapon"),
+        "equipped_armor": player.get("equipped_armor", {}),
+        "inventory": [
+            {
+                "name": i["name"],
+                "damage": i.get("damage", 0),
+                "weapon_type": i.get("weapon_type"),
+                "armor_slot": i.get("armor_slot"),
+                "armor_rating": i.get("armor_rating", 0),
+            }
+            for i in inventory
+        ],
+    }
+    io.send(f"__statejson__{json.dumps(data)}")
+
+
 def parse_llm_json(text: str) -> str:
     """Strip markdown code fences from LLM output before JSON parsing."""
     text = text.strip()

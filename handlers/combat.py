@@ -7,7 +7,7 @@
 import random
 from utils import (invoke_with_system, total_armor_rating, debug,
                    FLEE_SUCCESS_THRESHOLD, WEAKNESS_BONUS_DAMAGE,
-                   ARMOR_REDUCTION_RATE, ARMOR_REDUCTION_CAP)
+                   ARMOR_REDUCTION_RATE, ARMOR_REDUCTION_CAP, emit_player_state)
 from prompts import COMBAT_PROMPT, FLEE_PROMPT
 
 def combat_node(state, ROOMS, llm, io) -> dict:
@@ -171,6 +171,8 @@ def combat_node(state, ROOMS, llm, io) -> dict:
     new_monsters = [m for m in room["monsters"] if m["name"] != target]
     room_override["monsters"] = new_monsters
     room_states[room_id] = room_override
+
+    emit_player_state(player, room_id, io)
 
     return {
         "room_states": room_states,
