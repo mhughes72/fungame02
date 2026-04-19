@@ -218,6 +218,8 @@ def load_room_data(state: AgentState) -> dict:
     override_keys = list(room_override.keys()) if room_override else []
     debug(f"load_room: {new_room_id} ({base_room['name']}) | overrides: {override_keys or 'none'} | prev: {previous_room_id}")
 
+    io_ctx().send(f"__state__room_id={new_room_id}")
+
     return {
         "current_room_data": room,
         "route_to": None,

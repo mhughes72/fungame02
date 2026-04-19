@@ -23,6 +23,22 @@
       overflow: hidden;
     }
 
+    /* Main content layout: game + sidebar */
+    .main-content {
+      display: flex;
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .game-container {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
     /* Header with title and stats */
     .header {
       background: #1a1a1a;
@@ -63,7 +79,7 @@
       overflow-y: auto;
       border: 1px solid #3d3d3d;
       padding: 16px;
-      margin: 12px 20px;
+      margin: 12px 20px 0 20px;
       white-space: pre-wrap;
       word-wrap: break-word;
       font-size: 14px;
@@ -195,6 +211,76 @@
       opacity: 0.5;
       cursor: not-allowed;
     }
+
+    /* Sidebar */
+    #sidebar {
+      width: 280px;
+      min-width: 280px;
+      background: #111;
+      border-left: 1px solid #3d3d3d;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #tab-bar {
+      display: flex;
+      border-bottom: 1px solid #3d3d3d;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 8px;
+      background: #0d0d0d;
+      color: #5a4a2a;
+      border: none;
+      cursor: pointer;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+
+    .tab:hover {
+      color: #8a7a5a;
+    }
+
+    .tab.active {
+      color: #c8a96e;
+      border-bottom: 2px solid #c8a96e;
+      background: #1a1a1a;
+    }
+
+    .tab-content {
+      display: none;
+      padding: 12px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    #tab-help {
+      font-size: 11px;
+      line-height: 1.8;
+      color: #8a7a5a;
+      white-space: pre;
+    }
+
+    #tab-map {
+      padding: 8px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    #map-canvas {
+      display: block;
+      background: #0d0d0d;
+      border: 1px solid #3d3d3d;
+    }
   </style>
 </head>
 <body>
@@ -213,12 +299,51 @@
   </div>
 </div>
 
-<div id="output"></div>
+<div class="main-content">
+  <div class="game-container">
+    <div id="output"></div>
+    <div class="input-container">
+      <span class="input-prefix">&gt;</span>
+      <input id="input" type="text" placeholder="What do you do?" autofocus>
+      <button id="send-btn">Send</button>
+    </div>
+  </div>
 
-<div class="input-container">
-  <span class="input-prefix">&gt;</span>
-  <input id="input" type="text" placeholder="What do you do?" autofocus>
-  <button id="send-btn">Send</button>
+  <div id="sidebar">
+    <div id="tab-bar">
+      <button class="tab active" data-tab="help">Help</button>
+      <button class="tab" data-tab="map">Map</button>
+    </div>
+    <div id="tab-help" class="tab-content active">MOVEMENT
+  go [direction]   — north, south, east, west
+
+INTERACTION
+  talk [npc]       — start conversation
+  take [item]      — pick up item
+  examine [item]   — inspect something
+  open [item]      — open container
+  use [item]       — use an item
+  bribe [npc] [N]  — offer N gold
+
+COMBAT
+  attack [enemy]   — attack target
+  flee             — attempt to escape
+
+INVENTORY
+  inventory        — show items & stats
+  equip [item]     — equip weapon/armour
+  unequip [item]   — remove equipped item
+
+OTHER
+  look             — redescribe room
+  room             — show room summary
+  help             — show this list
+  quit             — end game
+    </div>
+    <div id="tab-map" class="tab-content">
+      <canvas id="map-canvas" width="260" height="400"></canvas>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -231,6 +356,9 @@
   let ws = null;
   let isGameOver = false;
   let isConnected = false;
+  let currentRoomId = 'room_1';
+  let roomsData = {};
+  let roomPositions = {};
 
   /**
    * Initialize WebSocket connection
@@ -282,6 +410,12 @@
       appendOutput(msg.text, 'message', msg.text + '\n');
     } else if (msg.type === 'prompt') {
       appendOutput(msg.text, 'prompt', msg.text);
+    } else if (msg.type === 'state') {
+      // Handle state messages (e.g., room change)
+      if (msg.room_id) {
+        currentRoomId = msg.room_id;
+        drawMap();
+      }
     } else if (msg.type === 'game_over') {
       isGameOver = true;
       inputField.disabled = true;
@@ -361,6 +495,161 @@
   }
 
   /**
+   * Tab switching for sidebar
+   */
+  function setupTabSwitching() {
+    const tabs = document.querySelectorAll('.tab');
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const tabName = tab.dataset.tab;
+
+        // Hide all tab contents
+        document.querySelectorAll('.tab-content').forEach(content => {
+          content.classList.remove('active');
+        });
+
+        // Remove active from all tabs
+        document.querySelectorAll('.tab').forEach(t => {
+          t.classList.remove('active');
+        });
+
+        // Show selected tab content
+        const tabContent = document.getElementById(`tab-${tabName}`);
+        if (tabContent) {
+          tabContent.classList.add('active');
+        }
+
+        // Mark tab as active
+        tab.classList.add('active');
+
+        // If map tab, redraw canvas
+        if (tabName === 'map') {
+          setTimeout(() => drawMap(), 0);
+        }
+      });
+    });
+  }
+
+  /**
+   * Compute BFS layout for room positions
+   */
+  function computeRoomLayout(rooms) {
+    roomPositions = {};
+    const visited = new Set();
+    const queue = [{ id: 'room_1', x: 0, y: 0 }];
+
+    while (queue.length > 0) {
+      const { id, x, y } = queue.shift();
+      if (visited.has(id)) continue;
+      visited.add(id);
+      roomPositions[id] = { x, y };
+
+      const room = rooms[id];
+      if (!room || !room.exits) continue;
+
+      const directionDeltas = {
+        'north': { dx: 0, dy: -1 },
+        'south': { dx: 0, dy: 1 },
+        'east': { dx: 1, dy: 0 },
+        'west': { dx: -1, dy: 0 }
+      };
+
+      for (const [direction, destRoomId] of Object.entries(room.exits)) {
+        if (!visited.has(destRoomId)) {
+          const delta = directionDeltas[direction] || { dx: 0, dy: 0 };
+          queue.push({ id: destRoomId, x: x + delta.dx, y: y + delta.dy });
+        }
+      }
+    }
+  }
+
+  /**
+   * Draw the map on canvas
+   */
+  function drawMap() {
+    const canvas = document.getElementById('map-canvas');
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#0d0d0d';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    if (Object.keys(roomPositions).length === 0) {
+      ctx.fillStyle = '#8a7a5a';
+      ctx.font = '12px Courier New';
+      ctx.textAlign = 'center';
+      ctx.fillText('Loading map...', canvas.width / 2, canvas.height / 2);
+      return;
+    }
+
+    // Draw edges (connections)
+    ctx.strokeStyle = '#3d3d3d';
+    ctx.lineWidth = 1;
+    for (const [roomId, pos] of Object.entries(roomPositions)) {
+      const room = roomsData[roomId];
+      if (!room || !room.exits) continue;
+
+      for (const destRoomId of Object.values(room.exits)) {
+        const destPos = roomPositions[destRoomId];
+        if (destPos) {
+          const x1 = 130 + pos.x * 70;
+          const y1 = 200 + pos.y * 70;
+          const x2 = 130 + destPos.x * 70;
+          const y2 = 200 + destPos.y * 70;
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.stroke();
+        }
+      }
+    }
+
+    // Draw room nodes
+    for (const [roomId, pos] of Object.entries(roomPositions)) {
+      const x = 130 + pos.x * 70;
+      const y = 200 + pos.y * 70;
+      const w = 40;
+      const h = 20;
+
+      const isCurrent = roomId === currentRoomId;
+
+      if (isCurrent) {
+        ctx.fillStyle = '#3d2a0a';
+        ctx.strokeStyle = '#c8a96e';
+      } else {
+        ctx.fillStyle = '#1a1a1a';
+        ctx.strokeStyle = '#5a4a2a';
+      }
+      ctx.lineWidth = 2;
+      ctx.fillRect(x - w / 2, y - h / 2, w, h);
+      ctx.strokeRect(x - w / 2, y - h / 2, w, h);
+
+      // Draw room name
+      const room = roomsData[roomId];
+      const shortName = room ? room.name.substring(0, 6) : roomId.substring(5);
+      ctx.fillStyle = isCurrent ? '#c8a96e' : '#8a7a5a';
+      ctx.font = 'bold 9px Courier New';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(shortName, x, y);
+    }
+  }
+
+  /**
+   * Fetch and initialize the map
+   */
+  async function fetchAndDrawMap() {
+    try {
+      const response = await fetch('/rooms');
+      roomsData = await response.json();
+      computeRoomLayout(roomsData);
+      drawMap();
+    } catch (e) {
+      console.error('Error fetching rooms:', e);
+    }
+  }
+
+  /**
    * Event listeners
    */
   sendBtn.addEventListener('click', send);
@@ -373,6 +662,8 @@
   });
 
   // Initialize on page load
+  setupTabSwitching();
+  fetchAndDrawMap();
   initWebSocket();
 </script>
 

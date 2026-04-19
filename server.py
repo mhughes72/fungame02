@@ -15,10 +15,11 @@ Client → server:
 """
 
 import asyncio
+import json as json_lib
 from concurrent.futures import ThreadPoolExecutor
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from io_context import WebSocketContext, DisconnectedError
@@ -66,6 +67,11 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
             elif msg.startswith("__prompt__"):
                 prompt = msg[len("__prompt__"):]
                 await websocket.send_json({"type": "prompt", "text": prompt})
+            elif msg.startswith("__state__"):
+                payload = msg[len("__state__"):]
+                # parse key=value pairs: "room_id=room_1"
+                data = dict(kv.split("=", 1) for kv in payload.split(",") if "=" in kv)
+                await websocket.send_json({"type": "state", **data})
             else:
                 await websocket.send_json({"type": "message", "text": msg})
 
@@ -80,6 +86,12 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 
     await asyncio.gather(forward_output(), forward_input())
     await asyncio.wrap_future(game_future)
+
+
+@fastapi_app.get("/rooms")
+async def get_rooms() -> JSONResponse:
+    with open("data/rooms.json", "r") as f:
+        return JSONResponse(json_lib.load(f))
 
 
 @fastapi_app.get("/")
