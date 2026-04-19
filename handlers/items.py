@@ -10,7 +10,7 @@
 from utils import find_item, invoke_with_system, debug
 from prompts import EXAMINE_PROMPT
 
-def handle_use(state, target) -> dict:
+def handle_use(state, target, io) -> dict:
     player = dict(state.get("player", {}))
     inventory = list(player.get("inventory", []))
 
@@ -18,7 +18,7 @@ def handle_use(state, target) -> dict:
 
     if not item:
         debug(f"use '{target}': not in inventory")
-        print(f"You don't have {target} in your inventory.")
+        io.send(f"You don't have {target} in your inventory.")
         return {"force_full_description": False}
 
     if item.get("heal_amount"):
@@ -27,7 +27,7 @@ def handle_use(state, target) -> dict:
 
         if current_health == max_health:
             debug(f"use '{target}': already at full health")
-            print("You are already at full health.")
+            io.send("You are already at full health.")
             return {"force_full_description": False}
 
         heal_amount = item.get("heal_amount", 50)
@@ -35,18 +35,18 @@ def handle_use(state, target) -> dict:
         player["health"] = current_health + healed
         player["inventory"] = [i for i in inventory if i != item]
         debug(f"use '{target}': healed {healed} | health {current_health} → {player['health']}/{max_health}")
-        print(f"You drink the health potion and recover {healed} health.")
-        print(f"Health: {player['health']}/{max_health}")
+        io.send(f"You drink the health potion and recover {healed} health.")
+        io.send(f"Health: {player['health']}/{max_health}")
         return {
             "player": player,
             "force_full_description": False
         }
 
     debug(f"use '{target}': no effect defined")
-    print(f"You can't use the {target}.")
+    io.send(f"You can't use the {target}.")
     return {"force_full_description": False}
 
-def handle_take(state, target) -> dict:
+def handle_take(state, target, io) -> dict:
     room = state["current_room_data"]
     room_id = state["current_room_id"]
     room_states = dict(state.get("room_states", {}))
@@ -58,7 +58,7 @@ def handle_take(state, target) -> dict:
     if item:
         if item.get("openable"):
             debug(f"take '{target}': is a container, blocked")
-            print(f"The {target} is too large to carry. Try opening it instead.")
+            io.send(f"The {target} is too large to carry. Try opening it instead.")
             return {"force_full_description": False}
         new_items = [i for i in room["items"] if i["name"] != target]
         room_override["items"] = new_items
@@ -66,18 +66,18 @@ def handle_take(state, target) -> dict:
         inventory.append(item)
         player["inventory"] = inventory
         debug(f"take '{target}': added to inventory | inventory size: {len(inventory)}")
-        print(f"You take the {target}.")
+        io.send(f"You take the {target}.")
         return {
             "room_states": room_states,
             "player": player,
             "force_full_description": False
         }
     debug(f"take '{target}': not found in {room_id}")
-    print(f"There's no {target} here.")
+    io.send(f"There's no {target} here.")
     return {"force_full_description": False}
 
 
-def handle_examine(state, target, llm) -> dict:
+def handle_examine(state, target, llm, io) -> dict:
     room = state["current_room_data"]
     room_id = state["current_room_id"]
     room_states = dict(state.get("room_states", {}))
@@ -88,17 +88,17 @@ def handle_examine(state, target, llm) -> dict:
     # Monster?
     monster = next((m for m in room["monsters"] if m["name"] == target), None)
     if monster:
-        print(f"\n--- {monster['name'].upper()} ---")
-        print(f"Health:     {monster['health']}/{monster['max_health']}")
-        print(f"Defense:    {monster['defense']}")
-        print(f"Damage:     {monster['damage']}")
-        print(f"Weaknesses: {', '.join(monster['weaknesses']) if monster['weaknesses'] else 'none'}")
+        io.send(f"\n--- {monster['name'].upper()} ---")
+        io.send(f"Health:     {monster['health']}/{monster['max_health']}")
+        io.send(f"Defense:    {monster['defense']}")
+        io.send(f"Damage:     {monster['damage']}")
+        io.send(f"Weaknesses: {', '.join(monster['weaknesses']) if monster['weaknesses'] else 'none'}")
         return {"force_full_description": False}
 
     # NPC?
     npc = next((n for n in room["npcs"] if n["name"].lower() == target), None)
     if npc:
-        print(f"\n{npc['name']}: {npc['description']}")
+        io.send(f"\n{npc['name']}: {npc['description']}")
         return {"force_full_description": False}
 
     # Room itself?
@@ -131,10 +131,10 @@ def handle_examine(state, target, llm) -> dict:
         "discovery_text": discovery_text,
     })
     response = invoke_with_system(llm, prompt)
-    print(response.content)
+    io.send(response.content)
 
     if newly_revealed:
-        print(f"\n[You find: {', '.join(newly_revealed)}]")
+        io.send(f"\n[You find: {', '.join(newly_revealed)}]")
         return {
             "room_states": room_states,
             "force_full_description": False
@@ -143,7 +143,7 @@ def handle_examine(state, target, llm) -> dict:
     return {"force_full_description": False}
 
 
-def handle_open(state, target) -> dict:
+def handle_open(state, target, io) -> dict:
     room = state["current_room_data"]
     room_id = state["current_room_id"]
     room_states = dict(state.get("room_states", {}))
@@ -153,17 +153,17 @@ def handle_open(state, target) -> dict:
     item = find_item(room, target)
 
     if not item:
-        print(f"There's no {target} here.")
+        io.send(f"There's no {target} here.")
         return {"force_full_description": False}
 
     if not item.get("openable"):
-        print(f"You can't open the {target}.")
+        io.send(f"You can't open the {target}.")
         return {"force_full_description": False}
 
     if item.get("is_open"):
-        print(f"The {target} is already open.")
+        io.send(f"The {target} is already open.")
         return {"force_full_description": False}
-    
+
     gold_found = item.get("gold", 0)
 
     new_items = []
@@ -179,8 +179,8 @@ def handle_open(state, target) -> dict:
     if gold_found > 0:
         player["gold"] = player.get("gold", 0) + gold_found
         debug(f"open '{target}': found {gold_found}g | total gold: {player['gold']}")
-        print(f"You open the {target} and find {gold_found} gold coins inside!")
-        print(f"You now have {player['gold']} gold.")
+        io.send(f"You open the {target} and find {gold_found} gold coins inside!")
+        io.send(f"You now have {player['gold']} gold.")
         return {
             "room_states": room_states,
             "player": player,
@@ -188,28 +188,28 @@ def handle_open(state, target) -> dict:
         }
 
     debug(f"open '{target}': empty")
-    print(f"You open the {target} but find nothing of value inside.")
+    io.send(f"You open the {target} but find nothing of value inside.")
     return {
         "room_states": room_states,
         "force_full_description": False
     }
 
 
-def handle_equip(state, target) -> dict:
+def handle_equip(state, target, io) -> dict:
     player = dict(state.get("player", {}))
     inventory = list(player.get("inventory", []))
 
     item_data = next((i for i in inventory if i["name"] == target), None)
 
     if not item_data:
-        print(f"You don't have {target} in your inventory.")
+        io.send(f"You don't have {target} in your inventory.")
         return {"force_full_description": False}
 
     if item_data.get("weapon_type"):
         prev = player.get("equipped_weapon")
         player["equipped_weapon"] = target
         debug(f"equip weapon: '{target}' ({item_data['weapon_type']}, {item_data['damage']} dmg) | replaced: {prev}")
-        print(f"You equip the {target}. ({item_data['weapon_type']}, {item_data['damage']} damage)")
+        io.send(f"You equip the {target}. ({item_data['weapon_type']}, {item_data['damage']} damage)")
         return {"player": player, "force_full_description": False}
 
     if item_data.get("armor_slot"):
@@ -217,25 +217,25 @@ def handle_equip(state, target) -> dict:
         equipped_armor = dict(player.get("equipped_armor", {}))
         prev = equipped_armor.get(slot)
         if prev:
-            print(f"You remove the {prev}.")
+            io.send(f"You remove the {prev}.")
         equipped_armor[slot] = target
         player["equipped_armor"] = equipped_armor
         debug(f"equip armor: '{target}' → slot '{slot}' ({item_data['armor_rating']} rating) | replaced: {prev}")
-        print(f"You equip the {target}. ({slot}, {item_data['armor_rating']} armor rating)")
+        io.send(f"You equip the {target}. ({slot}, {item_data['armor_rating']} armor rating)")
         return {"player": player, "force_full_description": False}
 
     debug(f"equip '{target}': not a weapon or armor")
-    print(f"You can't equip the {target}.")
+    io.send(f"You can't equip the {target}.")
     return {"force_full_description": False}
 
-def handle_unequip(state, target) -> dict:
+def handle_unequip(state, target, io) -> dict:
     player = dict(state.get("player", {}))
     equipped_armor = dict(player.get("equipped_armor", {}))
 
     if player.get("equipped_weapon") == target:
         player["equipped_weapon"] = None
         debug(f"unequip weapon: '{target}'")
-        print(f"You unequip the {target}.")
+        io.send(f"You unequip the {target}.")
         return {"player": player, "force_full_description": False}
 
     for slot, item_name in equipped_armor.items():
@@ -243,9 +243,9 @@ def handle_unequip(state, target) -> dict:
             del equipped_armor[slot]
             player["equipped_armor"] = equipped_armor
             debug(f"unequip armor: '{target}' from slot '{slot}'")
-            print(f"You remove the {target}.")
+            io.send(f"You remove the {target}.")
             return {"player": player, "force_full_description": False}
 
     debug(f"unequip '{target}': not currently equipped")
-    print(f"You don't have {target} equipped.")
+    io.send(f"You don't have {target} equipped.")
     return {"force_full_description": False}

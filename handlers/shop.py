@@ -100,14 +100,14 @@ def make_shop_tools(player: dict, shop_data: dict, shops: dict, mood_score: int 
     return [get_player_gold, get_player_inventory, get_shop_stock, buy_item, sell_item]
 
 
-def handle_shop(state: dict, npc: dict, shops: dict, llm, npc_moods: dict = None, npc_fear: dict = None) -> dict:
+def handle_shop(state: dict, npc: dict, shops: dict, llm, npc_moods: dict = None, npc_fear: dict = None, io = None) -> dict:
     """Run the merchant shop conversation with LangChain tools."""
-    
+
     shop_id = npc.get("shop_id", "aldous")
     shop_data = shops.get(shop_id, {})
 
     if not shop_data:
-        print(f"{npc['name']}: I'm afraid I have nothing to sell right now.")
+        io.send(f"{npc['name']}: I'm afraid I have nothing to sell right now.")
         return {"force_full_description": False}
 
     # Make mutable copy of player state
@@ -132,8 +132,8 @@ def handle_shop(state: dict, npc: dict, shops: dict, llm, npc_moods: dict = None
         personality=npc["personality"],
     ) + memory_context
 
-    print(f"\n{npc['name']}: \"{npc['description']}\"")
-    print("(Type 'goodbye' to leave the shop)\n")
+    io.send(f"\n{npc['name']}: \"{npc['description']}\"")
+    io.send("(Type 'goodbye' to leave the shop)\n")
 
     history = [SystemMessage(content=system_prompt)]
     history.append(HumanMessage(content="Hello, show me what you have for sale."))
@@ -156,13 +156,13 @@ def handle_shop(state: dict, npc: dict, shops: dict, llm, npc_moods: dict = None
                     tool_call_id=tool_call["id"]
                 ))
 
-    print(f"\n{npc['name']}: {response.content}\n")
+    io.send(f"\n{npc['name']}: {response.content}\n")
 
     while True:
-        player_msg = input("You: ").strip()
+        player_msg = io.recv("You: ")
 
         if any(word in player_msg.lower() for word in CONVERSATION_EXIT_WORDS):
-            print(f"\n{npc['name']}: Safe travels, and remember — Aldous always has the best prices!")
+            io.send(f"\n{npc['name']}: Safe travels, and remember — Aldous always has the best prices!")
             break
 
         history.append(HumanMessage(content=player_msg))
@@ -191,7 +191,7 @@ def handle_shop(state: dict, npc: dict, shops: dict, llm, npc_moods: dict = None
         end_conversation = "[END CONVERSATION]" in reply
         clean_reply = reply.replace("[END CONVERSATION]", "").strip()
 
-        print(f"\n{npc['name']}: {clean_reply}\n")
+        io.send(f"\n{npc['name']}: {clean_reply}\n")
         store_exchange(npc["name"], player_msg, clean_reply)
 
         if end_conversation:

@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m py_compile io_context.py main.py handlers/*.py)",
+      "Bash(timeout 5 python main.py)",
+      "Bash(python -c \"import main\")",
+      "Bash(python -c ' *)",
+      "Bash(python)",
+      "Bash(python -c \"from io_context import IOContext, CLIContext; from main import app, initial_state_1; print\\('Import OK'\\)\")",
+      "Bash(PYTHONUTF8=1 python -c \"from io_context import IOContext, CLIContext; from main import app, initial_state_1; print\\('Import OK'\\)\")",
+      "Bash(pip install *)",
+      "Bash(PYTHONUTF8=1 python -c \"import server; print\\('server.py imports OK'\\)\")",
+      "Bash(taskkill /F /IM python.exe)",
+      "Bash(PYTHONUTF8=1 uvicorn server:fastapi_app --port 8765)",
+      "Bash(taskkill //F //IM uvicorn.exe)"
+    ]
+  }
+}

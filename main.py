@@ -7,6 +7,7 @@
 # Builds and compiles the LangGraph state graph and starts the game.
 
 
+import contextvars
 import os
 import json
 import random
@@ -18,6 +19,7 @@ from langchain_openai import ChatOpenAI
 from langgraph.graph import START, StateGraph, END
 from tavily import TavilyClient
 
+from io_context import IOContext, CLIContext
 from handlers.movement import handle_unlock
 from prompts import (
     ROOM_DESCRIPTION_PROMPT, COMMAND_PARSER_PROMPT,
@@ -34,6 +36,14 @@ from handlers import (
 )
 
 load_dotenv()
+
+_io_var: contextvars.ContextVar[IOContext] = contextvars.ContextVar("io", default=CLIContext())
+
+def io_ctx() -> IOContext:
+    return _io_var.get()
+
+def set_io(ctx: IOContext) -> contextvars.Token:
+    return _io_var.set(ctx)
 
 # ── Type definitions ─────────────────────────────────────────────────────────
 
@@ -208,6 +218,8 @@ def load_room_data(state: AgentState) -> dict:
     override_keys = list(room_override.keys()) if room_override else []
     debug(f"load_room: {new_room_id} ({base_room['name']}) | overrides: {override_keys or 'none'} | prev: {previous_room_id}")
 
+    io_ctx().send(f"__state__room_id={new_room_id}")
+
     return {
         "current_room_data": room,
         "route_to": None,
@@ -246,7 +258,7 @@ def describe_room(state: AgentState) -> dict:
         })
 
         response = invoke_with_system(llm, prompt)
-        print(response.content)
+        io_ctx().send(response.content)
 
         room_override["visited"] = True
         room_states[room_id] = room_override
@@ -261,7 +273,7 @@ def describe_room(state: AgentState) -> dict:
         f"Items: {', '.join(i['name'] for i in room['items'] if not i['hidden']) or 'none'}. "
         f"Exits: {', '.join(room['exits'].keys()) if room['exits'] else 'none'}."
     )
-    print(short_desc)
+    io_ctx().send(short_desc)
     return {"force_full_description": False}
 
 def check_aggressive(state: AgentState) -> dict:
@@ -269,15 +281,15 @@ def check_aggressive(state: AgentState) -> dict:
     debug(f"check_aggressive | just_fled: {state.get('just_fled')}")
     if state.get("just_fled"):
         return {"route_to": None, "just_fled": False}
-    
+
     room = state["current_room_data"]
     aggressive_monsters = [m for m in room["monsters"] if m.get("aggressive")]
-    
+
     if aggressive_monsters:
         monster = aggressive_monsters[0]
-        print(f"\nThe {monster['name']} lunges at you before you can react!")
+        io_ctx().send(f"\nThe {monster['name']} lunges at you before you can react!")
         return {"route_to": "combat", "combat_target": monster["name"]}
-    
+
     return {"route_to": None}
 
 def trigger_win(state: AgentState) -> dict:
@@ -293,15 +305,14 @@ def trigger_win(state: AgentState) -> dict:
     })
 
     response = invoke_with_system(llm, prompt)
-    print("\n" + "═" * 50)
-    print(response.content)
-    print("═" * 50 + "\n")
+    io_ctx().send("\n" + "═" * 50)
+    io_ctx().send(response.content)
+    io_ctx().send("═" * 50 + "\n")
 
     return {"game_won": True, "game_over": True}
 
 def get_player_action(state: AgentState) -> dict:
-    print("\nWhat do you do? ", end="", flush=True)
-    player_input = input().strip().lower()
+    player_input = io_ctx().recv("\nWhat do you do? ")
     return {"player_input": player_input}
 
 
@@ -351,24 +362,24 @@ def resolve_action(state: AgentState) -> dict:
     debug(f"resolve: '{player_input}' → action: {action} | target: {target}")
 
     handlers = {
-        "go":        lambda: handle_go(state, target),
-        "take":      lambda: handle_take(state, target),
-        "examine":   lambda: handle_examine(state, target, mini_llm),
-        "open":      lambda: handle_open(state, target),
-        "equip":     lambda: handle_equip(state, target),
-        "inventory": lambda: handle_inventory(state),
-        "room":      lambda: handle_room(state),
+        "go":        lambda: handle_go(state, target, io_ctx()),
+        "take":      lambda: handle_take(state, target, io_ctx()),
+        "examine":   lambda: handle_examine(state, target, mini_llm, io_ctx()),
+        "open":      lambda: handle_open(state, target, io_ctx()),
+        "equip":     lambda: handle_equip(state, target, io_ctx()),
+        "inventory": lambda: handle_inventory(state, io_ctx()),
+        "room":      lambda: handle_room(state, io_ctx()),
         "look":      lambda: {"force_full_description": True},
         "talk":      lambda: {"route_to": "npc_dialogue"},
         "attack":    lambda: {"route_to": "combat", "combat_target": target},
-        "quit":      lambda: (print("Goodbye.") or {"game_over": True}),
-        "unequip":   lambda: handle_unequip(state, target),
-        "use": lambda: handle_use(state, target),
+        "quit":      lambda: (io_ctx().send("Goodbye.") or {"game_over": True}),
+        "unequip":   lambda: handle_unequip(state, target, io_ctx()),
+        "use": lambda: handle_use(state, target, io_ctx()),
         "win": lambda: trigger_win(state),
-        "unlock": lambda: handle_unlock(state, target),
-        "help": lambda: handle_help(),
-        "bribe":     lambda: handle_bribe(state, target or "", command.get("amount", 10), llm, mini_llm),
-        "clearmemory": lambda: (clear_all_memories() or print("[NPC memories cleared.]")) or {"force_full_description": False},
+        "unlock": lambda: handle_unlock(state, target, io_ctx()),
+        "help": lambda: handle_help(io_ctx()),
+        "bribe":     lambda: handle_bribe(state, target or "", command.get("amount", 10), llm, mini_llm, io_ctx()),
+        "clearmemory": lambda: (clear_all_memories() or io_ctx().send("[NPC memories cleared.]")) or {"force_full_description": False},
 
     }
 
@@ -376,7 +387,7 @@ def resolve_action(state: AgentState) -> dict:
     if handler:
         return handler()
 
-    print("You're not sure how to do that.")
+    io_ctx().send("You're not sure how to do that.")
     return {"force_full_description": False}
 
 
@@ -405,8 +416,8 @@ graph.add_node("describe_room", describe_room)
 graph.add_node("check_aggressive", check_aggressive)
 graph.add_node("get_player_action", get_player_action)
 graph.add_node("resolve_action", resolve_action)
-graph.add_node("combat", lambda state: combat_node(state, ROOMS, mini_llm))
-graph.add_node("npc_dialogue", lambda state: npc_dialogue(state, SHOPS, llm, mini_llm, parse_command))
+graph.add_node("combat", lambda state: combat_node(state, ROOMS, mini_llm, io_ctx()))
+graph.add_node("npc_dialogue", lambda state: npc_dialogue(state, SHOPS, llm, mini_llm, parse_command, io_ctx()))
 
 graph.add_edge(START, "load_room_data")
 graph.add_edge("load_room_data", "describe_room")
@@ -436,76 +447,30 @@ graph.add_conditional_edges(
 
 app = graph.compile()
 
-# ── Run ──────────────────────────────────────────────────────────────────────
-'''
 
-# Fresh game start
-initial_state_1 = AgentState(
-    current_room_id="room_1",
-    player={
-        "inventory": [],
-        "health": 100,
-        "max_health": 100,
-        "status_effects": [],
-        "gold": 0,
-        "equipped_weapon": None,
-        "equipped_armor": {}
-    }
-)
-
-
-'''
+def make_initial_state() -> AgentState:
+    """Return a fresh game state. Swap in the testing state below when needed."""
+    return AgentState(
+        current_room_id="room_1",
+        player={
+            "inventory": [],
+            "health": 100,
+            "max_health": 100,
+            "status_effects": [],
+            "gold": 0,
+            "equipped_weapon": None,
+            "equipped_armor": {},
+        },
+        npc_moods={},
+        npc_fear={},
+    )
 
 
+if __name__ == "__main__":
+    clear_all_memories()
+    app.invoke(make_initial_state())
 
-# Testing state — fully loaded
-initial_state_1 = AgentState(
-    current_room_id="room_1",
-    npc_moods={
-        # Preset for testing mood effects — remove or zero out for a normal run
-        "Professor Aldric": 100,
-        "The Oracle":       100,
-        "Lady Vespera":     100,
-        "Aldous the Peddler": 100,
-        "Shadow":           100,
-    },
-    npc_fear={
-        # Preset for testing fear effects — remove or zero out for a normal run
-        "Professor Aldric": 0,
-        "The Oracle":       0,
-        "Lady Vespera":     0,
-        "Aldous the Peddler": 0,
-        "Shadow":           90,
-    },
-    player={
-        "inventory": [
-            {"name": "golden sword",   "hidden": False, "revealed_by": None, "openable": False, "is_open": False, "gold": 0, "damage": 25, "weapon_type": "blade",  "armor_slot": None,     "armor_rating": 0, "heal_amount": 0},
-            {"name": "magic staff",    "hidden": False, "revealed_by": None, "openable": False, "is_open": False, "gold": 0, "damage": 18, "weapon_type": "magic",  "armor_slot": None,     "armor_rating": 0, "heal_amount": 0},
-            {"name": "leather armour", "hidden": False, "revealed_by": None, "openable": False, "is_open": False, "gold": 0, "damage": 0,  "weapon_type": None,     "armor_slot": "chest",  "armor_rating": 5, "heal_amount": 0},
-            {"name": "iron helmet",    "hidden": False, "revealed_by": None, "openable": False, "is_open": False, "gold": 0, "damage": 0,  "weapon_type": None,     "armor_slot": "helmet", "armor_rating": 4, "heal_amount": 0},
-            {"name": "sturdy boots",   "hidden": False, "revealed_by": None, "openable": False, "is_open": False, "gold": 0, "damage": 0,  "weapon_type": None,     "armor_slot": "boots",  "armor_rating": 3, "heal_amount": 0},
-            {"name": "chain gloves",   "hidden": False, "revealed_by": None, "openable": False, "is_open": False, "gold": 0, "damage": 0,  "weapon_type": None,     "armor_slot": "gloves", "armor_rating": 2, "heal_amount": 0},
-            {"name": "health potion",  "hidden": False, "revealed_by": None, "openable": False, "is_open": False, "gold": 0, "damage": 0,  "weapon_type": None,     "armor_slot": None,     "armor_rating": 0, "heal_amount": 50},
-         ],
-        "health": 50,
-        "max_health": 100,
-        "status_effects": [],
-        "gold": 1000,
-        "equipped_weapon": "golden sword",
-        "equipped_armor": {
-            "chest":  "leather armour",
-            "helmet": "iron helmet",
-            "boots":  "sturdy boots",
-            "gloves": "chain gloves"
-        }
-    }
-)
-
-clear_all_memories()
-app.invoke(initial_state_1)
-
-# Draw the graph
-img = app.get_graph().draw_mermaid_png()
-with open("graph.png", "wb") as f:
-    f.write(img)
-print("Saved graph.png")
+    img = app.get_graph().draw_mermaid_png()
+    with open("graph.png", "wb") as f:
+        f.write(img)
+    print("Saved graph.png")
