@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Haunted Mansion — A Gothic Text Adventure</title>
+  <title>AI Driven Haunted Mansion</title>
   <style>
     * {
       margin: 0;
@@ -175,6 +175,30 @@
       color: #a85555;
     }
 
+    /* Loading indicator */
+    #loading {
+      display: none;
+      padding: 4px 20px 0;
+      font-size: 12px;
+      color: #6b5a3d;
+      font-style: italic;
+      flex-shrink: 0;
+    }
+
+    #loading.active { display: block; }
+
+    #loading-dots::after {
+      content: '';
+      animation: dots 1.2s steps(4, end) infinite;
+    }
+
+    @keyframes dots {
+      0%   { content: ''; }
+      25%  { content: '.'; }
+      50%  { content: '..'; }
+      75%  { content: '...'; }
+    }
+
     /* Input container */
     .input-container {
       display: flex;
@@ -259,105 +283,140 @@
       overflow: hidden;
     }
 
-    #tab-bar {
+    .sidebar-section {
       display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar-section-label {
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #4a3a22;
+      padding: 6px 10px 4px;
+      border-bottom: 1px solid #2a2a2a;
+      flex-shrink: 0;
+    }
+
+    #map-section {
+      flex-shrink: 0;
       border-bottom: 1px solid #3d3d3d;
     }
 
-    .tab {
+    #map-canvas {
+      display: block;
+      width: 100%;
+      background: #0d0d0d;
+      cursor: crosshair;
+    }
+
+    /* Tabs below map */
+    #sidebar-tab-bar {
+      display: flex;
+      border-bottom: 1px solid #3d3d3d;
+      flex-shrink: 0;
+    }
+
+    .sidebar-tab {
       flex: 1;
-      padding: 8px;
+      padding: 6px 4px;
       background: #0d0d0d;
       color: #5a4a2a;
       border: none;
       cursor: pointer;
       font-family: 'Courier New', monospace;
-      font-size: 12px;
+      font-size: 11px;
       border-bottom: 2px solid transparent;
       transition: all 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 1px;
     }
 
-    .tab:hover {
-      color: #8a7a5a;
-    }
+    .sidebar-tab:hover { color: #8a7a5a; }
 
-    .tab.active {
+    .sidebar-tab.active {
       color: #c8a96e;
       border-bottom: 2px solid #c8a96e;
       background: #1a1a1a;
     }
 
-    .tab-content {
+    .sidebar-panel {
       display: none;
-      padding: 12px;
-      overflow-y: auto;
       flex: 1;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #3d3d3d #1a1a1a;
     }
 
-    .tab-content.active {
-      display: block;
-    }
+    .sidebar-panel.active { display: block; }
 
-    #tab-help {
+    #sidebar-inventory {
+      padding: 8px 10px;
       font-size: 11px;
       line-height: 1.8;
-      color: #8a7a5a;
+    }
+
+    #sidebar-help {
+      padding: 10px;
+      font-size: 11px;
+      line-height: 1.8;
+      color: #a89060;
       white-space: pre;
     }
 
-    #tab-map {
-      padding: 8px;
-    }
-
-    #tab-map.active {
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-    }
-
-    #map-canvas {
-      display: block;
-      background: #0d0d0d;
-      border: 1px solid #3d3d3d;
-    }
-
-    /* Inventory tab */
-    #tab-inventory {
+    #map-tooltip {
+      position: fixed;
+      display: none;
+      background: #1a1a1a;
+      border: 1px solid #5a4a2a;
+      padding: 6px 10px;
       font-size: 11px;
-      line-height: 1.7;
-      color: #8a7a5a;
+      font-family: 'Courier New', monospace;
+      color: #c8a96e;
+      pointer-events: none;
+      z-index: 100;
+      max-width: 180px;
+      line-height: 1.6;
     }
+
+    #map-tooltip .tt-name {
+      color: #d4a574;
+      font-weight: bold;
+      margin-bottom: 2px;
+    }
+
+    #map-tooltip .tt-monster { color: #8b4545; }
+    #map-tooltip .tt-npc     { color: #4a6a8a; }
+    #map-tooltip .tt-exits   { color: #5a6a4a; }
 
     .inv-section-title {
-      color: #6b5a3d;
+      color: #a89060;
       font-size: 10px;
       letter-spacing: 1px;
       text-transform: uppercase;
       margin: 10px 0 4px 0;
-      border-bottom: 1px solid #2a2a2a;
+      border-bottom: 1px solid #3a3a3a;
       padding-bottom: 2px;
     }
 
-    .inv-section-title:first-child {
-      margin-top: 0;
-    }
+    .inv-section-title:first-child { margin-top: 0; }
 
     .inv-item {
       padding: 2px 0;
-      color: #a89060;
+      color: #c8b878;
     }
 
     .inv-item.equipped {
-      color: #c8a96e;
+      color: #e8d090;
     }
 
     .inv-item .inv-tag {
-      color: #5a7a5a;
+      color: #7a9a7a;
       font-size: 10px;
     }
 
     .inv-empty {
-      color: #4a3a2a;
+      color: #6a5a4a;
       font-style: italic;
     }
   </style>
@@ -365,7 +424,7 @@
 <body>
 
 <div class="header">
-  <div class="header-left">⚰ HAUNTED MANSION ⚰</div>
+  <div class="header-left">⚰ AI DRIVEN HAUNTED MANSION ⚰</div>
   <div class="header-right">
     <div>
       <span class="stat-label">Health:</span>
@@ -382,9 +441,10 @@
   <div class="game-container">
     <div id="room-image-container">
       <img id="room-image" src="" alt="">
-      <div id="room-image-placeholder">HAUNTED MANSION</div>
+      <div id="room-image-placeholder">AI DRIVEN HAUNTED MANSION</div>
     </div>
     <div id="output"></div>
+    <div id="loading"><span id="loading-dots">The mansion stirs</span></div>
     <div class="input-container">
       <span class="input-prefix">&gt;</span>
       <input id="input" type="text" placeholder="What do you do?" autofocus>
@@ -393,12 +453,20 @@
   </div>
 
   <div id="sidebar">
-    <div id="tab-bar">
-      <button class="tab active" data-tab="help">Help</button>
-      <button class="tab" data-tab="map">Map</button>
-      <button class="tab" data-tab="inventory">Inv</button>
+    <div id="map-section" class="sidebar-section">
+      <div class="sidebar-section-label">Map</div>
+      <canvas id="map-canvas" width="280" height="340"></canvas>
     </div>
-    <div id="tab-help" class="tab-content active">MOVEMENT
+    <div id="map-tooltip"></div>
+    <div id="sidebar-tab-bar">
+      <button class="sidebar-tab active" data-panel="inventory">Inventory</button>
+      <button class="sidebar-tab" data-panel="help">Help</button>
+    </div>
+    <div id="panel-inventory" class="sidebar-panel active">
+      <div id="sidebar-inventory"></div>
+    </div>
+    <div id="panel-help" class="sidebar-panel">
+      <div id="sidebar-help">MOVEMENT
   go [direction]   — north, south, east, west
 
 INTERACTION
@@ -422,12 +490,8 @@ OTHER
   look             — redescribe room
   room             — show room summary
   help             — show this list
-  quit             — end game
+  quit             — end game</div>
     </div>
-    <div id="tab-map" class="tab-content">
-      <canvas id="map-canvas" width="260" height="400"></canvas>
-    </div>
-    <div id="tab-inventory" class="tab-content"></div>
   </div>
 </div>
 
@@ -444,6 +508,7 @@ OTHER
   let currentRoomId = 'room_1';
   let roomsData = {};
   let roomPositions = {};
+  let visitedRooms = new Set();
 
   /**
    * Initialize WebSocket connection
@@ -494,10 +559,12 @@ OTHER
     if (msg.type === 'message') {
       appendOutput(msg.text, 'message', msg.text + '\n');
     } else if (msg.type === 'prompt') {
+      document.getElementById('loading').classList.remove('active');
       appendOutput(msg.text, 'prompt', msg.text);
     } else if (msg.type === 'state') {
       if (msg.room_id) {
         currentRoomId = msg.room_id;
+        visitedRooms.add(msg.room_id);
         drawMap();
         updateRoomImage(msg.room_id);
       }
@@ -567,6 +634,9 @@ OTHER
       return;
     }
 
+    // Show loading indicator
+    document.getElementById('loading').classList.add('active');
+
     // Echo player command in a distinct color
     appendOutput('> ' + text, 'command', '> ' + text + '\n');
 
@@ -581,41 +651,6 @@ OTHER
     scrollToBottom();
   }
 
-  /**
-   * Tab switching for sidebar
-   */
-  function setupTabSwitching() {
-    const tabs = document.querySelectorAll('.tab');
-    tabs.forEach(tab => {
-      tab.addEventListener('click', () => {
-        const tabName = tab.dataset.tab;
-
-        // Hide all tab contents
-        document.querySelectorAll('.tab-content').forEach(content => {
-          content.classList.remove('active');
-        });
-
-        // Remove active from all tabs
-        document.querySelectorAll('.tab').forEach(t => {
-          t.classList.remove('active');
-        });
-
-        // Show selected tab content
-        const tabContent = document.getElementById(`tab-${tabName}`);
-        if (tabContent) {
-          tabContent.classList.add('active');
-        }
-
-        // Mark tab as active
-        tab.classList.add('active');
-
-        // If map tab, redraw canvas
-        if (tabName === 'map') {
-          setTimeout(() => drawMap(), 0);
-        }
-      });
-    });
-  }
 
   /**
    * Compute BFS layout for room positions
@@ -637,8 +672,10 @@ OTHER
       const directionDeltas = {
         'north': { dx: 0, dy: -1 },
         'south': { dx: 0, dy: 1 },
-        'east': { dx: 1, dy: 0 },
-        'west': { dx: -1, dy: 0 }
+        'east':  { dx: 1, dy: 0 },
+        'west':  { dx: -1, dy: 0 },
+        'down':  { dx: 0, dy: -1 },
+        'up':    { dx: 0, dy: 1 },
       };
 
       for (const [direction, destRoomId] of Object.entries(room.exits)) {
@@ -650,76 +687,182 @@ OTHER
     }
   }
 
-  /**
-   * Draw the map on canvas
-   */
+  // Map layout constants — shared by drawMap and setupMapTooltip
+  const MAP = { CELL: 72, CX: 140, CY: 306, RW: 56, RH: 32 };
+
+  function mapX(pos) { return MAP.CX + pos.x * MAP.CELL; }
+  function mapY(pos) { return MAP.CY + pos.y * MAP.CELL; }
+
+  function roomColors(room, isCurrent) {
+    if (isCurrent)
+      return { fill: '#2e1e06', stroke: '#c8a96e', text: '#e8c97e', glow: 'rgba(200,169,110,0.25)' };
+    if (room.monsters && room.monsters.length > 0)
+      return { fill: '#1e0a0a', stroke: '#7a3030', text: '#aa6060', glow: null };
+    if (room.npcs && room.npcs.length > 0)
+      return { fill: '#0a1220', stroke: '#2a4a70', text: '#6090b8', glow: null };
+    return   { fill: '#141410', stroke: '#4a4030', text: '#8a7a58', glow: null };
+  }
+
   function drawMap() {
     const canvas = document.getElementById('map-canvas');
     if (!canvas) return;
-
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#0d0d0d';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    const W = canvas.width, H = canvas.height;
+    const { CELL, RW, RH } = MAP;
+
+    // Background
+    ctx.fillStyle = '#080806';
+    ctx.fillRect(0, 0, W, H);
+
+    // Subtle grid
+    ctx.strokeStyle = '#111108';
+    ctx.lineWidth = 1;
+    for (let gx = 0; gx < W; gx += 16) { ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, H); ctx.stroke(); }
+    for (let gy = 0; gy < H; gy += 16) { ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke(); }
 
     if (Object.keys(roomPositions).length === 0) {
       ctx.fillStyle = '#8a7a5a';
       ctx.font = '12px Courier New';
       ctx.textAlign = 'center';
-      ctx.fillText('Loading map...', canvas.width / 2, canvas.height / 2);
+      ctx.textBaseline = 'middle';
+      ctx.fillText('Loading map...', W / 2, H / 2);
       return;
     }
 
-    // Draw edges (connections)
-    ctx.strokeStyle = '#3d3d3d';
-    ctx.lineWidth = 1;
+    // Draw corridors (under rooms)
+    const drawnCorridors = new Set();
     for (const [roomId, pos] of Object.entries(roomPositions)) {
       const room = roomsData[roomId];
       if (!room || !room.exits) continue;
+      for (const [dir, destId] of Object.entries(room.exits)) {
+        const key = [roomId, destId].sort().join('|');
+        if (drawnCorridors.has(key)) continue;
+        drawnCorridors.add(key);
 
-      for (const destRoomId of Object.values(room.exits)) {
-        const destPos = roomPositions[destRoomId];
-        if (destPos) {
-          const x1 = 130 + pos.x * 70;
-          const y1 = 200 + pos.y * 70;
-          const x2 = 130 + destPos.x * 70;
-          const y2 = 200 + destPos.y * 70;
+        const destPos = roomPositions[destId];
+        if (!destPos) continue;
+
+        const x1 = mapX(pos), y1 = mapY(pos);
+        const x2 = mapX(destPos), y2 = mapY(destPos);
+
+        const isVertical = dir === 'north' || dir === 'south' || dir === 'up' || dir === 'down';
+        const isDiagonal = !isVertical && !(dir === 'east' || dir === 'west');
+
+        ctx.fillStyle = '#1a1810';
+        ctx.strokeStyle = '#2e2a20';
+        ctx.lineWidth = 1;
+
+        if (dir === 'down' || dir === 'up') {
+          // Staircase: dashed diagonal line
+          ctx.save();
+          ctx.strokeStyle = '#4a4030';
+          ctx.lineWidth = 2;
+          ctx.setLineDash([4, 3]);
           ctx.beginPath();
           ctx.moveTo(x1, y1);
           ctx.lineTo(x2, y2);
           ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.restore();
+        } else if (isVertical) {
+          const top    = Math.min(y1, y2) + RH / 2;
+          const bottom = Math.max(y1, y2) - RH / 2;
+          const cx = (x1 + x2) / 2;
+          ctx.fillRect(cx - 5, top, 10, bottom - top);
+          ctx.strokeRect(cx - 5, top, 10, bottom - top);
+        } else {
+          const left  = Math.min(x1, x2) + RW / 2;
+          const right = Math.max(x1, x2) - RW / 2;
+          const cy = (y1 + y2) / 2;
+          ctx.fillRect(left, cy - 5, right - left, 10);
+          ctx.strokeRect(left, cy - 5, right - left, 10);
         }
       }
     }
 
-    // Draw room nodes
+    // Draw rooms (on top of corridors)
     for (const [roomId, pos] of Object.entries(roomPositions)) {
-      const x = 130 + pos.x * 70;
-      const y = 200 + pos.y * 70;
-      const w = 40;
-      const h = 20;
-
-      const isCurrent = roomId === currentRoomId;
-
-      if (isCurrent) {
-        ctx.fillStyle = '#3d2a0a';
-        ctx.strokeStyle = '#c8a96e';
-      } else {
-        ctx.fillStyle = '#1a1a1a';
-        ctx.strokeStyle = '#5a4a2a';
-      }
-      ctx.lineWidth = 2;
-      ctx.fillRect(x - w / 2, y - h / 2, w, h);
-      ctx.strokeRect(x - w / 2, y - h / 2, w, h);
-
-      // Draw room name
+      const x = mapX(pos), y = mapY(pos);
       const room = roomsData[roomId];
-      const shortName = room ? room.name.substring(0, 6) : roomId.substring(5);
-      ctx.fillStyle = isCurrent ? '#c8a96e' : '#8a7a5a';
-      ctx.font = 'bold 9px Courier New';
+      const isCurrent = roomId === currentRoomId;
+      const colors = roomColors(room || {}, isCurrent);
+
+      // Glow for current room
+      if (colors.glow) {
+        ctx.shadowColor = colors.glow;
+        ctx.shadowBlur = 12;
+      }
+
+      ctx.fillStyle = colors.fill;
+      ctx.strokeStyle = colors.stroke;
+      ctx.lineWidth = isCurrent ? 2 : 1;
+      ctx.fillRect(x - RW / 2, y - RH / 2, RW, RH);
+      ctx.strokeRect(x - RW / 2, y - RH / 2, RW, RH);
+      ctx.shadowBlur = 0;
+
+      // Room name — split into two lines if needed
+      ctx.fillStyle = colors.text;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(shortName, x, y);
+      const name = room ? room.name : roomId;
+      const words = name.split(' ');
+      if (words.length > 1 && name.length > 7) {
+        ctx.font = `${isCurrent ? 'bold ' : ''}8px Courier New`;
+        ctx.fillText(words[0], x, y - 6);
+        ctx.fillText(words.slice(1).join(' '), x, y + 6);
+      } else {
+        ctx.font = `${isCurrent ? 'bold ' : ''}9px Courier New`;
+        ctx.fillText(name, x, y);
+      }
     }
+  }
+
+  function setupMapTooltip() {
+    const canvas = document.getElementById('map-canvas');
+    const tooltip = document.getElementById('map-tooltip');
+    if (!canvas || !tooltip) return;
+
+    canvas.addEventListener('mousemove', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const { RW, RH } = MAP;
+
+      let hovered = null;
+      for (const [roomId, pos] of Object.entries(roomPositions)) {
+        const x = mapX(pos), y = mapY(pos);
+        if (mx >= x - RW / 2 && mx <= x + RW / 2 && my >= y - RH / 2 && my <= y + RH / 2) {
+          hovered = roomId;
+          break;
+        }
+      }
+
+      if (!hovered) {
+        tooltip.style.display = 'none';
+        return;
+      }
+
+      const room = roomsData[hovered];
+      if (!room) { tooltip.style.display = 'none'; return; }
+
+      const monsters = (room.monsters || []).map(m => m.name);
+      const npcs = (room.npcs || []).map(n => n.name);
+      const exits = Object.keys(room.exits || {});
+
+      let html = `<div class="tt-name">${room.name}</div>`;
+      if (monsters.length) html += `<div class="tt-monster">⚔ ${monsters.join(', ')}</div>`;
+      if (npcs.length)     html += `<div class="tt-npc">👤 ${npcs.join(', ')}</div>`;
+      if (exits.length)    html += `<div class="tt-exits">↔ ${exits.join(', ')}</div>`;
+
+      tooltip.innerHTML = html;
+      tooltip.style.display = 'block';
+      tooltip.style.left = (e.clientX + 14) + 'px';
+      tooltip.style.top  = (e.clientY - 10) + 'px';
+    });
+
+    canvas.addEventListener('mouseleave', () => {
+      tooltip.style.display = 'none';
+    });
   }
 
   /**
@@ -760,7 +903,7 @@ OTHER
    * Render the inventory sidebar tab from a state message
    */
   function updateInventoryTab(state) {
-    const tab = document.getElementById('tab-inventory');
+    const tab = document.getElementById('sidebar-inventory');
     if (!tab) return;
 
     const inventory = state.inventory || [];
@@ -818,8 +961,18 @@ OTHER
     next.src = url;
   }
 
+  // Sidebar tab switching (Inventory / Help)
+  document.querySelectorAll('.sidebar-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.sidebar-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.sidebar-panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('panel-' + tab.dataset.panel).classList.add('active');
+    });
+  });
+
   // Initialize on page load
-  setupTabSwitching();
+  setupMapTooltip();
   fetchAndDrawMap();
   initWebSocket();
 </script>
