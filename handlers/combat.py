@@ -181,7 +181,8 @@ def combat_node(state, ROOMS, llm, io) -> dict:
     room_override["monsters"] = new_monsters
     room_states[room_id] = room_override
 
-    emit_player_state(player, room_id, io)
+    updated_room = {**room, "monsters": new_monsters}
+    emit_player_state(player, room_id, io, room_data=updated_room)
 
     return {
         "room_states": room_states,

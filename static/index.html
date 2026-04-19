@@ -73,6 +73,63 @@
       color: #c8a96e;
     }
 
+    /* Modal overlay */
+    #about-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #about-modal.active { display: flex; }
+
+    #about-modal-content {
+      background: #1a1a1a;
+      border: 2px solid #3d3d3d;
+      padding: 24px;
+      max-width: 500px;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    #about-modal-title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #d4a574;
+      margin-bottom: 12px;
+      text-shadow: 0 0 10px rgba(196, 137, 74, 0.3);
+    }
+
+    #about-modal-text {
+      color: #c8a96e;
+      font-size: 14px;
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+
+    #about-modal-close {
+      background: #2a2520;
+      color: #c8a96e;
+      border: 1px solid #3d3d3d;
+      padding: 8px 16px;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 12px;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      transition: all 0.2s;
+    }
+
+    #about-modal-close:hover {
+      background: #3d3530;
+      border-color: #6b5a3d;
+      box-shadow: 0 0 8px rgba(196, 137, 74, 0.2);
+    }
+
     /* Main output panel */
     #output {
       flex: 1;
@@ -107,11 +164,18 @@
       background: #555;
     }
 
-    /* Room image banner */
-    #room-image-container {
+    /* Top banner: room image + room view side by side */
+    #room-banner {
       flex-shrink: 0;
       height: 200px;
       margin: 12px 20px 0 20px;
+      display: flex;
+      gap: 8px;
+    }
+
+    #room-image-container {
+      flex: 1;
+      min-width: 0;
       overflow: hidden;
       border: 1px solid #3d3d3d;
       background: #0d0d0d;
@@ -128,9 +192,7 @@
       transition: opacity 0.8s ease;
     }
 
-    #room-image.loaded {
-      opacity: 1;
-    }
+    #room-image.loaded { opacity: 1; }
 
     #room-image-placeholder {
       position: absolute;
@@ -141,6 +203,32 @@
       color: #3d3530;
       font-size: 11px;
       letter-spacing: 2px;
+    }
+
+    /* Room entity view */
+    #room-view-container {
+      width: 200px;
+      flex-shrink: 0;
+      border: 1px solid #3d3d3d;
+      background: #0a0a08;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #room-view-label {
+      font-size: 9px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #4a3a22;
+      padding: 3px 6px;
+      border-bottom: 1px solid #1e1e1a;
+      flex-shrink: 0;
+    }
+
+    #room-view-canvas {
+      display: block;
+      flex: 1;
     }
 
     /* Message types */
@@ -563,6 +651,7 @@
 <div class="header">
   <div class="header-left">⚰ AI DRIVEN HAUNTED MANSION ⚰</div>
   <div class="header-right">
+    <button id="about-btn" style="margin-right: 20px;">ABOUT</button>
     <div>
       <span class="stat-label">Health:</span>
       <span class="stat-value" id="health">100</span>
@@ -576,9 +665,15 @@
 
 <div class="main-content">
   <div class="game-container">
-    <div id="room-image-container">
-      <img id="room-image" src="" alt="">
-      <div id="room-image-placeholder">AI DRIVEN HAUNTED MANSION</div>
+    <div id="room-banner">
+      <div id="room-image-container">
+        <img id="room-image" src="" alt="">
+        <div id="room-image-placeholder">AI DRIVEN HAUNTED MANSION</div>
+      </div>
+      <div id="room-view-container">
+        <div id="room-view-label">Room</div>
+        <canvas id="room-view-canvas"></canvas>
+      </div>
     </div>
     <div id="output"></div>
     <div id="loading"><span id="loading-dots">The mansion stirs</span></div>
@@ -639,6 +734,32 @@ OTHER
   room             — show room summary
   help             — show this list
   quit             — end game</div>
+    </div>
+  </div>
+
+  <div id="about-modal">
+    <div id="about-modal-content">
+      <div id="about-modal-title">About This Game</div>
+      <div id="about-modal-text">
+        <p style="font-style: italic; margin-bottom: 12px;">
+          A decaying Victorian mansion drowns in eternal twilight, its corridors alive with secrets and shadows that remember what you've forgotten.
+        </p>
+        <p style="margin-bottom: 12px;">
+          <strong>AI Techniques:</strong>
+        </p>
+        <ul style="margin-left: 12px; margin-bottom: 12px; line-height: 1.8;">
+          <li><strong>NPC Memory (RAG):</strong> NPCs remember past conversations and facts about you using vector embeddings.</li>
+          <li><strong>Emotional State:</strong> Each NPC tracks mood and fear, dynamically changing their behavior and dialogue.</li>
+          <li><strong>Intelligent Shop:</strong> Merchants use agentic tool-calling to process real transactions in character.</li>
+          <li><strong>Web Search:</strong> The Oracle can search the internet in real-time to answer questions about the outside world.</li>
+          <li><strong>Natural Language Commands:</strong> All interactions are parsed and understood through GPT, not keyword matching.</li>
+          <li><strong>Dynamic Routing:</strong> The entire game is a state graph that intelligently routes between exploration, combat, dialogue, and more.</li>
+        </ul>
+        <p style="margin-top: 16px;">
+          <a href="https://github.com/mhughes72/fungame" target="_blank" style="color: #c8a96e; text-decoration: underline;">View on GitHub</a>
+        </p>
+      </div>
+      <button id="about-modal-close">Close</button>
     </div>
   </div>
 </div>
@@ -741,6 +862,7 @@ OTHER
       updateInventoryTab(msg);
       updateHeaderStats(msg);
       if (inEncounter) renderEncounterStats(encounterData);
+      drawRoomView(msg);
     } else if (msg.type === 'game_over') {
       isGameOver = true;
       inputField.disabled = true;
@@ -1176,6 +1298,127 @@ OTHER
   /**
    * Update header health/gold from a state message (replaces regex parsing)
    */
+  /**
+   * Draw the top-down room entity view
+   */
+  function drawRoomView(state) {
+    const canvas = document.getElementById('room-view-canvas');
+    if (!canvas) return;
+
+    // Size canvas to its CSS container
+    canvas.width  = canvas.offsetWidth  || 200;
+    canvas.height = canvas.offsetHeight || 176;
+
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+    const WALL = 9;
+
+    // Floor
+    ctx.fillStyle = '#0e0d0a';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#141210';
+    ctx.fillRect(WALL, WALL, W - WALL * 2, H - WALL * 2);
+
+    // Floor texture dots
+    ctx.fillStyle = '#1c1a15';
+    for (let fx = WALL + 14; fx < W - WALL; fx += 20)
+      for (let fy = WALL + 14; fy < H - WALL; fy += 20)
+        ctx.fillRect(fx - 1, fy - 1, 2, 2);
+
+    // Walls
+    ctx.fillStyle = '#25201a';
+    ctx.fillRect(0, 0, W, WALL);
+    ctx.fillRect(0, H - WALL, W, WALL);
+    ctx.fillRect(0, 0, WALL, H);
+    ctx.fillRect(W - WALL, 0, WALL, H);
+
+    // Stone lines on walls
+    ctx.strokeStyle = '#332d25';
+    ctx.lineWidth = 1;
+    [3, 6].forEach(o => {
+      ctx.beginPath(); ctx.moveTo(0, o);       ctx.lineTo(W, o);       ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, H - o);   ctx.lineTo(W, H - o);   ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(o, 0);       ctx.lineTo(o, H);       ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(W - o, 0);   ctx.lineTo(W - o, H);   ctx.stroke();
+    });
+
+    // Exit openings
+    const GAP = 18;
+    const exits = state.room_exits || [];
+    const midX = W / 2, midY = H / 2;
+
+    function drawExit(x, y, w, h, label, lx, ly) {
+      ctx.fillStyle = '#0a0a08';
+      ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = '#4a4030';
+      ctx.font = 'bold 8px Courier New';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, lx, ly);
+    }
+
+    if (exits.includes('north') || exits.includes('up'))
+      drawExit(midX - GAP/2, 0, GAP, WALL + 1, 'N', midX, 5);
+    if (exits.includes('south') || exits.includes('down'))
+      drawExit(midX - GAP/2, H - WALL - 1, GAP, WALL + 1, 'S', midX, H - 5);
+    if (exits.includes('east'))
+      drawExit(W - WALL - 1, midY - GAP/2, WALL + 1, GAP, 'E', W - 5, midY);
+    if (exits.includes('west'))
+      drawExit(0, midY - GAP/2, WALL + 1, GAP, 'W', 5, midY);
+
+    // Build entity list
+    const monsters = (state.room_monsters || []).map(m => ({ ...m, kind: 'monster' }));
+    const npcs     = (state.room_npcs    || []).map(n => ({ ...n, kind: 'npc' }));
+    const items    = (state.room_items   || []).map(i => ({ ...i, kind: 'item' }));
+    const entities = [...monsters, ...npcs, ...items];
+
+    // Layout entities in a grid inside the room interior
+    const inner = { x: WALL + 4, y: WALL + 4, w: W - WALL * 2 - 8, h: H - WALL * 2 - 8 };
+    const R = 10;
+    const cols = Math.max(1, Math.floor(inner.w / (R * 2 + 14)));
+    entities.forEach((e, idx) => {
+      const col = idx % cols;
+      const row = Math.floor(idx / cols);
+      const cellW = inner.w / cols;
+      const x = inner.x + col * cellW + cellW / 2;
+      const y = inner.y + row * (R * 2 + 18) + R + 6;
+      drawEntity(ctx, e, x, y, R);
+    });
+
+    // Player icon at bottom-centre
+    drawEntity(ctx, { name: 'You', kind: 'player' }, midX, H - WALL - R - 4, R);
+  }
+
+  function drawEntity(ctx, entity, x, y, R) {
+    const styles = {
+      monster: { fill: '#2a0e0e', stroke: '#8b3535', icon: '☠', text: '#aa5555' },
+      npc:     { fill: '#0a1525', stroke: '#2a5080', icon: '♟', text: '#5585b0' },
+      item:    { fill: '#1e1800', stroke: '#7a6010', icon: '✦', text: '#a08030' },
+      player:  { fill: '#2a1a04', stroke: '#c8a96e', icon: '⚔', text: '#c8a96e' },
+    };
+    const s = styles[entity.kind] || styles.item;
+
+    ctx.beginPath();
+    ctx.arc(x, y, R, 0, Math.PI * 2);
+    ctx.fillStyle = s.fill;
+    ctx.fill();
+    ctx.strokeStyle = s.stroke;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    ctx.fillStyle = s.stroke;
+    ctx.font = `${R}px serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(s.icon, x, y + 1);
+
+    const label = entity.name.length > 7 ? entity.name.slice(0, 6) + '…' : entity.name;
+    ctx.fillStyle = s.text;
+    ctx.font = '7px Courier New';
+    ctx.textBaseline = 'top';
+    ctx.fillText(label, x, y + R + 2);
+  }
+
   function updateHeaderStats(state) {
     if (state.health !== undefined) healthSpan.textContent = state.health;
     if (state.gold !== undefined) goldSpan.textContent = state.gold;
@@ -1253,10 +1496,34 @@ OTHER
     });
   });
 
+  // Modal controls
+  const aboutBtn = document.getElementById('about-btn');
+  const aboutModal = document.getElementById('about-modal');
+  const closeBtn = document.getElementById('about-modal-close');
+
+  aboutBtn.addEventListener('click', () => {
+    aboutModal.classList.add('active');
+  });
+
+  closeBtn.addEventListener('click', () => {
+    aboutModal.classList.remove('active');
+  });
+
+  aboutModal.addEventListener('click', (e) => {
+    if (e.target === aboutModal) {
+      aboutModal.classList.remove('active');
+    }
+  });
+
   // Initialize on page load
   setupMapTooltip();
   fetchAndDrawMap();
   initWebSocket();
+
+  // Show about modal on first load
+  setTimeout(() => {
+    aboutModal.classList.add('active');
+  }, 500);
 </script>
 
 </body>

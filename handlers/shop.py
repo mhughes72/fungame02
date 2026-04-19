@@ -198,7 +198,7 @@ def handle_shop(state: dict, npc: dict, shops: dict, llm, npc_moods: dict = None
         if end_conversation:
             break
 
-    emit_player_state(player, state["current_room_id"], io)
+    emit_player_state(player, state["current_room_id"], io, room_data=state.get("current_room_data"))
     io.send("__encounter_end__")
 
     return {

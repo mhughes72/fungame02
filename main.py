@@ -218,7 +218,7 @@ def load_room_data(state: AgentState) -> dict:
     override_keys = list(room_override.keys()) if room_override else []
     debug(f"load_room: {new_room_id} ({base_room['name']}) | overrides: {override_keys or 'none'} | prev: {previous_room_id}")
 
-    emit_player_state(state.get("player", {}), new_room_id, io_ctx())
+    emit_player_state(state.get("player", {}), new_room_id, io_ctx(), room_data=room)
 
     return {
         "current_room_data": room,

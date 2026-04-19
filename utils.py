@@ -87,7 +87,7 @@ ARMOR_REDUCTION_RATE = 0.05       # damage reduction per armor point
 ARMOR_REDUCTION_CAP = 0.75        # maximum damage reduction (75%)
 
 
-def emit_player_state(player: dict, room_id: str, io) -> None:
+def emit_player_state(player: dict, room_id: str, io, room_data: dict = None) -> None:
     """Send a structured player state update to the frontend via the IO context."""
     import json
     inventory = player.get("inventory", [])
@@ -109,6 +109,14 @@ def emit_player_state(player: dict, room_id: str, io) -> None:
             for i in inventory
         ],
     }
+    if room_data:
+        data["room_monsters"] = [
+            {"name": m["name"], "health": m.get("health", 0), "max_health": m.get("max_health", 1)}
+            for m in room_data.get("monsters", [])
+        ]
+        data["room_npcs"]  = [{"name": n["name"]} for n in room_data.get("npcs", [])]
+        data["room_items"] = [{"name": i["name"]} for i in room_data.get("items", []) if not i.get("hidden")]
+        data["room_exits"] = list(room_data.get("exits", {}).keys())
     io.send(f"__statejson__{json.dumps(data)}")
 
 
