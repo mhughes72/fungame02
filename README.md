@@ -26,6 +26,7 @@ find hidden items, trade with merchants, and converse with mysterious NPCs
 - **OpenAI GPT-4o-mini** — command parsing, combat narration, item examination, shop, NPC memory operations
 - **Pinecone** — vector database for NPC memory (RAG)
 - **Tavily** — real-time web search for the Oracle NPC
+- **FastAPI + WebSockets** — web server and real-time browser communication
 - **ElevenLabs** — text to speech (currently disabled)
 - **Python 3.10+**
 
@@ -44,9 +45,13 @@ fungame/
     combat.py           # Turn-based combat loop
     dialogue.py         # NPC conversation and shop routing
     shop.py             # Merchant shop system with LangChain tools
+  static/
+    index.html          # Web UI (gothic theme, sidebar with Help and Map tabs)
   docs/
     mansion_map.png     # Room map diagram
   main.py               # Game state, LangGraph nodes and graph
+  server.py             # FastAPI WebSocket server (web UI entry point)
+  io_context.py         # I/O abstraction layer (CLIContext / WebSocketContext)
   prompts.py            # All LLM prompts
   utils.py              # Shared utility functions
   audio_utils.py        # Text-to-speech (currently disabled)
@@ -100,9 +105,21 @@ PINECONE_API_KEY=your-pinecone-api-key-here
 - Pinecone: https://pinecone.io → Sign up free → Create index named `fungame-npc-memory` (dimensions: 1536, metric: cosine)
 
 ### 5. Run the game
+
+**Terminal (CLI):**
 ```bash
 python main.py
 ```
+
+**Web browser:**
+```bash
+# Windows PowerShell
+$env:PYTHONUTF8=1; uvicorn server:fastapi_app --port 8765
+
+# Mac/Linux
+PYTHONUTF8=1 uvicorn server:fastapi_app --port 8765
+```
+Then open `http://localhost:8765` in your browser.
 
 ## Mansion Map
 
@@ -228,6 +245,22 @@ The Oracle uses an additional routing step — a cheap LLM call determines wheth
 ### Health Potions
 Health potions restore a set amount of health when used. Different potions restore different amounts. They can be found in rooms or purchased from Aldous.
 
+## Web UI
+
+The game runs in the browser via a FastAPI WebSocket server. The UI features a gothic dark theme, scrolling game output, and a sidebar with Help and Map tabs. The map renders the mansion layout on a canvas and highlights the current room as you move.
+
+### How it works (explore later 🔖)
+
+This involved some patterns that are worth understanding more deeply when there's time:
+
+- **IOContext / ports and adapters** — the game engine has no knowledge of how output is displayed or input is received. `CLIContext` wraps `print`/`input`; `WebSocketContext` wraps async queues. The same game code drives both interfaces. This pattern is sometimes called hexagonal architecture.
+
+- **ContextVar for session isolation** — `contextvars.ContextVar` lets each concurrent game session have its own `io` instance without threading conflicts. It's similar to thread-local storage but designed for Python's async model.
+
+- **Threading + asyncio bridge** — the LangGraph game loop is synchronous (it blocks on `recv()`). FastAPI is async. These two worlds are bridged using `loop.run_in_executor()` to run the game in a thread, with `asyncio.Queue` (async-safe) carrying output from the game thread to the WebSocket coroutine, and `threading.Queue` (blocking) carrying player input back in.
+
+- **WebSocket protocol** — the server sends typed JSON messages (`message`, `prompt`, `state`, `game_over`). The `state` message carries the current room ID so the frontend can highlight it on the map without parsing game text.
+
 ## Architecture
 
 The game is built as a LangGraph state graph. Each turn flows through these nodes:
@@ -289,8 +322,7 @@ Add a monster dict to a room's `monsters` list in `rooms.json`. Set `aggressive:
 
 | Branch | Description |
 |--------|-------------|
-| `main` | Stable terminal version |
-| `web-app` | Web browser version (in progress) |
+| `main` | Current version — includes both CLI and web UI |
 
 ## Branch Commands
 ```bash
