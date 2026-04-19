@@ -1,4 +1,4 @@
-# Fun Game 02 — Text Adventure
+# AI Driven Haunted Mansion
 
 A dark, atmospheric text adventure game built with LangGraph and OpenAI.
 Explore a haunted mansion, battle monsters, collect weapons and armour,
@@ -46,7 +46,10 @@ fungame/
     dialogue.py         # NPC conversation and shop routing
     shop.py             # Merchant shop system with LangChain tools
   static/
-    index.html          # Web UI (gothic theme, sidebar with Help and Map tabs)
+    index.html          # Web UI (gothic theme, room images, map + inventory sidebar)
+    rooms/              # Pre-generated DALL-E 3 room images (one PNG per room)
+  scripts/
+    generate_room_images.py  # Generate/regenerate DALL-E 3 room images
   docs/
     mansion_map.png     # Room map diagram
   main.py               # Game state, LangGraph nodes and graph
@@ -247,19 +250,33 @@ Health potions restore a set amount of health when used. Different potions resto
 
 ## Web UI
 
-The game runs in the browser via a FastAPI WebSocket server. The UI features a gothic dark theme, scrolling game output, and a sidebar with Help and Map tabs. The map renders the mansion layout on a canvas and highlights the current room as you move.
+The game runs in the browser via a FastAPI WebSocket server. The UI features:
 
-### How it works (explore later 🔖)
+- **Gothic dark theme** with atmospheric typography
+- **Room images** — DALL-E 3 generated artwork for each room, fading in as you move (pre-generated, zero runtime cost)
+- **D&D-style map** — always visible sidebar panel showing rooms in correct positional layout (N/S/E/W), filled corridors, colour-coded by content (amber = current, red = monsters, blue = NPCs), hover tooltip with room details
+- **Inventory panel** — live inventory list below the map, showing weapons/armour/items with equipped indicator; switches to a Help tab on demand
+- **Loading indicator** — "The mansion stirs..." animated prompt while the AI generates a response
 
-This involved some patterns that are worth understanding more deeply when there's time:
+### Generating room images
 
-- **IOContext / ports and adapters** — the game engine has no knowledge of how output is displayed or input is received. `CLIContext` wraps `print`/`input`; `WebSocketContext` wraps async queues. The same game code drives both interfaces. This pattern is sometimes called hexagonal architecture.
+Images are pre-generated and committed. To regenerate:
 
-- **ContextVar for session isolation** — `contextvars.ContextVar` lets each concurrent game session have its own `io` instance without threading conflicts. It's similar to thread-local storage but designed for Python's async model.
+```bash
+python scripts/generate_room_images.py           # all rooms (~$0.44, ~2.5 min)
+python scripts/generate_room_images.py --room room_3   # single room
+python scripts/generate_room_images.py --overwrite     # force regenerate
+```
 
-- **Threading + asyncio bridge** — the LangGraph game loop is synchronous (it blocks on `recv()`). FastAPI is async. These two worlds are bridged using `loop.run_in_executor()` to run the game in a thread, with `asyncio.Queue` (async-safe) carrying output from the game thread to the WebSocket coroutine, and `threading.Queue` (blocking) carrying player input back in.
+### How it works
 
-- **WebSocket protocol** — the server sends typed JSON messages (`message`, `prompt`, `state`, `game_over`). The `state` message carries the current room ID so the frontend can highlight it on the map without parsing game text.
+- **IOContext / ports and adapters** — the game engine has no knowledge of how output is displayed or input is received. `CLIContext` wraps `print`/`input`; `WebSocketContext` wraps async queues. The same game code drives both interfaces (hexagonal architecture).
+
+- **ContextVar for session isolation** — `contextvars.ContextVar` lets each concurrent game session have its own `io` instance without threading conflicts.
+
+- **Threading + asyncio bridge** — the LangGraph game loop is synchronous. FastAPI is async. These two worlds are bridged using `loop.run_in_executor()` to run the game in a thread, with `asyncio.Queue` carrying output to the WebSocket and `threading.Queue` carrying player input back in.
+
+- **WebSocket protocol** — the server sends typed JSON messages (`message`, `prompt`, `state`, `game_over`). The `state` message carries full player state (room ID, health, gold, inventory, equipped items) so the frontend stays in sync without parsing game text.
 
 ## Architecture
 
@@ -317,27 +334,6 @@ Add a new entry to `data/shop.json` and set `shop_id` on the NPC to match.
 
 ### Add a new monster
 Add a monster dict to a room's `monsters` list in `rooms.json`. Set `aggressive: true` to make it auto-attack on room entry.
-
-## Branches
-
-| Branch | Description |
-|--------|-------------|
-| `main` | Current version — includes both CLI and web UI |
-
-## Branch Commands
-```bash
-# Switch branches
-git checkout main
-git checkout web-app
-
-# Create a new branch
-git checkout -b branch-name
-
-# Save and push changes
-git add .
-git commit -m "describe your change"
-git push origin main
-```
 
 ## Notes
 
