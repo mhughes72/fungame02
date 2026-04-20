@@ -125,6 +125,7 @@ class HandlerResult(TypedDict, total=False):
     skip_description: bool
     just_fled: bool
     previous_room_id: str
+    last_entity: str
 
 class AgentState(TypedDict):
     current_room_id: str
@@ -144,6 +145,7 @@ class AgentState(TypedDict):
     just_fled: NotRequired[bool]
     npc_moods: NotRequired[Dict[str, int]]
     npc_fear: NotRequired[Dict[str, int]]
+    last_entity: NotRequired[str]
 
 
 
@@ -393,6 +395,7 @@ def parse_command(player_input: str, state: AgentState) -> dict:
         "monsters": ", ".join(m["name"] for m in room["monsters"]) or "none",
         "npcs": ", ".join(n["name"] for n in room["npcs"]) or "none",
         "inventory": ", ".join(i["name"] for i in inventory) or "nothing",
+        "last_entity": state.get("last_entity") or "none",
         "player_input": player_input,
     })
 
@@ -443,8 +446,8 @@ def resolve_action(state: AgentState) -> dict:
         "inventory": lambda: handle_inventory(state, io_ctx()),
         "room":      lambda: handle_room(state, io_ctx()),
         "look":      lambda: {"force_full_description": True},
-        "talk":      lambda: {"route_to": "npc_dialogue"},
-        "attack":    lambda: {"route_to": "combat", "combat_target": target},
+        "talk":      lambda: {"route_to": "npc_dialogue", "last_entity": target},
+        "attack":    lambda: {"route_to": "combat", "combat_target": target, "last_entity": target},
         "quit":      lambda: (io_ctx().send("Goodbye.") or {"game_over": True}),
         "unequip":   lambda: handle_unequip(state, target, io_ctx()),
         "use": lambda: handle_use(state, target, io_ctx()),

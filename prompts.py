@@ -49,10 +49,12 @@ Room items (things you can take FROM THE ROOM): {room_items}
 Monsters in room: {monsters}
 NPCs in room: {npcs}
 Player inventory (things you are already carrying): {inventory}
+Last entity the player interacted with: {last_entity}
 
 Player input: "{player_input}"
 
 Rules:
+- If the player uses a pronoun (it, him, her, them, that, this) as the target, resolve it to the last entity listed above.
 - For movement words (go, walk, move, head, travel, run), set action to "go" and target to the direction word found in the player input, even if it is not a valid exit.
 - For picking up items FROM THE ROOM (take, grab, pick up), set action to "take" and target to the closest matching item name from room items. Only use this if the item is in the room items list.
 - For using or consuming items FROM INVENTORY (use, drink, consume, eat, quaff), set action to "use" and target to the closest matching item name from inventory. Only use this if the item is in the player inventory list.

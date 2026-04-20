@@ -69,7 +69,8 @@ def handle_take(state, target, io) -> dict:
         return {
             "room_states": room_states,
             "player": player,
-            "force_full_description": False
+            "force_full_description": False,
+            "last_entity": target,
         }
     debug(f"take '{target}': not found in {room_id}")
     io.send(f"There's no {target} here.")
@@ -135,10 +136,11 @@ def handle_examine(state, target, llm, io) -> dict:
         io.send(f"\n[You find: {', '.join(newly_revealed)}]")
         return {
             "room_states": room_states,
-            "force_full_description": False
+            "force_full_description": False,
+            "last_entity": target,
         }
 
-    return {"force_full_description": False}
+    return {"force_full_description": False, "last_entity": target}
 
 
 def handle_open(state, target, io) -> dict:
@@ -182,14 +184,16 @@ def handle_open(state, target, io) -> dict:
         return {
             "room_states": room_states,
             "player": player,
-            "force_full_description": False
+            "force_full_description": False,
+            "last_entity": target,
         }
 
     debug(f"open '{target}': empty")
     io.send(f"You open the {target} but find nothing of value inside.")
     return {
         "room_states": room_states,
-        "force_full_description": False
+        "force_full_description": False,
+        "last_entity": target,
     }
 
 
