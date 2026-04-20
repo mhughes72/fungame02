@@ -73,6 +73,69 @@
       color: #c8a96e;
     }
 
+    /* Cheat modal */
+    #cheat-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #cheat-modal.active { display: flex; }
+
+    #cheat-modal-content {
+      background: #1a1a1a;
+      border: 2px solid #3d3d3d;
+      padding: 24px;
+      max-width: 520px;
+      width: 100%;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+
+    #cheat-modal-title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #d4a574;
+      margin-bottom: 16px;
+      text-shadow: 0 0 10px rgba(196, 137, 74, 0.3);
+    }
+
+    .cheat-feature-section-title {
+      color: #a89060;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      border-bottom: 1px solid #3a3a3a;
+      padding-bottom: 4px;
+    }
+
+    .cheat-feature-list {
+      list-style: none;
+      margin: 0 0 16px 0;
+      padding: 0;
+      font-size: 12px;
+      line-height: 1.9;
+    }
+
+    .cheat-feature-list li::before {
+      content: '▸ ';
+      color: #6b5a3d;
+    }
+
+    .cheat-feature-list li strong {
+      color: #d4a574;
+    }
+
+    .cheat-feature-list li {
+      color: #a89060;
+    }
+
     /* Modal overlay */
     #about-modal {
       display: none;
@@ -933,6 +996,7 @@
 <div class="header">
   <div class="header-left">⚰ AI DRIVEN HAUNTED MANSION ⚰</div>
   <div class="header-right">
+    <button id="cheat-btn" style="margin-right: 8px;">CHEAT</button>
     <button id="about-btn" style="margin-right: 20px;">ABOUT</button>
     <div>
       <span class="stat-label">Health:</span>
@@ -1028,6 +1092,26 @@ OTHER
     </div>
   </div>
 
+  <div id="cheat-modal">
+    <div id="cheat-modal-content">
+      <div id="cheat-modal-title">⚗ Cheat & Debug Panel</div>
+      <div id="cheat-ai-features"></div>
+      <div style="margin-bottom: 12px;">
+        <div style="color: #a89060; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; border-bottom: 1px solid #3a3a3a; padding-bottom: 4px;">Debug Commands</div>
+        <table style="width: 100%; border-collapse: collapse; font-size: 12px; line-height: 1.9;">
+          <tr><td style="color: #7a9a7a; width: 120px;">win</td><td style="color: #a89060;">trigger the win condition</td></tr>
+          <tr><td style="color: #7a9a7a;">room</td><td style="color: #a89060;">print current room summary</td></tr>
+          <tr><td style="color: #7a9a7a;">goto room_X</td><td style="color: #a89060;">teleport to any room (e.g. goto room_5)</td></tr>
+          <tr><td style="color: #7a9a7a;">clearmemory</td><td style="color: #a89060;">wipe all NPC memory embeddings</td></tr>
+        </table>
+      </div>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <button id="get-gold-btn">Get Gold (+100)</button>
+        <button id="cheat-modal-close">Close</button>
+      </div>
+    </div>
+  </div>
+
   <div id="about-modal">
     <div id="about-modal-content">
       <div id="about-modal-title">About This Game</div>
@@ -1078,6 +1162,8 @@ OTHER
   let encounterData = {};
   let shopData = null;
   let lastShopGold = null;
+  const roomFeaturesCache = {};
+
   let currentPlayerState = {
     health: 100, max_health: 100, gold: 0,
     inventory: [], equipped_weapon: null, equipped_armor: {}
@@ -1183,6 +1269,8 @@ OTHER
       updateHeaderStats(msg);
       if (inEncounter) renderEncounterStats(encounterData);
       drawRoomView(msg);
+    } else if (msg.type === 'room_features') {
+      roomFeaturesCache[msg.room_id] = msg.features;
     } else if (msg.type === 'game_over') {
       isGameOver = true;
       inputField.disabled = true;
@@ -1937,6 +2025,50 @@ OTHER
       tab.classList.add('active');
       document.getElementById('panel-' + tab.dataset.panel).classList.add('active');
     });
+  });
+
+  // Cheat modal
+  function buildCheatFeatures() {
+    const room = roomsData[currentRoomId];
+    const roomName = room ? room.name : currentRoomId;
+    const cached = roomFeaturesCache[currentRoomId];
+
+    let html = `<div class="cheat-feature-section-title">AI Features Active in ${roomName}</div>`;
+
+    if (cached) {
+      html += '<ul class="cheat-feature-list">';
+      for (const f of cached) {
+        html += `<li><strong>${f.label}</strong> — ${f.description}</li>`;
+      }
+      html += '</ul>';
+    } else {
+      html += '<div style="color: #6a5a4a; font-size: 12px; font-style: italic; margin-bottom: 16px;">Visit this room first to generate the feature list.</div>';
+    }
+
+    document.getElementById('cheat-ai-features').innerHTML = html;
+  }
+
+  const cheatBtn = document.getElementById('cheat-btn');
+  const cheatModal = document.getElementById('cheat-modal');
+  const cheatCloseBtn = document.getElementById('cheat-modal-close');
+  const getGoldBtn = document.getElementById('get-gold-btn');
+
+  cheatBtn.addEventListener('click', () => {
+    buildCheatFeatures();
+    cheatModal.classList.add('active');
+  });
+
+  cheatCloseBtn.addEventListener('click', () => cheatModal.classList.remove('active'));
+
+  cheatModal.addEventListener('click', (e) => {
+    if (e.target === cheatModal) cheatModal.classList.remove('active');
+  });
+
+  getGoldBtn.addEventListener('click', () => {
+    if (isConnected && ws.readyState === WebSocket.OPEN) {
+      ws.send('cheat gold');
+      document.getElementById('loading').classList.add('active');
+    }
   });
 
   // Modal controls

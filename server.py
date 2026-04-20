@@ -85,6 +85,10 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                 import json as _json
                 data = _json.loads(msg[len("__shop_data__"):])
                 await websocket.send_json({"type": "shop_data", **data})
+            elif msg.startswith("__roomfeatures__"):
+                import json as _json
+                data = _json.loads(msg[len("__roomfeatures__"):])
+                await websocket.send_json({"type": "room_features", **data})
             else:
                 await websocket.send_json({"type": "message", "text": msg})
 

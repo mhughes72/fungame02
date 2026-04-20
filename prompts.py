@@ -271,6 +271,27 @@ NPC_MEMORY_EXTRACT_PROMPT = (
     'Example: ["Player\'s name is Matthew", "Player likes dogs", "Player\'s nickname is Thomas"]'
 )
 
+ROOM_FEATURES_PROMPT = """You are documenting the AI/ML techniques powering a text adventure game room for a developer cheat panel.
+
+Room: {room_name}
+NPCs present: {npc_summary}
+Monsters present: {monsters}
+
+Always include these three (they apply to every room):
+- "LLM Room Description": GPT writes the room atmosphere dynamically
+- "Natural Language Parsing": Player commands understood by LLM, not keyword matching
+- "LangGraph State Routing": Dynamic routing between exploration, combat, dialogue nodes
+
+Also include if applicable:
+- If any NPCs are listed: "NPC Memory (RAG)": NPCs remember conversations via vector embeddings; "Sentiment → Mood/Fear": Player tone shifts NPC emotional state in real time
+- If web_search=true for an NPC: "Real-time Web Search": that NPC queries the internet via Tavily
+- If shop=true for an NPC: "Agentic Tool-calling Shop": that NPC processes transactions via GPT function-calling
+
+Write each description in one punchy sentence from a technical but accessible angle. Be specific — name the NPC or technique where relevant.
+
+Return ONLY a JSON array: [{{"label": "...", "description": "..."}}, ...]
+"""
+
 NPC_EMAIL_PROMPT = """You are {npc_name} in a gothic text adventure game.
 Personality: {personality}
 

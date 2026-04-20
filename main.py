@@ -23,7 +23,8 @@ from io_context import IOContext, CLIContext
 from handlers.movement import handle_unlock
 from prompts import (
     ROOM_DESCRIPTION_PROMPT, COMMAND_PARSER_PROMPT,
-    COMBAT_PROMPT, FLEE_PROMPT, GAME_SYSTEM_PROMPT, WIN_PROMPT
+    COMBAT_PROMPT, FLEE_PROMPT, GAME_SYSTEM_PROMPT, WIN_PROMPT,
+    ROOM_FEATURES_PROMPT
 )
 
 from utils import invoke_with_system, find_item, visible_items, total_armor_rating, debug, parse_llm_json, emit_player_state
@@ -227,6 +228,34 @@ def load_room_data(state: AgentState) -> dict:
     }
 
 
+def _emit_room_features(room: dict, room_id: str) -> None:
+    """Generate AI feature descriptions for this room using gpt-4o-mini and emit to frontend."""
+    npcs = room.get("npcs", [])
+    npc_parts = []
+    for n in npcs:
+        tags = []
+        if n.get("can_search_web"):
+            tags.append("web_search=true")
+        if n.get("shop_id"):
+            tags.append("shop=true")
+        npc_parts.append(n["name"] + (f" [{', '.join(tags)}]" if tags else ""))
+    npc_summary = ", ".join(npc_parts) if npc_parts else "none"
+    monsters = ", ".join(m["name"] for m in room.get("monsters", [])) or "none"
+
+    try:
+        response = mini_llm.invoke([
+            {"role": "user", "content": ROOM_FEATURES_PROMPT.format(
+                room_name=room["name"],
+                npc_summary=npc_summary,
+                monsters=monsters,
+            )}
+        ])
+        features = json.loads(parse_llm_json(response.content))
+        io_ctx().send(f"__roomfeatures__{json.dumps({'room_id': room_id, 'features': features})}")
+    except Exception as e:
+        debug(f"room_features error: {e}")
+
+
 def describe_room(state: AgentState) -> dict:
     if state.get("skip_description"):
         return {"skip_description": False}
@@ -262,6 +291,9 @@ def describe_room(state: AgentState) -> dict:
 
         room_override["visited"] = True
         room_states[room_id] = room_override
+
+        # Generate AI features list once per room using cheap model
+        _emit_room_features(room, room_id)
 
         return {
             "room_states": room_states,
@@ -346,6 +378,14 @@ def parse_command(player_input: str, state: AgentState) -> dict:
 
 def resolve_action(state: AgentState) -> dict:
     player_input = state.get("player_input", "").strip()
+
+    # Cheat: give gold
+    if player_input == "cheat gold":
+        player = dict(state.get("player", {}))
+        player["gold"] = player.get("gold", 0) + 100
+        emit_player_state(player, state["current_room_id"], io_ctx())
+        io_ctx().send("[CHEAT] +100 gold conjured from thin air.")
+        return {"player": player, "force_full_description": False}
 
     # Debug teleport
     if player_input.startswith("goto "):
