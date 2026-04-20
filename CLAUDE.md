@@ -27,6 +27,9 @@ Server → client prefixes (stripped before JSON parse):
 - `__encounter_end__` → `{type: "encounter_end"}`
 - `__encounter_state__` → `{type: "encounter_state", ...}`
 - `__prompt__` → `{type: "prompt", text}`
+- `__debug__` → `{type: "debug", text}` — streams to Debug tab in sidebar
+
+CLI strips all `__`-prefixed messages (`CLIContext.send` in `io_context.py`).
 
 ## Game Mechanics
 
@@ -43,6 +46,16 @@ Server → client prefixes (stripped before JSON parse):
 ### Shop
 - Aldous uses LangChain tool-calling for transactions
 - Price multiplier: `min(mood_multiplier, fear_multiplier)`
+
+### Oracle NPC
+- ReAct-style tool-calling loop: given a `web_search` tool, decides autonomously when/whether to call it
+- Implemented in `handlers/dialogue.py`: `_make_oracle_tool`, `_run_oracle_loop`, prompt `ORACLE_SYSTEM_PROMPT`
+- Mood ≤ -30 blocks web search entirely (in-character refusal via `WEB_SEARCH_REFUSED_PROMPT`)
+
+### NPC Memory
+- `NPC_MEMORY_EXTRACT_PROMPT` captures player interests/goals/questions, not just biographical facts
+- `last_entity` in `AgentState` tracks the last item/NPC/monster interacted with; injected into `COMMAND_PARSER_PROMPT` for pronoun resolution ("take satchel" → "open it")
+- `_debug_io_var` in `utils.py` (ContextVar) lets `debug()` stream to the web UI Debug tab
 
 ## Cheat / Debug Panel
 - CHEAT button in header opens modal with room-specific AI feature list
