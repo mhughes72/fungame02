@@ -137,15 +137,15 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn, io) -> dict:
 
     debug(f"dialogue: talking to '{npc['name']}' | shop: {npc.get('shop_id')} | web_search: {npc.get('can_search_web', False)}")
 
-    npc_slug = npc['name'].lower().replace(' ', '_').replace("'", '').replace('-', '_')
-    _moods = state.get("npc_moods", {})
-    _fear = state.get("npc_fear", {})
-    io.send(f"__encounter_start__{json.dumps({'encounter_type': 'dialogue', 'target_name': npc['name'], 'target_slug': npc_slug, 'npc_mood': _moods.get(npc['name'], 0), 'npc_fear': _fear.get(npc['name'], 0)})}")
-
     if npc.get("shop_id"):
         npc_moods = dict(state.get("npc_moods", {}))
         npc_fear = dict(state.get("npc_fear", {}))
         return handle_shop(state, npc, SHOPS, mini_llm, npc_moods, npc_fear, io)
+
+    npc_slug = npc['name'].lower().replace(' ', '_').replace("'", '').replace('-', '_')
+    _moods = state.get("npc_moods", {})
+    _fear = state.get("npc_fear", {})
+    io.send(f"__encounter_start__{json.dumps({'encounter_type': 'dialogue', 'target_name': npc['name'], 'target_slug': npc_slug, 'npc_mood': _moods.get(npc['name'], 0), 'npc_fear': _fear.get(npc['name'], 0)})}")
 
     io.send(f"\n{npc['name']}: \"{npc['description']}\"")
     io.send("(Type 'goodbye' or 'leave' to end the conversation)\n")

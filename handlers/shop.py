@@ -100,11 +100,44 @@ def make_shop_tools(player: dict, shop_data: dict, shops: dict, mood_score: int 
     return [get_player_gold, get_player_inventory, get_shop_stock, buy_item, sell_item]
 
 
+def _emit_shop_data(player: dict, shop_data: dict, npc: dict, npc_moods: dict, npc_fear: dict, io) -> None:
+    """Send structured shop state to the frontend."""
+    mood_score = (npc_moods or {}).get(npc["name"], 0)
+    fear_score = (npc_fear or {}).get(npc["name"], 0)
+    price_mult = min(mood_price_multiplier(mood_score), fear_price_multiplier(fear_score))
+    sell_mult = shop_data.get("sell_multiplier", 0.5)
+
+    items = []
+    for item in shop_data.get("stock", []):
+        if item.get("quantity", 1) > 0:
+            entry = {
+                "name": item["name"],
+                "price": max(1, int(item["price"] * price_mult)),
+                "sell_price": max(1, int(item["price"] * sell_mult)),
+            }
+            if item.get("weapon_type"):
+                entry["weapon_type"] = item["weapon_type"]
+                entry["damage"] = item.get("damage", 0)
+            if item.get("armor_slot"):
+                entry["armor_slot"] = item["armor_slot"]
+                entry["armor_rating"] = item.get("armor_rating", 0)
+            if item.get("heal_amount"):
+                entry["heal_amount"] = item["heal_amount"]
+            items.append(entry)
+
+    io.send(f"__shop_data__{json.dumps({'items': items, 'mood_score': mood_score, 'fear_score': fear_score, 'price_multiplier': round(price_mult, 2), 'player_gold': player.get('gold', 0)})}")
+
+
 def handle_shop(state: dict, npc: dict, shops: dict, llm, npc_moods: dict = None, npc_fear: dict = None, io = None) -> dict:
     """Run the merchant shop conversation with LangChain tools."""
 
     shop_id = npc.get("shop_id", "aldous")
     shop_data = shops.get(shop_id, {})
+
+    npc_slug = npc['name'].lower().replace(' ', '_').replace("'", '').replace('-', '_')
+    mood_score = (npc_moods or {}).get(npc["name"], 0)
+    fear_score = (npc_fear or {}).get(npc["name"], 0)
+    io.send(f"__encounter_start__{json.dumps({'encounter_type': 'shop', 'target_name': npc['name'], 'target_slug': npc_slug, 'npc_mood': mood_score, 'npc_fear': fear_score})}")
 
     if not shop_data:
         io.send(f"{npc['name']}: I'm afraid I have nothing to sell right now.")
@@ -115,8 +148,6 @@ def handle_shop(state: dict, npc: dict, shops: dict, llm, npc_moods: dict = None
     player = dict(state.get("player", {}))
     player["inventory"] = list(player.get("inventory", []))
 
-    mood_score = (npc_moods or {}).get(npc["name"], 0)
-    fear_score = (npc_fear or {}).get(npc["name"], 0)
     debug(f"shop: mood for '{npc['name']}': {mood_score} | fear: {fear_score}")
 
     tools = make_shop_tools(player, shop_data, shops, mood_score, fear_score)
@@ -135,6 +166,8 @@ def handle_shop(state: dict, npc: dict, shops: dict, llm, npc_moods: dict = None
 
     io.send(f"\n{npc['name']}: \"{npc['description']}\"")
     io.send("(Type 'goodbye' to leave the shop)\n")
+
+    _emit_shop_data(player, shop_data, npc, npc_moods, npc_fear, io)
 
     history = [SystemMessage(content=system_prompt)]
     history.append(HumanMessage(content="Hello, show me what you have for sale."))
@@ -194,6 +227,7 @@ def handle_shop(state: dict, npc: dict, shops: dict, llm, npc_moods: dict = None
 
         io.send(f"\n{npc['name']}: {clean_reply}\n")
         store_exchange(npc["name"], player_msg, clean_reply)
+        _emit_shop_data(player, shop_data, npc, npc_moods, npc_fear, io)
 
         if end_conversation:
             break

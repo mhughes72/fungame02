@@ -130,6 +130,94 @@
       box-shadow: 0 0 8px rgba(196, 137, 74, 0.2);
     }
 
+    /* Combat effects */
+    @keyframes damage-flash-red {
+      0% { background: rgba(220, 50, 50, 0.6); }
+      50% { background: rgba(139, 69, 69, 0.4); }
+      100% { background: transparent; }
+    }
+
+    @keyframes damage-flash-amber {
+      0% { background: rgba(255, 200, 50, 0.5); }
+      50% { background: rgba(200, 169, 110, 0.3); }
+      100% { background: transparent; }
+    }
+
+    @keyframes hp-shake {
+      0%, 100% { transform: scaleX(1); }
+      10% { transform: scaleX(0.95); }
+      20% { transform: scaleX(1.05); }
+      30% { transform: scaleX(0.98); }
+      40% { transform: scaleX(1.02); }
+      50% { transform: scaleX(1); }
+    }
+
+    @keyframes float-damage {
+      0% { opacity: 1; transform: translateY(0) scale(1); }
+      50% { opacity: 1; transform: translateY(-15px) scale(1.1); }
+      100% { opacity: 0; transform: translateY(-50px) scale(0.8); }
+    }
+
+    #encounter-section.damage-taken {
+      animation: damage-flash-red 0.6s ease-out;
+    }
+
+    #encounter-section.damage-dealt {
+      animation: damage-flash-amber 0.6s ease-out;
+    }
+
+    .enc-bar-track.shake {
+      animation: hp-shake 0.3s;
+    }
+
+    .floating-damage {
+      position: absolute;
+      font-weight: bold;
+      font-size: 18px;
+      pointer-events: none;
+      animation: float-damage 1s ease-out forwards;
+      text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+    }
+
+    .floating-damage.player-damage { color: #2a9a2a; }
+    .floating-damage.monster-damage { color: #d91010; }
+
+    /* Combat overlay on room image */
+    #combat-overlay {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.7) 100%);
+      padding: 16px;
+      flex-direction: column;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    #combat-overlay.active { display: flex; }
+
+    .combat-hp-label {
+      font-size: 11px;
+      color: #c8a96e;
+      letter-spacing: 1px;
+    }
+
+    .combat-hp-bar-track {
+      height: 14px;
+      background: #1a1a1a;
+      border: 1px solid #3d3d3d;
+      overflow: hidden;
+    }
+
+    .combat-hp-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #2a5a2a 0%, #3a8a3a 100%);
+      transition: width 0.3s ease;
+    }
+
     /* Main output panel */
     #output {
       flex: 1;
@@ -190,9 +278,57 @@
       display: block;
       opacity: 0;
       transition: opacity 0.8s ease;
+      filter: blur(0px);
     }
 
     #room-image.loaded { opacity: 1; }
+    #room-image.combat-blur { filter: blur(2px); }
+
+    /* Combat overlays on room image */
+    #room-combat-vignette {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at center, transparent 0%, rgba(0,0,0,0.5) 100%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+
+    #room-combat-vignette.active { opacity: 1; }
+
+    #room-combat-border {
+      position: absolute;
+      inset: 0;
+      border: 3px solid transparent;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    #room-combat-border.pulse {
+      animation: border-pulse 0.6s ease-out;
+    }
+
+    @keyframes border-pulse {
+      0% { border-color: #ff3333; opacity: 1; }
+      100% { border-color: #8b2020; opacity: 0; }
+    }
+
+    #room-combat-splatter {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .blood-splat {
+      position: absolute;
+      opacity: 0;
+    }
+
+    @keyframes splat-fade {
+      0% { opacity: 1; }
+      100% { opacity: 0; transform: scale(1.1); }
+    }
 
     #room-image-placeholder {
       position: absolute;
@@ -234,6 +370,21 @@
     /* Message types */
     .message {
       color: #c8a96e;
+    }
+
+    .combat-player-damage {
+      color: #2aaa2a;
+      font-weight: bold;
+    }
+
+    .combat-monster-damage {
+      color: #d91010;
+      font-weight: bold;
+    }
+
+    .combat-system {
+      color: #d4a574;
+      font-weight: bold;
     }
 
     .prompt {
@@ -644,6 +795,137 @@
 
     .enc-stat-label { color: #8b6f47; }
     .enc-stat-value { color: #c8b878; }
+
+    /* ── Shop panel ─────────────────────────────────────── */
+    #encounter-stats-wrap.shop-mode {
+      max-height: 320px;
+    }
+
+    .shop-gold-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 0 6px;
+      border-bottom: 1px solid #3a2a0a;
+    }
+
+    .shop-gold-label {
+      color: #8b6f47;
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .shop-gold-amount {
+      color: #e8c84a;
+      font-size: 13px;
+      font-weight: bold;
+      position: relative;
+    }
+
+    .shop-price-mood {
+      font-size: 10px;
+      letter-spacing: 0.5px;
+      padding: 3px 6px;
+      border-radius: 2px;
+      text-align: center;
+      margin-bottom: 6px;
+    }
+
+    .shop-price-mood.favorable { background: #1a3a1a; color: #6abf6a; }
+    .shop-price-mood.normal    { background: #1a1a1a; color: #8b8b6a; }
+    .shop-price-mood.hostile   { background: #3a1a1a; color: #c06060; }
+
+    .shop-section-hdr {
+      color: #c8a060;
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin: 8px 0 3px;
+      border-bottom: 1px solid #3a2a0a;
+      padding-bottom: 2px;
+    }
+
+    .shop-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 3px 0;
+      border-bottom: 1px solid #1e1810;
+      gap: 4px;
+    }
+
+    .shop-item:last-child { border-bottom: none; }
+
+    .shop-item-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .shop-item-name {
+      color: #d4b896;
+      font-size: 11px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .shop-item-sub {
+      color: #6a5a3a;
+      font-size: 9px;
+    }
+
+    .shop-item-price {
+      color: #e8c84a;
+      font-size: 11px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      min-width: 36px;
+      text-align: right;
+    }
+
+    .shop-btn {
+      background: #2a1a08;
+      border: 1px solid #5a3a10;
+      color: #e8c84a;
+      font-family: inherit;
+      font-size: 10px;
+      letter-spacing: 0.5px;
+      padding: 2px 7px;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background 0.15s;
+    }
+
+    .shop-btn:hover { background: #3a2a10; border-color: #8a5a20; }
+    .shop-btn:active { background: #1a1008; }
+    .shop-btn.sell-btn { border-color: #3a5a1a; color: #90c84a; }
+    .shop-btn.sell-btn:hover { background: #1e2a0e; border-color: #5a8a2a; }
+
+    .shop-empty {
+      color: #5a4a2a;
+      font-size: 10px;
+      font-style: italic;
+      padding: 4px 0;
+    }
+
+    .gold-float {
+      position: fixed;
+      font-size: 14px;
+      font-weight: bold;
+      font-family: inherit;
+      pointer-events: none;
+      z-index: 9999;
+      animation: goldFloatUp 1.4s ease-out forwards;
+    }
+
+    .gold-float.gain { color: #e8c84a; }
+    .gold-float.lose { color: #c06060; }
+
+    @keyframes goldFloatUp {
+      0%   { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-48px); }
+    }
   </style>
 </head>
 <body>
@@ -669,6 +951,9 @@
       <div id="room-image-container">
         <img id="room-image" src="" alt="">
         <div id="room-image-placeholder">AI DRIVEN HAUNTED MANSION</div>
+        <div id="room-combat-vignette"></div>
+        <div id="room-combat-border"></div>
+        <svg id="room-combat-splatter" width="100%" height="100%"></svg>
       </div>
       <div id="room-view-container">
         <div id="room-view-label">Room</div>
@@ -692,6 +977,12 @@
         <div id="encounter-image-placeholder">
           <span>NO IMAGE</span>
           <span class="enc-placeholder-name" id="encounter-placeholder-name"></span>
+        </div>
+        <div id="combat-overlay">
+          <div class="combat-hp-label" id="combat-label"></div>
+          <div class="combat-hp-bar-track">
+            <div class="combat-hp-bar-fill" id="combat-hp-bar"></div>
+          </div>
         </div>
       </div>
       <div id="encounter-stats-wrap"></div>
@@ -741,10 +1032,13 @@ OTHER
     <div id="about-modal-content">
       <div id="about-modal-title">About This Game</div>
       <div id="about-modal-text">
-        <p style="font-style: italic; margin-bottom: 12px;">
-          A decaying Victorian mansion drowns in eternal twilight, its corridors alive with secrets and shadows that remember what you've forgotten.
-        </p>
-        <p style="margin-bottom: 12px;">
+<p style="font-style: italic; margin-bottom: 12px;">
+    This is an experimental playground to explore how contemporary AI technologies can elevate the way video games are designed and experienced.
+</p>
+<p style="font-style: italic; margin-bottom: 12px; margin-left: 20px;">
+    — Winston Churchill
+</p>
+          
           <strong>AI Techniques:</strong>
         </p>
         <ul style="margin-left: 12px; margin-bottom: 12px; line-height: 1.8;">
@@ -756,7 +1050,7 @@ OTHER
           <li><strong>Dynamic Routing:</strong> The entire game is a state graph that intelligently routes between exploration, combat, dialogue, and more.</li>
         </ul>
         <p style="margin-top: 16px;">
-          <a href="https://github.com/mhughes72/fungame" target="_blank" style="color: #c8a96e; text-decoration: underline;">View on GitHub</a>
+          <a href="https://github.com/mhughes72/fungame02" target="_blank" style="color: #c8a96e; text-decoration: underline;">View on GitHub</a>
         </p>
       </div>
       <button id="about-modal-close">Close</button>
@@ -782,6 +1076,8 @@ OTHER
   // Encounter state
   let inEncounter = false;
   let encounterData = {};
+  let shopData = null;
+  let lastShopGold = null;
   let currentPlayerState = {
     health: 100, max_health: 100, gold: 0,
     inventory: [], equipped_weapon: null, equipped_armor: {}
@@ -834,7 +1130,21 @@ OTHER
    */
   function handleMessage(msg) {
     if (msg.type === 'message') {
-      appendOutput(msg.text, 'message', msg.text + '\n');
+      let className = 'message';
+      const text = msg.text.toLowerCase();
+
+      // Color-code combat messages
+      if (inEncounter) {
+        if (text.includes('player dealt') || text.includes('damage to') || text.includes('bonus damage') || text.includes('weakness')) {
+          className = 'combat-player-damage';
+        } else if (text.includes('struck back') || text.includes('hit you') || text.includes('failed to flee')) {
+          className = 'combat-monster-damage';
+        } else if (text.includes('defeated') || text.includes('slain') || text.includes('escaped') || text.includes('turns away')) {
+          className = 'combat-system';
+        }
+      }
+
+      appendOutput(msg.text, className, msg.text + '\n');
     } else if (msg.type === 'prompt') {
       document.getElementById('loading').classList.remove('active');
       appendOutput(msg.text, 'prompt', msg.text);
@@ -844,6 +1154,16 @@ OTHER
       hideEncounter();
     } else if (msg.type === 'encounter_state') {
       updateEncounterState(msg);
+    } else if (msg.type === 'shop_data') {
+      const prevGold = shopData ? shopData.player_gold : null;
+      shopData = msg;
+      if (prevGold !== null && msg.player_gold !== prevGold) {
+        const delta = msg.player_gold - prevGold;
+        const goldEl = document.querySelector('.shop-gold-amount');
+        if (goldEl) floatGold(goldEl, delta);
+      }
+      lastShopGold = msg.player_gold;
+      renderEncounterStats(encounterData);
     } else if (msg.type === 'state') {
       Object.assign(currentPlayerState, {
         health: msg.health,
@@ -977,19 +1297,142 @@ OTHER
     probe.onerror = () => { img.src = ''; placeholder.style.display = 'flex'; };
     probe.src = url;
 
+    // Show combat overlay for combat encounters
+    const combatOverlay = document.getElementById('combat-overlay');
+    if (data.encounter_type === 'combat') {
+      combatOverlay.classList.add('active');
+      updateCombatOverlay(data);
+      activateRoomCombatEffects();
+    } else {
+      combatOverlay.classList.remove('active');
+      deactivateRoomCombatEffects();
+    }
+
     renderEncounterStats(encounterData);
   }
 
   function hideEncounter() {
     inEncounter = false;
     encounterData = {};
+    shopData = null;
+    lastShopGold = null;
+    const wrap = document.getElementById('encounter-stats-wrap');
+    if (wrap) wrap.classList.remove('shop-mode');
     document.getElementById('encounter-section').classList.remove('active');
     document.getElementById('map-section').style.display = '';
+    document.getElementById('combat-overlay').classList.remove('active');
+    deactivateRoomCombatEffects();
+  }
+
+  function updateCombatOverlay(data) {
+    if (data.encounter_type !== 'combat') return;
+    const mhp = data.monster_health ?? 0;
+    const mmhp = data.monster_max_health ?? 1;
+    const pct = (mhp / mmhp) * 100;
+    document.getElementById('combat-label').textContent = `${data.target_name} — ${mhp}/${mmhp} HP`;
+    document.getElementById('combat-hp-bar').style.width = `${pct}%`;
   }
 
   function updateEncounterState(data) {
+    const section = document.getElementById('encounter-section');
+    const prevPlayerHp = encounterData.player_health ?? currentPlayerState.health;
+    const prevMonsterHp = encounterData.monster_health ?? 0;
+
     Object.assign(encounterData, data);
-    if (inEncounter) renderEncounterStats(encounterData);
+
+    if (inEncounter) {
+      renderEncounterStats(encounterData);
+
+      // Update combat overlay
+      if (data.encounter_type === 'combat' || encounterData.encounter_type === 'combat') {
+        updateCombatOverlay(encounterData);
+      }
+
+      // Damage flash effect
+      if (data.player_health !== undefined && data.player_health < prevPlayerHp) {
+        section.classList.remove('damage-taken');
+        void section.offsetWidth; // force reflow
+        section.classList.add('damage-taken');
+        const dmgTaken = prevPlayerHp - data.player_health;
+        createFloatingDamage(dmgTaken, 'monster-damage', section);
+        createBloodSplatter();
+      }
+
+      if (data.monster_health !== undefined && data.monster_health < prevMonsterHp) {
+        section.classList.remove('damage-dealt');
+        void section.offsetWidth;
+        section.classList.add('damage-dealt');
+        const dmgDealt = prevMonsterHp - data.monster_health;
+        createFloatingDamage(dmgDealt, 'player-damage', section);
+      }
+
+      // HP bar shake
+      const hpBars = section.querySelectorAll('.enc-bar-track');
+      hpBars.forEach(bar => {
+        bar.classList.remove('shake');
+        void bar.offsetWidth;
+        bar.classList.add('shake');
+      });
+    }
+  }
+
+  function createFloatingDamage(amount, dmgClass, container) {
+    const el = document.createElement('div');
+    el.className = `floating-damage ${dmgClass}`;
+    el.textContent = `-${amount}`;
+    el.style.position = 'absolute';
+    el.style.left = '50%';
+    el.style.top = '50%';
+    el.style.transform = 'translate(-50%, -50%)';
+    container.style.position = 'relative';
+    container.appendChild(el);
+    setTimeout(() => el.remove(), 1000);
+  }
+
+  function activateRoomCombatEffects() {
+    const roomImg = document.getElementById('room-image');
+    const vignette = document.getElementById('room-combat-vignette');
+
+    roomImg.classList.add('combat-blur');
+    vignette.classList.add('active');
+  }
+
+  function deactivateRoomCombatEffects() {
+    const roomImg = document.getElementById('room-image');
+    const vignette = document.getElementById('room-combat-vignette');
+    const border = document.getElementById('room-combat-border');
+    const splatter = document.getElementById('room-combat-splatter');
+
+    roomImg.classList.remove('combat-blur');
+    vignette.classList.remove('active');
+    border.classList.remove('pulse');
+    splatter.innerHTML = '';
+  }
+
+  function pulseRoomCombatBorder() {
+    const border = document.getElementById('room-combat-border');
+    border.classList.remove('pulse');
+    void border.offsetWidth; // force reflow
+    border.classList.add('pulse');
+  }
+
+  function createBloodSplatter() {
+    const splatter = document.getElementById('room-combat-splatter');
+    const numSplats = 4 + Math.floor(Math.random() * 3);
+
+    for (let i = 0; i < numSplats; i++) {
+      const x = Math.random() * 100;
+      const y = Math.random() * 100;
+      const size = 20 + Math.random() * 50;
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.setAttribute('cx', `${x}%`);
+      circle.setAttribute('cy', `${y}%`);
+      circle.setAttribute('r', size);
+      circle.setAttribute('fill', `rgba(200, 30, 30, 0.9)`);
+      circle.style.animation = `splat-fade 1.2s ease-out forwards`;
+      splatter.appendChild(circle);
+      setTimeout(() => circle.remove(), 1200);
+    }
   }
 
   function encBar(label, value, max, fillClass, displayText) {
