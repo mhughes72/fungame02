@@ -420,7 +420,7 @@ def resolve_action(state: AgentState) -> dict:
         player["gold"] = player.get("gold", 0) + 100
         emit_player_state(player, state["current_room_id"], io_ctx())
         io_ctx().send("[CHEAT] +100 gold conjured from thin air.")
-        return {"player": player, "force_full_description": False}
+        return {"player": player, "skip_description": True}
 
     # Debug teleport
     if player_input.startswith("goto "):
