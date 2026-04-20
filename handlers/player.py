@@ -6,12 +6,11 @@
 #   handle_room      — display full debug-style room state including hidden items,
 #                      containers, monsters, NPCs, exits and total armor rating
 
-from utils import total_armor_rating
+from utils import total_armor_rating, get_mutable_player
 
 
 def handle_inventory(state, io) -> dict:
-    player = state.get("player", {})
-    inventory = list(player.get("inventory", []))
+    player, inventory = get_mutable_player(state)
 
     io.send(f"\n--- PLAYER STATUS ---")
 
@@ -67,8 +66,7 @@ def handle_inventory(state, io) -> dict:
 
 def handle_room(state, io) -> dict:
     room = state["current_room_data"]
-    player = state.get("player", {})
-    inventory = list(player.get("inventory", []))
+    player, inventory = get_mutable_player(state)
 
     visible = [i for i in room["items"] if not i["hidden"]]
     hidden = [i for i in room["items"] if i["hidden"]]

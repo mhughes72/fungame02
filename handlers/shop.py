@@ -9,9 +9,10 @@
 import json
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
 from prompts import GAME_SYSTEM_PROMPT, SHOP_SYSTEM_PROMPT
-from utils import debug, CONVERSATION_EXIT_WORDS, mood_price_multiplier, fear_price_multiplier, emit_player_state
+from utils import (debug, CONVERSATION_EXIT_WORDS, mood_price_multiplier, fear_price_multiplier,
+                   emit_player_state, emit_encounter_start, emit_encounter_end, get_mutable_player, make_slug)
 from npc_memory import store_exchange, retrieve_memories
 
 def make_shop_tools(player: dict, shop_data: dict, shops: dict, mood_score: int = 0, fear_score: int = 0):
@@ -128,25 +129,41 @@ def _emit_shop_data(player: dict, shop_data: dict, npc: dict, npc_moods: dict, n
     io.send(f"__shop_data__{json.dumps({'items': items, 'mood_score': mood_score, 'fear_score': fear_score, 'price_multiplier': round(price_mult, 2), 'player_gold': player.get('gold', 0)})}")
 
 
+def _run_tool_loop(shop_llm, tools, history):
+    """Invoke shop LLM and execute any tool calls until the LLM responds without tool calls. Returns final response."""
+    while True:
+        response = shop_llm.invoke(history)
+        history.append(response)
+        if not response.tool_calls:
+            return response
+        for tool_call in response.tool_calls:
+            tool_fn = next((t for t in tools if t.name == tool_call["name"]), None)
+            if tool_fn:
+                debug(f"shop tool: {tool_call['name']}({tool_call['args']})")
+                result = tool_fn.invoke(tool_call["args"])
+                debug(f"shop tool result: {result}")
+                history.append(ToolMessage(content=str(result), tool_call_id=tool_call["id"]))
+
+
 def handle_shop(state: dict, npc: dict, shops: dict, llm, npc_moods: dict = None, npc_fear: dict = None, io = None) -> dict:
     """Run the merchant shop conversation with LangChain tools."""
 
     shop_id = npc.get("shop_id", "aldous")
     shop_data = shops.get(shop_id, {})
 
-    npc_slug = npc['name'].lower().replace(' ', '_').replace("'", '').replace('-', '_')
+    npc_slug = make_slug(npc['name'])
     mood_score = (npc_moods or {}).get(npc["name"], 0)
     fear_score = (npc_fear or {}).get(npc["name"], 0)
-    io.send(f"__encounter_start__{json.dumps({'encounter_type': 'shop', 'target_name': npc['name'], 'target_slug': npc_slug, 'npc_mood': mood_score, 'npc_fear': fear_score})}")
+    emit_encounter_start(io, encounter_type='shop', target_name=npc['name'],
+                         target_slug=npc_slug, npc_mood=mood_score, npc_fear=fear_score)
 
     if not shop_data:
         io.send(f"{npc['name']}: I'm afraid I have nothing to sell right now.")
-        io.send("__encounter_end__")
+        emit_encounter_end(io)
         return {"force_full_description": False}
 
-    # Make mutable copy of player state
-    player = dict(state.get("player", {}))
-    player["inventory"] = list(player.get("inventory", []))
+    player, inventory = get_mutable_player(state)
+    player["inventory"] = inventory
 
     debug(f"shop: mood for '{npc['name']}': {mood_score} | fear: {fear_score}")
 
@@ -172,24 +189,7 @@ def handle_shop(state: dict, npc: dict, shops: dict, llm, npc_moods: dict = None
     history = [SystemMessage(content=system_prompt)]
     history.append(HumanMessage(content="Hello, show me what you have for sale."))
 
-    # Run one LLM turn before player input to get opening stock display
-    while True:
-        response = shop_llm.invoke(history)
-        history.append(response)
-        if not response.tool_calls:
-            break
-        from langchain_core.messages import ToolMessage
-        for tool_call in response.tool_calls:
-            tool_fn = next((t for t in tools if t.name == tool_call["name"]), None)
-            if tool_fn:
-                debug(f"shop tool: {tool_call['name']}({tool_call['args']})")
-                result = tool_fn.invoke(tool_call["args"])
-                debug(f"shop tool result: {result}")
-                history.append(ToolMessage(
-                    content=str(result),
-                    tool_call_id=tool_call["id"]
-                ))
-
+    response = _run_tool_loop(shop_llm, tools, history)
     io.send(f"\n{npc['name']}: {response.content}\n")
 
     while True:
@@ -200,26 +200,7 @@ def handle_shop(state: dict, npc: dict, shops: dict, llm, npc_moods: dict = None
             break
 
         history.append(HumanMessage(content=player_msg))
-
-        # Agentic loop — keep calling until no more tool calls
-        while True:
-            response = shop_llm.invoke(history)
-            history.append(response)
-
-            if not response.tool_calls:
-                break
-
-            from langchain_core.messages import ToolMessage
-            for tool_call in response.tool_calls:
-                tool_fn = next((t for t in tools if t.name == tool_call["name"]), None)
-                if tool_fn:
-                    debug(f"shop tool: {tool_call['name']}({tool_call['args']})")
-                    result = tool_fn.invoke(tool_call["args"])
-                    debug(f"shop tool result: {result}")
-                    history.append(ToolMessage(
-                        content=str(result),
-                        tool_call_id=tool_call["id"]
-                    ))
+        response = _run_tool_loop(shop_llm, tools, history)
 
         reply = response.content
         end_conversation = "[END CONVERSATION]" in reply
@@ -233,7 +214,7 @@ def handle_shop(state: dict, npc: dict, shops: dict, llm, npc_moods: dict = None
             break
 
     emit_player_state(player, state["current_room_id"], io, room_data=state.get("current_room_data"))
-    io.send("__encounter_end__")
+    emit_encounter_end(io)
 
     return {
         "player": player,

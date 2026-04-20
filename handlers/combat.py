@@ -4,158 +4,118 @@
 # player attacks, monster retaliation, flee attempts, weapon damage,
 # armor reduction, weakness bonuses, and monster drop handling.
 
-import json
 import random
-from utils import (invoke_with_system, total_armor_rating, debug,
+from utils import (invoke_with_system, total_armor_rating, debug, make_slug,
                    FLEE_SUCCESS_THRESHOLD, WEAKNESS_BONUS_DAMAGE,
-                   ARMOR_REDUCTION_RATE, ARMOR_REDUCTION_CAP, emit_player_state)
+                   ARMOR_REDUCTION_RATE, ARMOR_REDUCTION_CAP, emit_player_state,
+                   emit_encounter_start, emit_encounter_end, emit_encounter_state,
+                   get_mutable_player, get_mutable_room)
 from prompts import COMBAT_PROMPT, FLEE_PROMPT
 
-def combat_node(state, ROOMS, llm, io) -> dict:
-    target = state.get("combat_target")
-    room = state["current_room_data"]
-    room_id = state["current_room_id"]
-    room_states = dict(state.get("room_states", {}))
-    room_override = dict(room_states.get(room_id, {}))
-    player = dict(state.get("player", {}))
-    inventory = list(player.get("inventory", []))
 
-    debug(f"combat: targeting '{target}' in {room_id}")
+def _find_monster(room, target, io):
+    """Look up the target monster in the room. Returns a mutable copy or None."""
     monster = next((m for m in room["monsters"] if m["name"] == target), None)
     if not monster:
         debug(f"combat: '{target}' not found in room")
         io.send(f"There is no {target} here.")
-        return {"force_full_description": False, "route_to": None}
+        return None
+    return dict(monster)
 
-    monster = dict(monster)
 
-    monster_slug = monster['name'].lower().replace(' ', '_').replace("'", '').replace('-', '_')
-    io.send(f"__encounter_start__{json.dumps({'encounter_type': 'combat', 'target_name': monster['name'], 'target_slug': monster_slug, 'monster_health': monster['health'], 'monster_max_health': monster['max_health'], 'monster_damage': monster['damage'], 'monster_defense': monster['defense'], 'monster_weaknesses': monster.get('weaknesses', [])})}")
+def _handle_flee(state, monster, target, room, room_id, room_override, room_states, player, llm, io):
+    """Process a flee attempt. Returns a final state dict on success or player death, None if flee fails harmlessly."""
+    flee_chance = random.randint(1, 100)
+    success = flee_chance > FLEE_SUCCESS_THRESHOLD
 
-    equipped_weapon = player.get("equipped_weapon")
-    weapon_data = None
-    if equipped_weapon:
-        weapon_data = next(
-            (i for i in player.get("inventory", []) if i["name"] == equipped_weapon),
-            None
-        )
+    prompt = FLEE_PROMPT.invoke({
+        "room_name": room["name"],
+        "monster_name": monster["name"],
+        "success": success,
+    })
+    io.send(f"\n{invoke_with_system(llm, prompt).content}")
 
-    io.send(f"\nYou engage the {monster['name']}!")
-    io.send(f"Your health: {player['health']}/{player['max_health']}")
-    io.send(f"Weapon: {equipped_weapon if equipped_weapon else 'bare hands (1 damage)'}\n")
+    if success:
+        previous_room = state.get("previous_room_id")
+        debug(f"flee: success | returning to {previous_room}")
+        updated_monsters = [
+            {**m, "health": monster["health"]} if m["name"] == target else m
+            for m in room["monsters"]
+        ]
+        room_override["monsters"] = updated_monsters
+        room_states[room_id] = room_override
+        io.send("\n[You escaped back the way you came!]")
+        emit_encounter_end(io)
+        return {
+            "player": player,
+            "route_to": None,
+            "force_full_description": True,
+            "skip_description": False,
+            "current_room_id": previous_room if previous_room else state["current_room_id"],
+            "just_fled": True,
+            "room_states": room_states
+        }
 
-    while monster["health"] > 0 and player["health"] > 0:
-        io.send(f"\n[{monster['name'].upper()} — HP: {monster['health']}/{monster['max_health']}]")
-        io.send(f"[YOUR HP: {player['health']}/{player['max_health']}]")
-        io.send("What do you do? (attack / flee)")
-        combat_input = io.recv("> ")
+    variance = monster.get("damage_variance", 2)
+    monster_dmg = max(0, monster["damage"] + random.randint(-variance, variance))
+    player["health"] -= monster_dmg
+    io.send(f"[Failed to flee — {monster['name']} hits you for {monster_dmg} damage]")
+    if player["health"] <= 0:
+        io.send("\nYou have been slain. Game over.")
+        emit_encounter_end(io)
+        return {"player": player, "game_over": True, "route_to": None}
+    return None
 
-        if any(word in combat_input for word in ["flee", "run", "escape", "retreat"]):
-            flee_chance = random.randint(1, 100)
-            success = flee_chance > FLEE_SUCCESS_THRESHOLD
 
-            prompt = FLEE_PROMPT.invoke({
-                "room_name": room["name"],
-                "monster_name": monster["name"],
-                "success": success,
-            })
-            response = invoke_with_system(llm, prompt)
-            io.send(f"\n{response.content}")
+def _execute_attack_round(player, monster, weapon_data, equipped_weapon, room, llm, io):
+    """Execute one full combat round (player attack + monster retaliation). Mutates health on both sides. Returns True if player is alive."""
+    base_damage = weapon_data.get("damage", 1) if weapon_data else 1
+    dice_roll = random.randint(1, 6)
+    weakness_bonus = 0
 
-            if success:
-                previous_room = state.get("previous_room_id")
-                debug(f"flee: success | returning to {previous_room}")
+    if weapon_data and weapon_data.get("weapon_type") in monster.get("weaknesses", []):
+        weakness_bonus = WEAKNESS_BONUS_DAMAGE
+        io.send(f"[Weakness hit! +{weakness_bonus} bonus damage]")
 
-                # Save wounded monster back to room state
-                updated_monsters = []
-                for m in room["monsters"]:
-                    if m["name"] == target:
-                        updated_monsters.append({**m, "health": monster["health"]})
-                    else:
-                        updated_monsters.append(m)
-                room_override["monsters"] = updated_monsters
-                room_states[room_id] = room_override
+    player_dmg = max(0, base_damage + dice_roll + weakness_bonus - monster["defense"])
+    monster["health"] -= player_dmg
 
-                io.send("\n[You escaped back the way you came!]")
-                io.send("__encounter_end__")
-                return {
-                    "player": player,
-                    "route_to": None,
-                    "force_full_description": True,
-                    "skip_description": False,
-                    "current_room_id": previous_room if previous_room else state["current_room_id"],
-                    "just_fled": True,
-                    "room_states": room_states
-                }
-            else:
-                variance = monster.get("damage_variance", 2)
-                monster_dmg = max(0, monster["damage"] + random.randint(-variance, variance))
-                player["health"] -= monster_dmg
-                io.send(f"[Failed to flee — {monster['name']} hits you for {monster_dmg} damage]")
-                if player["health"] <= 0:
-                    io.send("\nYou have been slain. Game over.")
-                    io.send("__encounter_end__")
-                    return {
-                        "player": player,
-                        "game_over": True,
-                        "route_to": None
-                    }
-                continue
+    monster_dmg = 0
+    if monster["health"] > 0:
+        variance = monster.get("damage_variance", 2)
+        armor = total_armor_rating(player, player.get("inventory", []))
+        raw_dmg = monster["damage"] + random.randint(-variance, variance)
+        damage_reduction = min(ARMOR_REDUCTION_CAP, armor * ARMOR_REDUCTION_RATE)
+        monster_dmg = max(1, int(raw_dmg * (1 - damage_reduction)))
+        player["health"] -= monster_dmg
 
-        base_damage = weapon_data.get("damage", 1) if weapon_data else 1
-        dice_roll = random.randint(1, 6)
-        weakness_bonus = 0
+    debug(f"round: player dealt {player_dmg} (base {base_damage}+d6({dice_roll})+weak({weakness_bonus})-def({monster['defense']})) | {monster['name']} hp: {max(0, monster['health'])}/{monster['max_health']} | monster dealt {monster_dmg} | player hp: {player['health']}/{player['max_health']}")
 
-        if weapon_data and weapon_data.get("weapon_type") in monster.get("weaknesses", []):
-            weakness_bonus = WEAKNESS_BONUS_DAMAGE
-            io.send(f"[Weakness hit! +{weakness_bonus} bonus damage]")
+    round_events = f"Player dealt {player_dmg} damage to the {monster['name']}."
+    if monster["health"] > 0:
+        round_events += f" The {monster['name']} struck back for {monster_dmg} damage."
+    else:
+        round_events += f" The {monster['name']} has been defeated."
 
-        player_dmg = max(0, base_damage + dice_roll + weakness_bonus - monster["defense"])
-        monster["health"] -= player_dmg
+    prompt = COMBAT_PROMPT.invoke({
+        "room_name": room["name"],
+        "player_health": player["health"],
+        "player_max_health": player["max_health"],
+        "weapon": equipped_weapon if equipped_weapon else "bare hands",
+        "monster_name": monster["name"],
+        "monster_health": max(0, monster["health"]),
+        "monster_max_health": monster["max_health"],
+        "round_events": round_events,
+    })
+    io.send(f"\n{invoke_with_system(llm, prompt).content}")
+    emit_encounter_state(io, player_health=player['health'], player_max_health=player['max_health'],
+                         monster_health=max(0, monster['health']), monster_max_health=monster['max_health'])
 
-        monster_dmg = 0
-        if monster["health"] > 0:
-            variance = monster.get("damage_variance", 2)
-            armor = total_armor_rating(player, player.get("inventory", []))
-            raw_dmg = monster["damage"] + random.randint(-variance, variance)
-            damage_reduction = min(ARMOR_REDUCTION_CAP, armor * ARMOR_REDUCTION_RATE)
-            monster_dmg = max(1, int(raw_dmg * (1 - damage_reduction)))
-            player["health"] -= monster_dmg
+    return player["health"] > 0
 
-        debug(f"round: player dealt {player_dmg} (base {base_damage}+d6({dice_roll})+weak({weakness_bonus})-def({monster['defense']})) | {monster['name']} hp: {max(0, monster['health'])}/{monster['max_health']} | monster dealt {monster_dmg} | player hp: {player['health']}/{player['max_health']}")
 
-        round_events = f"Player dealt {player_dmg} damage to the {monster['name']}."
-        if monster["health"] > 0:
-            round_events += f" The {monster['name']} struck back for {monster_dmg} damage."
-        else:
-            round_events += f" The {monster['name']} has been defeated."
-
-        prompt = COMBAT_PROMPT.invoke({
-            "room_name": room["name"],
-            "player_health": player["health"],
-            "player_max_health": player["max_health"],
-            "weapon": equipped_weapon if equipped_weapon else "bare hands",
-            "monster_name": monster["name"],
-            "monster_health": max(0, monster["health"]),
-            "monster_max_health": monster["max_health"],
-            "round_events": round_events,
-        })
-        response = invoke_with_system(llm, prompt)
-        io.send(f"\n{response.content}")
-        io.send(f"__encounter_state__{json.dumps({'player_health': player['health'], 'player_max_health': player['max_health'], 'monster_health': max(0, monster['health']), 'monster_max_health': monster['max_health']})}")
-
-        if player["health"] <= 0:
-            io.send("\nYou have been slain. Game over.")
-            io.send("__encounter_end__")
-            return {
-                "player": player,
-                "game_over": True,
-                "route_to": None
-            }
-
-    io.send(f"\n[{monster['name'].upper()} DEFEATED]")
-    io.send("__encounter_end__")
-
+def _handle_victory(monster, target, room, room_override, room_states, room_id, player, inventory, io):
+    """Process monster defeat: loot drops, room update, and player state emit."""
     drops = monster.get("drops", {})
     gold_drop = drops.get("gold", 0)
     item_drop = drops.get("item", None)
@@ -191,3 +151,53 @@ def combat_node(state, ROOMS, llm, io) -> dict:
         "force_full_description": False,
         "skip_description": True
     }
+
+
+def combat_node(state, ROOMS, llm, io) -> dict:
+    target = state.get("combat_target")
+    room = state["current_room_data"]
+    room_id = state["current_room_id"]
+    room_states, room_override = get_mutable_room(state, room_id)
+    player, inventory = get_mutable_player(state)
+
+    debug(f"combat: targeting '{target}' in {room_id}")
+    monster = _find_monster(room, target, io)
+    if not monster:
+        return {"force_full_description": False, "route_to": None}
+
+    monster_slug = make_slug(monster['name'])
+    emit_encounter_start(io, encounter_type='combat', target_name=monster['name'],
+                         target_slug=monster_slug, monster_health=monster['health'],
+                         monster_max_health=monster['max_health'], monster_damage=monster['damage'],
+                         monster_defense=monster['defense'], monster_weaknesses=monster.get('weaknesses', []))
+
+    equipped_weapon = player.get("equipped_weapon")
+    weapon_data = next(
+        (i for i in player.get("inventory", []) if i["name"] == equipped_weapon), None
+    ) if equipped_weapon else None
+
+    io.send(f"\nYou engage the {monster['name']}!")
+    io.send(f"Your health: {player['health']}/{player['max_health']}")
+    io.send(f"Weapon: {equipped_weapon if equipped_weapon else 'bare hands (1 damage)'}\n")
+
+    while monster["health"] > 0 and player["health"] > 0:
+        io.send(f"\n[{monster['name'].upper()} — HP: {monster['health']}/{monster['max_health']}]")
+        io.send(f"[YOUR HP: {player['health']}/{player['max_health']}]")
+        io.send("What do you do? (attack / flee)")
+        combat_input = io.recv("> ")
+
+        if any(word in combat_input for word in ["flee", "run", "escape", "retreat"]):
+            result = _handle_flee(state, monster, target, room, room_id, room_override, room_states, player, llm, io)
+            if result is not None:
+                return result
+            continue
+
+        player_alive = _execute_attack_round(player, monster, weapon_data, equipped_weapon, room, llm, io)
+        if not player_alive:
+            io.send("\nYou have been slain. Game over.")
+            emit_encounter_end(io)
+            return {"player": player, "game_over": True, "route_to": None}
+
+    io.send(f"\n[{monster['name'].upper()} DEFEATED]")
+    emit_encounter_end(io)
+    return _handle_victory(monster, target, room, room_override, room_states, room_id, player, inventory, io)

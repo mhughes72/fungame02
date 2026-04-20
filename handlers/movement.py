@@ -28,13 +28,11 @@ def handle_go(state, target, io) -> dict:
     return {"force_full_description": False}
 
 def handle_unlock(state, target, io) -> dict:
-    from utils import debug
+    from utils import debug, get_mutable_player, get_mutable_room
     room = state["current_room_data"]
     room_id = state["current_room_id"]
-    room_states = dict(state.get("room_states", {}))
-    room_override = dict(room_states.get(room_id, {}))
-    player = dict(state.get("player", {}))
-    inventory = list(player.get("inventory", []))
+    room_states, room_override = get_mutable_room(state, room_id)
+    player, inventory = get_mutable_player(state)
 
     locked_exits = dict(room.get("locked_exits", {}))
 

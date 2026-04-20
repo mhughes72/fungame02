@@ -57,6 +57,17 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 
     game_future = loop.run_in_executor(executor, run_game, ctx)
 
+    # Maps prefix → (ws_type, has_json_payload)
+    _DISPATCH: dict[str, tuple[str, bool]] = {
+        "__prompt__":        ("prompt",          False),
+        "__statejson__":     ("state",            True),
+        "__encounter_start__": ("encounter_start", True),
+        "__encounter_end__": ("encounter_end",    False),
+        "__encounter_state__": ("encounter_state", True),
+        "__shop_data__":     ("shop_data",        True),
+        "__roomfeatures__":  ("room_features",    True),
+    }
+
     async def forward_output() -> None:
         """Drain the game's outbox and send to client."""
         while True:
@@ -64,31 +75,16 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
             if msg is None:
                 await websocket.send_json({"type": "game_over"})
                 break
-            elif msg.startswith("__prompt__"):
-                prompt = msg[len("__prompt__"):]
-                await websocket.send_json({"type": "prompt", "text": prompt})
-            elif msg.startswith("__statejson__"):
-                import json as _json
-                data = _json.loads(msg[len("__statejson__"):])
-                await websocket.send_json({"type": "state", **data})
-            elif msg.startswith("__encounter_start__"):
-                import json as _json
-                data = _json.loads(msg[len("__encounter_start__"):])
-                await websocket.send_json({"type": "encounter_start", **data})
-            elif msg.startswith("__encounter_end__"):
-                await websocket.send_json({"type": "encounter_end"})
-            elif msg.startswith("__encounter_state__"):
-                import json as _json
-                data = _json.loads(msg[len("__encounter_state__"):])
-                await websocket.send_json({"type": "encounter_state", **data})
-            elif msg.startswith("__shop_data__"):
-                import json as _json
-                data = _json.loads(msg[len("__shop_data__"):])
-                await websocket.send_json({"type": "shop_data", **data})
-            elif msg.startswith("__roomfeatures__"):
-                import json as _json
-                data = _json.loads(msg[len("__roomfeatures__"):])
-                await websocket.send_json({"type": "room_features", **data})
+            for prefix, (ws_type, has_json) in _DISPATCH.items():
+                if msg.startswith(prefix):
+                    payload = msg[len(prefix):]
+                    if has_json:
+                        await websocket.send_json({"type": ws_type, **json_lib.loads(payload)})
+                    elif payload:
+                        await websocket.send_json({"type": ws_type, "text": payload})
+                    else:
+                        await websocket.send_json({"type": ws_type})
+                    break
             else:
                 await websocket.send_json({"type": "message", "text": msg})
 
