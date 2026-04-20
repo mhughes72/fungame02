@@ -17,6 +17,7 @@ find hidden items, trade with merchants, and converse with mysterious NPCs
 | **Prompt injection via system message** | NPC emotional state — mood and fear behavioural overrides are appended to the system message so they carry authority over personality descriptions in the human turn |
 | **LangGraph state graph** | Game loop — the entire game is a compiled state graph with conditional edges routing between room loading, combat, dialogue, and player input nodes |
 | **Per-exchange fact extraction** | NPC memory — after every player/NPC exchange, GPT-4o-mini extracts discrete facts about the player and upserts them as separate vector embeddings |
+| **Short-term coreference resolution** | Command parsing — the last entity the player interacted with (item, NPC, monster) is tracked in game state and injected into the command parser, so pronouns like "it", "him", "them" resolve correctly across consecutive commands |
 
 ## Tech Stack
 
@@ -113,7 +114,13 @@ PINECONE_API_KEY=your-pinecone-api-key-here
 python main.py
 ```
 
-**Web browser:**
+**Web browser (Windows — recommended):**
+```bash
+run_live
+```
+Prints your local and network URLs, then starts the server.
+
+**Web browser (manual):**
 ```bash
 # Windows PowerShell
 $env:PYTHONUTF8=1; uvicorn server:fastapi_app --port 8765
