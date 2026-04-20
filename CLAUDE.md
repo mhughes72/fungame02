@@ -44,6 +44,11 @@ Server → client prefixes (stripped before JSON parse):
 - Aldous uses LangChain tool-calling for transactions
 - Price multiplier: `min(mood_multiplier, fear_multiplier)`
 
+## Known Tech Debt
+
+### Graph always routes through load_room_data
+Every action cycles back through `load_room_data → describe_room → check_aggressive` even when the room didn't change. We use `skip_description: True` / `force_full_description` as workarounds. A cleaner design would route non-room-changing actions directly back to `get_player_action`, only hitting `load_room_data` on actual room transitions. Revisit when a third `skip_description` workaround appears or new action types need to bypass room logic.
+
 ## Workflow
 - Work directly on `main` branch — do NOT create worktrees
 - Keep this file under 200 lines
