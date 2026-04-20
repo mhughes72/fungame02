@@ -263,12 +263,14 @@ NPC_MEMORY_HYDE_PROMPT = (
 )
 
 NPC_MEMORY_EXTRACT_PROMPT = (
-    "Extract ALL facts about the player from this conversation exchange. "
-    "Only extract facts the player explicitly stated about themselves. "
+    "Extract memorable facts from this conversation exchange worth remembering for future interactions. "
+    "Include: facts the player stated about themselves, things the player is looking for or asking about, "
+    "player goals or intentions revealed by their questions, and topics of clear interest to the player. "
     "Capture every distinct fact — do not summarise or combine them. "
-    "If there are no clear facts, return an empty array. "
+    "If there is nothing worth remembering, return an empty array. "
     "Return ONLY a JSON array. "
-    'Example: ["Player\'s name is Matthew", "Player likes dogs", "Player\'s nickname is Thomas"]'
+    'Example: ["Player\'s name is Matthew", "Player is searching for the dragon\'s location", '
+    '"Player is interested in the history of the mansion", "Player likes dogs"]'
 )
 
 ROOM_FEATURES_PROMPT = """You are documenting the AI/ML techniques powering a text adventure game room for a developer cheat panel.

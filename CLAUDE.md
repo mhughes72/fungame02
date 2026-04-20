@@ -85,5 +85,5 @@ Work through these in priority order. Check off each one as completed.
 - [ ] **Missing return type hints** — handler functions lack `-> dict`. Add where missing.
 
 ## Workflow
-- Work directly on `main` branch — do NOT create worktrees
+- Work directly on `main` branch — do NOT create worktrees unless absolutely necessary for a specific change, and always ask first
 - Keep this file under 200 lines
