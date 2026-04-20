@@ -29,15 +29,22 @@ def _make_oracle_tool(tavily_client):
 
 def _run_oracle_loop(oracle_llm, oracle_tools, messages):
     """Invoke Oracle LLM and execute web_search tool calls until the model responds without tools."""
+    iteration = 0
     while True:
+        iteration += 1
+        debug(f"oracle loop [{iteration}]: invoking LLM ({len(messages)} messages in context)")
         response = oracle_llm.invoke(messages)
         messages.append(response)
         if not response.tool_calls:
+            debug(f"oracle loop [{iteration}]: no tool calls — final reply ({len(response.content)} chars)")
             return response
+        debug(f"oracle loop [{iteration}]: {len(response.tool_calls)} tool call(s) requested")
         for tc in response.tool_calls:
+            debug(f"oracle loop [{iteration}]:   → {tc['name']}({tc['args']})")
             tool_fn = next((t for t in oracle_tools if t.name == tc["name"]), None)
             if tool_fn:
                 result = tool_fn.invoke(tc["args"])
+                debug(f"oracle loop [{iteration}]:   ← {len(str(result))} chars returned")
                 messages.append(ToolMessage(content=str(result), tool_call_id=tc["id"]))
 
 def _invoke_npc(llm, npc, room, memory_context, history, player_msg, mood_tone, fear_tone):
