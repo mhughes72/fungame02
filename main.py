@@ -228,8 +228,40 @@ def load_room_data(state: AgentState) -> dict:
     }
 
 
+_FEATURES_CACHE_PATH = os.path.join("data", "room_features_cache.json")
+
+def _room_hash(room: dict) -> str:
+    """Stable hash of room data fields that affect feature generation."""
+    import hashlib
+    key = json.dumps({
+        "name": room.get("name"),
+        "npcs": [{"name": n["name"], "can_search_web": n.get("can_search_web"), "shop_id": n.get("shop_id")} for n in room.get("npcs", [])],
+        "monsters": [m["name"] for m in room.get("monsters", [])],
+    }, sort_keys=True)
+    return hashlib.md5(key.encode()).hexdigest()[:12]
+
+def _load_features_cache() -> dict:
+    try:
+        with open(_FEATURES_CACHE_PATH, "r") as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {}
+
+def _save_features_cache(cache: dict) -> None:
+    with open(_FEATURES_CACHE_PATH, "w") as f:
+        json.dump(cache, f, indent=2)
+
 def _emit_room_features(room: dict, room_id: str) -> None:
-    """Generate AI feature descriptions for this room using gpt-4o-mini and emit to frontend."""
+    """Emit AI feature descriptions, using disk cache unless room data changed."""
+    room_hash = _room_hash(room)
+    cache = _load_features_cache()
+    entry = cache.get(room_id, {})
+
+    if entry.get("hash") == room_hash:
+        debug(f"room_features: cache hit for {room_id}")
+        io_ctx().send(f"__roomfeatures__{json.dumps({'room_id': room_id, 'features': entry['features']})}")
+        return
+
     npcs = room.get("npcs", [])
     npc_parts = []
     for n in npcs:
@@ -251,6 +283,9 @@ def _emit_room_features(room: dict, room_id: str) -> None:
             )}
         ])
         features = json.loads(parse_llm_json(response.content))
+        cache[room_id] = {"hash": room_hash, "features": features}
+        _save_features_cache(cache)
+        debug(f"room_features: generated and cached for {room_id}")
         io_ctx().send(f"__roomfeatures__{json.dumps({'room_id': room_id, 'features': features})}")
     except Exception as e:
         debug(f"room_features error: {e}")
