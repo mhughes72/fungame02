@@ -115,8 +115,8 @@ python main.py
 ```
 
 **Web browser (Windows — recommended):**
-```bash
-run_live
+```powershell
+.\run_live.ps1
 ```
 Prints your local and network URLs, then starts the server.
 
