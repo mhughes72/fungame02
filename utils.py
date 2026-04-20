@@ -7,12 +7,17 @@ from langchain_core.messages import SystemMessage
 from prompts import GAME_SYSTEM_PROMPT
 
 import os
+import contextvars
 
 DEBUG = os.getenv("DEBUG", "true").lower() == "true"
+_debug_io_var: contextvars.ContextVar = contextvars.ContextVar('debug_io', default=None)
 
 def debug(msg):
     if DEBUG:
         print(f"\033[2m  ▸ {msg}\033[0m")
+        _io = _debug_io_var.get()
+        if _io is not None:
+            _io.send(f"__debug__{msg}")
 
 def visible_items(room):
     return [i for i in room["items"] if not i["hidden"]]
