@@ -7,25 +7,38 @@
 import os
 import re
 from tavily import TavilyClient
-from langchain_core.messages import SystemMessage, HumanMessage
-from langchain_openai import ChatOpenAI
+from langchain_core.messages import SystemMessage, HumanMessage, ToolMessage
+from langchain_core.tools import tool
 from utils import (invoke_with_system, debug, mood_tone_for_score, fear_tone_for_score,
                    CONVERSATION_EXIT_WORDS, get_mutable_player, find_npc, make_slug,
                    emit_encounter_start, emit_encounter_end, emit_encounter_state)
-from prompts import GAME_SYSTEM_PROMPT, NPC_PROMPT, WEB_SEARCH_ROLEPLAY_PROMPT, WEB_SEARCH_REQUIRED_PROMPT, WEB_SEARCH_REFUSED_PROMPT, NPC_BRIBE_PROMPT, NPC_BRIBE_BOOST_PROMPT
+from prompts import GAME_SYSTEM_PROMPT, NPC_PROMPT, ORACLE_SYSTEM_PROMPT, WEB_SEARCH_REFUSED_PROMPT, NPC_BRIBE_PROMPT, NPC_BRIBE_BOOST_PROMPT
 from npc_memory import store_exchange, retrieve_memories, evaluate_mood_delta, evaluate_fear_delta
 
-_router_llm = None
 
-def _requires_web_search(player_msg: str, llm) -> bool:
-    global _router_llm
-    if _router_llm is None:
-        _router_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
-    from langchain_core.messages import HumanMessage
-    response = _router_llm.invoke([
-        HumanMessage(content=WEB_SEARCH_REQUIRED_PROMPT.format(player_msg=player_msg))
-    ])
-    return response.content.strip().upper().startswith("YES")
+def _make_oracle_tool(tavily_client):
+    @tool
+    def web_search(query: str) -> str:
+        """Search the web for real-world facts, current events, people, or information."""
+        debug(f"oracle tool: web_search('{query}')")
+        results = tavily_client.search(query)
+        debug(f"oracle tool: got {len(results['results'])} results")
+        return "\n".join(r["content"] for r in results["results"])
+    return [web_search]
+
+
+def _run_oracle_loop(oracle_llm, oracle_tools, messages):
+    """Invoke Oracle LLM and execute web_search tool calls until the model responds without tools."""
+    while True:
+        response = oracle_llm.invoke(messages)
+        messages.append(response)
+        if not response.tool_calls:
+            return response
+        for tc in response.tool_calls:
+            tool_fn = next((t for t in oracle_tools if t.name == tc["name"]), None)
+            if tool_fn:
+                result = tool_fn.invoke(tc["args"])
+                messages.append(ToolMessage(content=str(result), tool_call_id=tc["id"]))
 
 def _invoke_npc(llm, npc, room, memory_context, history, player_msg, mood_tone, fear_tone):
     """Invoke NPC response with mood/fear injected into the system message."""
@@ -137,7 +150,7 @@ def _handle_bribe_in_loop(player_msg, npc, player, npc_moods, current_fear, curr
 
 def _get_npc_reply(player_msg, npc, room, memory_context, history, mood_tone, fear_tone,
                    current_mood, use_web_search, tavily_client, llm, io):
-    """Get NPC reply, handling web-search refusal/search or standard NPC response. Returns (clean_reply, end_conversation)."""
+    """Get NPC reply, handling web-search refusal/tool loop or standard NPC response. Returns (clean_reply, end_conversation)."""
     if use_web_search:
         if current_mood <= -30:
             debug(f"dialogue: web search blocked — mood too low ({current_mood})")
@@ -152,30 +165,21 @@ def _get_npc_reply(player_msg, npc, room, memory_context, history, mood_tone, fe
             ]).content
             return reply.replace("[END CONVERSATION]", "").strip(), "[END CONVERSATION]" in reply
 
-        needs_search = _requires_web_search(player_msg, llm)
-        debug(f"dialogue: web search required: {needs_search}")
-
-        if needs_search:
-            debug(f"dialogue: web search query: '{player_msg}'")
-            search_result = tavily_client.search(player_msg)
-            raw_facts = "\n".join([r["content"] for r in search_result["results"]])
-            debug(f"dialogue: web search returned {len(search_result['results'])} results")
-
-            roleplay_prompt = WEB_SEARCH_ROLEPLAY_PROMPT.format(
-                npc_name=npc["name"],
-                personality=npc["personality"],
-                knowledge=npc["knowledge"],
-                memory_context=memory_context,
-                player_msg=player_msg,
-                raw_facts=raw_facts,
-                history=chr(10).join(history),
-            )
-            reply = invoke_with_system(llm, [
-                SystemMessage(content=roleplay_prompt),
-                HumanMessage(content="Respond in character now.")
-            ]).content
-        else:
-            reply = str(_invoke_npc(llm, npc, room, memory_context, history, player_msg, mood_tone, fear_tone).content)
+        overrides = [t for t in [mood_tone, fear_tone] if t]
+        mood_overrides = "\nBEHAVIORAL OVERRIDES — reflected in every sentence:\n" + "\n".join(overrides) if overrides else ""
+        system = ORACLE_SYSTEM_PROMPT.format(
+            npc_name=npc["name"],
+            personality=npc["personality"],
+            knowledge=npc["knowledge"],
+            memory_context=memory_context,
+            history="\n".join(history[:-1]),
+            mood_overrides=mood_overrides,
+        )
+        oracle_tools = _make_oracle_tool(tavily_client)
+        oracle_llm = llm.bind_tools(oracle_tools)
+        messages = [SystemMessage(content=system), HumanMessage(content=player_msg)]
+        response = _run_oracle_loop(oracle_llm, oracle_tools, messages)
+        reply = response.content or ""
     else:
         reply = str(_invoke_npc(llm, npc, room, memory_context, history, player_msg, mood_tone, fear_tone).content)
 

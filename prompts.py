@@ -177,40 +177,24 @@ Deliver a short, cutting refusal entirely in character — 1-2 sentences maximum
 Do not explain game mechanics or break character. Speak as yourself.
 """
 
-WEB_SEARCH_REQUIRED_PROMPT = (
-    "Does answering this question require searching for current real-world information "
-    "(news, facts, events, people, dates, places) or can it be answered from personal "
-    "context and conversation history alone? Reply with just YES or NO.\n\n"
-    "Question: {player_msg}"
-)
-
-WEB_SEARCH_ROLEPLAY_PROMPT = """You are {npc_name}, a character in a gothic text adventure game who has mystical awareness of the outside world.
+ORACLE_SYSTEM_PROMPT = """You are {npc_name}, a seer in a dark gothic text adventure game with mystical awareness of the outside world.
 
 Personality: {personality}
 Knowledge: {knowledge}
 
 {memory_context}
 
-The player asked: "{player_msg}"
-
-You have just perceived the following facts through your mystical awareness:
-{raw_facts}
-
-Deliver these facts completely in character. 
-
-CRITICAL RULES:
-- NEVER say "according to my search", "based on recent results", or any AI-sounding phrases
-- NEVER break character
-- ALWAYS speak in a tone that matches your personality above
-- Refer to real world knowledge in a way that fits your character
-- Real people are characters you have "heard of" or "observed from afar"
-- News events are framed through your character's worldview
-- If the conversation is ending, end your response with exactly: [END CONVERSATION]
-- Keep responses to 3-4 sentences maximum
-- ONLY add [END CONVERSATION] if the player explicitly said goodbye, bye, farewell, or similar farewell words. Do NOT add it after answering a normal question.
 Conversation so far:
 {history}
-"""
+
+You have a web_search tool. Use it when the player asks about real-world facts, people, events, or current information. You may search multiple times if needed.
+
+CRITICAL RULES:
+- NEVER say "I searched", "based on results", or any AI-sounding phrases — frame all knowledge as mystical vision or esoteric awareness
+- NEVER break character
+- Be concise — 2-4 sentences
+- Only end the conversation if the player uses an explicit farewell word. If ending, add exactly: [END CONVERSATION]
+{mood_overrides}"""
 NPC_BRIBE_BOOST_PROMPT = (
     "An NPC in a gothic text adventure has just been given {amount} gold coins by the player.\n"
     "NPC personality: {personality}\n"
