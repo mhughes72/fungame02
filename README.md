@@ -254,7 +254,7 @@ Health potions restore a set amount of health when used. Different potions resto
 
 > 🌐 **Live demo:** `[ADD URL HERE]`
 >
-> _Hosted on `[ADD HOSTING PROVIDER HERE]` — to run your own copy see Setup below._
+> _Hosted on [Railway](https://railway.app) — to run your own copy see Setup below._
 
 ---
 
