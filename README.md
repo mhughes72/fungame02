@@ -193,6 +193,8 @@ Type `help` at any time to see all commands in-game.
 | `clearmemory` | Wipe all NPC memories mid-session |
 | `quit` | Exit the game |
 
+> **Tip:** Click the **CHEAT** button in the top bar for a debug panel with a gold cheat button and a live list of all AI techniques active in your current room.
+
 ## Game Systems
 
 ### Combat
@@ -248,6 +250,14 @@ The Oracle uses an additional routing step — a cheap LLM call determines wheth
 ### Health Potions
 Health potions restore a set amount of health when used. Different potions restore different amounts. They can be found in rooms or purchased from Aldous.
 
+## Hosted Demo
+
+> 🌐 **Live demo:** `[ADD URL HERE]`
+>
+> _Hosted on `[ADD HOSTING PROVIDER HERE]` — to run your own copy see Setup below._
+
+---
+
 ## Web UI
 
 The game runs in the browser via a FastAPI WebSocket server. The UI features:
@@ -268,15 +278,34 @@ python scripts/generate_room_images.py --room room_3   # single room
 python scripts/generate_room_images.py --overwrite     # force regenerate
 ```
 
-### How it works
+### How the CLI game becomes a web app
 
-- **IOContext / ports and adapters** — the game engine has no knowledge of how output is displayed or input is received. `CLIContext` wraps `print`/`input`; `WebSocketContext` wraps async queues. The same game code drives both interfaces (hexagonal architecture).
+The game engine (`main.py`) was originally a pure terminal app — it printed text and read from stdin. Turning it into a web app without rewriting the game logic required solving three problems:
 
-- **ContextVar for session isolation** — `contextvars.ContextVar` lets each concurrent game session have its own `io` instance without threading conflicts.
+**1. Abstracting I/O (`io_context.py`)**
+Every `print` and `input` call in the game was replaced with `io_ctx().send(text)` and `io_ctx().get_input()`. `io_ctx()` returns whatever I/O driver is registered for the current session:
+- `CLIContext` → wraps `print` / `input` (terminal mode, `python main.py`)
+- `WebSocketContext` → wraps async queues (web mode, `uvicorn server:fastapi_app`)
 
-- **Threading + asyncio bridge** — the LangGraph game loop is synchronous. FastAPI is async. These two worlds are bridged using `loop.run_in_executor()` to run the game in a thread, with `asyncio.Queue` carrying output to the WebSocket and `threading.Queue` carrying player input back in.
+The game code itself never changes — only the driver does. This is a [ports and adapters](https://alistair.cockburn.us/hexagonal-architecture/) pattern.
 
-- **WebSocket protocol** — the server sends typed JSON messages (`message`, `prompt`, `state`, `game_over`). The `state` message carries full player state (room ID, health, gold, inventory, equipped items) so the frontend stays in sync without parsing game text.
+**2. Bridging sync game ↔ async server (`server.py`)**
+LangGraph's game loop is **synchronous** (it blocks waiting for player input). FastAPI is **async** (it can't block). The bridge:
+- Each WebSocket connection spawns the game in a **thread** via `ThreadPoolExecutor`
+- Game output flows through an `asyncio.Queue` (thread → WebSocket)
+- Player input flows through a `threading.Queue` (WebSocket → thread)
+- A `contextvars.ContextVar` gives each game thread its own I/O driver so concurrent sessions don't interfere
+
+**3. Structured state messages**
+Plain text output is fine for a terminal, but the browser needs to know health, gold, inventory, and room ID to render the sidebar and map. After every action the game emits a `__statejson__` message alongside the narrative text. The browser parses this to update the UI panels; the narrative text goes into the scrolling output unchanged.
+
+```
+Browser  ←──── ws ────────────────────────────────  FastAPI
+                │  {type:"message", text:"..."}      │  ← narrative text
+                │  {type:"state", gold:50, ...}       │  ← UI data
+                │  {type:"encounter_start", ...}      │  ← combat/dialogue panel
+                └──── plain text ────────────────→   │  player input
+```
 
 ## Architecture
 
