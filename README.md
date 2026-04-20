@@ -13,8 +13,7 @@ find hidden items, trade with merchants, and converse with mysterious NPCs
 | **HyDE (Hypothetical Document Embeddings)** | Memory retrieval — player queries are rewritten as one or more hypothetical factual statements before embedding. Set `HYDE_NUM_DOCUMENTS` in `npc_memory.py` to generate multiple reformulations and average their embeddings for richer semantic search |
 | **LLM-as-judge** | Mood and fear scoring — GPT-4o-mini rates player attitude and threat level after every message as an unconstrained integer |
 | **Tool calling (function calling)** | Merchant shop — Aldous uses a LangChain agentic loop with bound tools (`get_shop_stock`, `buy_item`, `sell_item`, etc.) to process real transactions in character |
-| **Dynamic routing** | Oracle web search — a cheap LLM call decides per message whether a live Tavily search is needed or the question can be answered from context, saving API credits |
-| **Two-step generation** | Oracle responses — raw Tavily search results are passed to GPT-4o to be redelivered in character, separating fact retrieval from roleplay |
+| **ReAct-style agentic loop** | Oracle NPC — the model is given a `web_search` tool and decides autonomously whether to call it (zero or more times) before replying. No separate routing classifier; the model reasons and acts in one pass |
 | **Prompt injection via system message** | NPC emotional state — mood and fear behavioural overrides are appended to the system message so they carry authority over personality descriptions in the human turn |
 | **LangGraph state graph** | Game loop — the entire game is a compiled state graph with conditional edges routing between room loading, combat, dialogue, and player input nodes |
 | **Per-exchange fact extraction** | NPC memory — after every player/NPC exchange, GPT-4o-mini extracts discrete facts about the player and upserts them as separate vector embeddings |
@@ -245,7 +244,7 @@ NPCs remember what you tell them across conversations using a RAG (Retrieval-Aug
 
 **Memory is wiped at the start of every new game.** Use the `clearmemory` debug command to wipe manually mid-session.
 
-The Oracle uses an additional routing step — a cheap LLM call determines whether a question requires a live web search (current events, facts, news) or can be answered from memory and conversation context alone, saving Tavily API credits on personal questions.
+The Oracle uses a ReAct-style tool-calling loop — she is given a `web_search` tool and decides herself whether to use it, and can search multiple times if the first result is insufficient. No separate routing classifier is needed.
 
 ### Health Potions
 Health potions restore a set amount of health when used. Different potions restore different amounts. They can be found in rooms or purchased from Aldous.
@@ -336,9 +335,9 @@ State is stored in `AgentState` which tracks:
 - **Inventory stores full item dicts** — not just strings, so weapon/armour/potion stats are always available
 - **Room state overrides** — base room data lives in JSON, changes (items taken, monsters wounded, doors unlocked) are stored as overrides in game state
 - **LangChain tools for the shop** — Aldous uses an agentic tool-calling loop to process real transactions in character
-- **Two-step web search** — the Oracle uses Tavily for raw facts then GPT-4o to deliver them in character
+- **ReAct-style Oracle** — the Oracle is given a `web_search` tool and reasons autonomously about when to use it; no routing classifier needed
 - **NPC memory via RAG** — facts extracted per exchange, embedded and stored in Pinecone per NPC namespace, retrieved via HyDE-rewritten semantic search
-- **Dynamic web search routing** — the Oracle decides per message whether a question requires a live web search or can be answered from memory
+- **Dynamic web search** — the Oracle decides per message whether to call `web_search` (and how many times), handled autonomously inside the tool-calling loop
 - **NPC emotional state** — dual-axis mood/fear system evaluated by GPT-4o-mini after every message; scores are injected as system-level behavioural overrides
 - **Gold bribing** — mood boosts from bribes are LLM-evaluated based on NPC personality and current attitude, not a fixed formula
 - **Aggressive monsters** — some monsters auto-attack on room entry and block progress until defeated
