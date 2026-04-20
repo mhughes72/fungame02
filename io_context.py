@@ -15,6 +15,8 @@ class IOContext(Protocol):
 
 class CLIContext:
     def send(self, message: str) -> None:
+        if message.startswith("__"):
+            return
         print(message, flush=True)
 
     def recv(self, prompt: str = "\nWhat do you do? ") -> str:
