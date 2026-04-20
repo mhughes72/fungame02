@@ -19,6 +19,7 @@ langchain_cache/
 
 # Generated files
 # graph.png
+data/room_features_cache.json
 
 # VS Code
 .vscode/
