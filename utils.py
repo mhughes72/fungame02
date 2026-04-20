@@ -87,6 +87,20 @@ ARMOR_REDUCTION_RATE = 0.05       # damage reduction per armor point
 ARMOR_REDUCTION_CAP = 0.75        # maximum damage reduction (75%)
 
 
+def emit_encounter_start(io, **kwargs) -> None:
+    import json
+    io.send(f"__encounter_start__{json.dumps(kwargs)}")
+
+
+def emit_encounter_end(io) -> None:
+    io.send("__encounter_end__")
+
+
+def emit_encounter_state(io, **kwargs) -> None:
+    import json
+    io.send(f"__encounter_state__{json.dumps(kwargs)}")
+
+
 def emit_player_state(player: dict, room_id: str, io, room_data: dict = None) -> None:
     """Send a structured player state update to the frontend via the IO context."""
     import json
@@ -128,6 +142,30 @@ def parse_llm_json(text: str) -> str:
         if text.startswith("json"):
             text = text[4:]
     return text.strip()
+
+
+def make_slug(name: str) -> str:
+    return name.lower().replace(' ', '_').replace("'", '').replace('-', '_')
+
+
+def find_npc(room: dict, target: str) -> dict | None:
+    """Find an NPC in a room by partial name match. target should be lowercased."""
+    return next(
+        (n for n in room.get("npcs", []) if n["name"].lower() in target or target in n["name"].lower()),
+        None
+    )
+
+
+def get_mutable_player(state: dict) -> tuple[dict, list]:
+    player = dict(state.get("player", {}))
+    inventory = list(player.get("inventory", []))
+    return player, inventory
+
+
+def get_mutable_room(state: dict, room_id: str) -> tuple[dict, dict]:
+    room_states = dict(state.get("room_states", {}))
+    room_override = dict(room_states.get(room_id, {}))
+    return room_states, room_override
 
 
 def total_armor_rating(player: dict, inventory: list) -> int:

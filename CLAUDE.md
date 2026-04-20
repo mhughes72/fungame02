@@ -56,6 +56,34 @@ Server → client prefixes (stripped before JSON parse):
 ### Graph always routes through load_room_data
 Every action cycles back through `load_room_data → describe_room → check_aggressive` even when the room didn't change. We use `skip_description: True` / `force_full_description` as workarounds. A cleaner design would route non-room-changing actions directly back to `get_player_action`, only hitting `load_room_data` on actual room transitions. Revisit when a third `skip_description` workaround appears or new action types need to bypass room logic.
 
+## Planned Refactoring
+
+Work through these in priority order. Check off each one as completed.
+
+### HIGH — Across multiple handlers, high leverage
+
+- [x] **State dict copy boilerplate** — `get_mutable_player(state)` → `(player, inventory)` and `get_mutable_room(state, room_id)` → `(room_states, room_override)` added to `utils.py`. All handlers updated.
+
+- [x] **JSON emitter duplication** — `emit_encounter_start()`, `emit_encounter_state()`, `emit_encounter_end()` added to `utils.py`. All handlers updated.
+
+- [x] **server.py message dispatch** — `_DISPATCH` dict maps prefix → `(ws_type, has_json)` in `server.py`. Adding a new message type is a one-liner.
+
+### MEDIUM — Isolated but messy
+
+- [x] **NPC lookup helper** — `find_npc(room, target) -> dict | None` added to `utils.py`. Updated dialogue (bribe + npc_dialogue) and items (handle_examine).
+
+- [x] **`npc_slug` construction** — `make_slug(name: str)` added to `utils.py`. Updated combat (monster_slug), dialogue, and shop (npc_slug).
+
+- [x] **Split long handlers** — `combat_node`, `npc_dialogue`, `handle_shop` broken into private phase functions: `_find_monster`, `_handle_flee`, `_execute_attack_round`, `_handle_victory` (combat); `_handle_bribe_in_loop`, `_get_npc_reply` (dialogue); `_run_tool_loop` (shop, eliminates duplicated agentic loop).
+
+- [x] **Dead code in audio_utils.py** — duplicates already removed; `audio_utils.py` now only contains `speak()`.
+
+### LOW — Polish
+
+- [ ] **Hardcoded cache path** — `os.path.join("data", "room_features_cache.json")` in `main.py`. Define `DATA_DIR` constant at top of file.
+- [ ] **`_io_var` naming** — rename to `_io_context_var` in `main.py` for clarity.
+- [ ] **Missing return type hints** — handler functions lack `-> dict`. Add where missing.
+
 ## Workflow
 - Work directly on `main` branch — do NOT create worktrees
 - Keep this file under 200 lines

@@ -7,12 +7,11 @@
 #   handle_equip   — equip a weapon or armour piece from inventory
 #   handle_unequip — remove an equipped weapon or armour piece
 
-from utils import find_item, invoke_with_system, debug, emit_player_state
+from utils import find_item, find_npc, invoke_with_system, debug, emit_player_state, get_mutable_player, get_mutable_room
 from prompts import EXAMINE_PROMPT
 
 def handle_use(state, target, io) -> dict:
-    player = dict(state.get("player", {}))
-    inventory = list(player.get("inventory", []))
+    player, inventory = get_mutable_player(state)
 
     item = next((i for i in inventory if i["name"] == target), None)
 
@@ -50,10 +49,8 @@ def handle_use(state, target, io) -> dict:
 def handle_take(state, target, io) -> dict:
     room = state["current_room_data"]
     room_id = state["current_room_id"]
-    room_states = dict(state.get("room_states", {}))
-    room_override = dict(room_states.get(room_id, {}))
-    player = dict(state.get("player", {}))
-    inventory = list(player.get("inventory", []))
+    room_states, room_override = get_mutable_room(state, room_id)
+    player, inventory = get_mutable_player(state)
 
     item = find_item(room, target)
     if item:
@@ -82,8 +79,7 @@ def handle_take(state, target, io) -> dict:
 def handle_examine(state, target, llm, io) -> dict:
     room = state["current_room_data"]
     room_id = state["current_room_id"]
-    room_states = dict(state.get("room_states", {}))
-    room_override = dict(room_states.get(room_id, {}))
+    room_states, room_override = get_mutable_room(state, room_id)
 
     debug(f"examine '{target}' in {room_id}")
 
@@ -98,7 +94,7 @@ def handle_examine(state, target, llm, io) -> dict:
         return {"force_full_description": False}
 
     # NPC?
-    npc = next((n for n in room["npcs"] if n["name"].lower() == target), None)
+    npc = find_npc(room, target)
     if npc:
         io.send(f"\n{npc['name']}: {npc['description']}")
         return {"force_full_description": False}
@@ -148,9 +144,8 @@ def handle_examine(state, target, llm, io) -> dict:
 def handle_open(state, target, io) -> dict:
     room = state["current_room_data"]
     room_id = state["current_room_id"]
-    room_states = dict(state.get("room_states", {}))
-    room_override = dict(room_states.get(room_id, {}))
-    player = dict(state.get("player", {}))
+    room_states, room_override = get_mutable_room(state, room_id)
+    player, _ = get_mutable_player(state)
 
     item = find_item(room, target)
 
@@ -199,8 +194,7 @@ def handle_open(state, target, io) -> dict:
 
 
 def handle_equip(state, target, io) -> dict:
-    player = dict(state.get("player", {}))
-    inventory = list(player.get("inventory", []))
+    player, inventory = get_mutable_player(state)
 
     item_data = next((i for i in inventory if i["name"] == target), None)
 

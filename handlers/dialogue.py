@@ -4,13 +4,14 @@
 # regular NPC chat, web search via Tavily for knowledge-enabled NPCs,
 # and routing to the merchant shop for NPCs with a shop_id.
 
-import json
 import os
 import re
 from tavily import TavilyClient
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_openai import ChatOpenAI
-from utils import invoke_with_system, debug, mood_tone_for_score, fear_tone_for_score, CONVERSATION_EXIT_WORDS
+from utils import (invoke_with_system, debug, mood_tone_for_score, fear_tone_for_score,
+                   CONVERSATION_EXIT_WORDS, get_mutable_player, find_npc, make_slug,
+                   emit_encounter_start, emit_encounter_end, emit_encounter_state)
 from prompts import GAME_SYSTEM_PROMPT, NPC_PROMPT, WEB_SEARCH_ROLEPLAY_PROMPT, WEB_SEARCH_REQUIRED_PROMPT, WEB_SEARCH_REFUSED_PROMPT, NPC_BRIBE_PROMPT, NPC_BRIBE_BOOST_PROMPT
 from npc_memory import store_exchange, retrieve_memories, evaluate_mood_delta, evaluate_fear_delta
 
@@ -93,14 +94,11 @@ def _execute_bribe(npc: dict, amount: int, player: dict, npc_moods: dict,
 
 def handle_bribe(state: dict, target: str, amount: int, llm, mini_llm, io) -> dict:
     room = state["current_room_data"]
-    player = dict(state.get("player", {}))
+    player, _ = get_mutable_player(state)
     npc_moods = dict(state.get("npc_moods", {}))
     npc_fear = dict(state.get("npc_fear", {}))
 
-    npc = next(
-        (n for n in room["npcs"] if n["name"].lower() in target.lower() or target.lower() in n["name"].lower()),
-        None
-    )
+    npc = find_npc(room, target.lower())
     if not npc:
         io.send("There's no one here to give gold to.")
         return {"force_full_description": False}
@@ -116,6 +114,74 @@ def handle_bribe(state: dict, target: str, amount: int, llm, mini_llm, io) -> di
     return {"player": player, "npc_moods": npc_moods, "npc_fear": npc_fear, "force_full_description": False}
 
 
+def _handle_bribe_in_loop(player_msg, npc, player, npc_moods, current_fear, current_mood, llm, mini_llm, history, io):
+    """Detect and process a bribe offer within the conversation loop. Returns (was_bribe, new_mood)."""
+    bribe_match = re.search(r'\b(?:give|offer|bribe|pay)\b.*?(\d+)\s*gold', player_msg.lower())
+    if not bribe_match:
+        return False, current_mood
+
+    amount = int(bribe_match.group(1))
+    if player.get("gold", 0) < amount:
+        io.send(f"You only have {player.get('gold', 0)} gold.")
+        history.pop()
+        return True, current_mood
+
+    player["gold"] = player.get("gold", 0) - amount
+    reply, new_mood = _execute_bribe(npc, amount, player, npc_moods, current_fear, llm, mini_llm)
+    io.send(f"\n{npc['name']}: {reply}\n")
+    history.append(f"{npc['name']}: {reply}")
+    store_exchange(npc["name"], player_msg, reply)
+    emit_encounter_state(io, npc_mood=new_mood, npc_fear=current_fear)
+    return True, new_mood
+
+
+def _get_npc_reply(player_msg, npc, room, memory_context, history, mood_tone, fear_tone,
+                   current_mood, use_web_search, tavily_client, llm, io):
+    """Get NPC reply, handling web-search refusal/search or standard NPC response. Returns (clean_reply, end_conversation)."""
+    if use_web_search:
+        if current_mood <= -30:
+            debug(f"dialogue: web search blocked — mood too low ({current_mood})")
+            refusal_prompt = WEB_SEARCH_REFUSED_PROMPT.format(
+                npc_name=npc["name"],
+                personality=npc["personality"],
+                player_msg=player_msg,
+            )
+            reply = invoke_with_system(llm, [
+                SystemMessage(content=refusal_prompt),
+                HumanMessage(content="Refuse in character now.")
+            ]).content
+            return reply.replace("[END CONVERSATION]", "").strip(), "[END CONVERSATION]" in reply
+
+        needs_search = _requires_web_search(player_msg, llm)
+        debug(f"dialogue: web search required: {needs_search}")
+
+        if needs_search:
+            debug(f"dialogue: web search query: '{player_msg}'")
+            search_result = tavily_client.search(player_msg)
+            raw_facts = "\n".join([r["content"] for r in search_result["results"]])
+            debug(f"dialogue: web search returned {len(search_result['results'])} results")
+
+            roleplay_prompt = WEB_SEARCH_ROLEPLAY_PROMPT.format(
+                npc_name=npc["name"],
+                personality=npc["personality"],
+                knowledge=npc["knowledge"],
+                memory_context=memory_context,
+                player_msg=player_msg,
+                raw_facts=raw_facts,
+                history=chr(10).join(history),
+            )
+            reply = invoke_with_system(llm, [
+                SystemMessage(content=roleplay_prompt),
+                HumanMessage(content="Respond in character now.")
+            ]).content
+        else:
+            reply = str(_invoke_npc(llm, npc, room, memory_context, history, player_msg, mood_tone, fear_tone).content)
+    else:
+        reply = str(_invoke_npc(llm, npc, room, memory_context, history, player_msg, mood_tone, fear_tone).content)
+
+    return reply.replace("[END CONVERSATION]", "").strip(), "[END CONVERSATION]" in reply
+
+
 def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn, io) -> dict:
     from handlers.shop import handle_shop
 
@@ -125,10 +191,7 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn, io) -> dict:
     command = parse_command_fn(player_input, state)
     target = command.get("target", "").lower() if command.get("target") else ""
 
-    npc = next(
-        (n for n in room["npcs"] if n["name"].lower() in target or target in n["name"].lower()),
-        room["npcs"][0] if room["npcs"] else None
-    )
+    npc = find_npc(room, target) or (room["npcs"][0] if room["npcs"] else None)
 
     if not npc:
         debug(f"dialogue: no NPC matched target '{target}'")
@@ -142,10 +205,12 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn, io) -> dict:
         npc_fear = dict(state.get("npc_fear", {}))
         return handle_shop(state, npc, SHOPS, mini_llm, npc_moods, npc_fear, io)
 
-    npc_slug = npc['name'].lower().replace(' ', '_').replace("'", '').replace('-', '_')
+    npc_slug = make_slug(npc['name'])
     _moods = state.get("npc_moods", {})
     _fear = state.get("npc_fear", {})
-    io.send(f"__encounter_start__{json.dumps({'encounter_type': 'dialogue', 'target_name': npc['name'], 'target_slug': npc_slug, 'npc_mood': _moods.get(npc['name'], 0), 'npc_fear': _fear.get(npc['name'], 0)})}")
+    emit_encounter_start(io, encounter_type='dialogue', target_name=npc['name'],
+                         target_slug=npc_slug, npc_mood=_moods.get(npc['name'], 0),
+                         npc_fear=_fear.get(npc['name'], 0))
 
     io.send(f"\n{npc['name']}: \"{npc['description']}\"")
     io.send("(Type 'goodbye' or 'leave' to end the conversation)\n")
@@ -154,12 +219,11 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn, io) -> dict:
     tavily_client = TavilyClient(api_key=os.getenv("TAVILY_API_KEY")) if use_web_search else None
 
     history = []
-
     npc_moods = dict(state.get("npc_moods", {}))
     npc_fear = dict(state.get("npc_fear", {}))
     current_mood = npc_moods.get(npc["name"], 0)
     current_fear = npc_fear.get(npc["name"], 0)
-    player = dict(state.get("player", {}))
+    player, _ = get_mutable_player(state)
     debug(f"dialogue: mood for '{npc['name']}': {current_mood} | fear: {current_fear}")
 
     while True:
@@ -168,26 +232,15 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn, io) -> dict:
 
         if any(word in player_msg.lower() for word in CONVERSATION_EXIT_WORDS):
             io.send(f"({npc['name']} turns away.)")
-            io.send("__encounter_end__")
+            emit_encounter_end(io)
             break
 
-        # Detect bribe inside conversation
-        bribe_match = re.search(r'\b(?:give|offer|bribe|pay)\b.*?(\d+)\s*gold', player_msg.lower())
-        if bribe_match:
-            amount = int(bribe_match.group(1))
-            if player.get("gold", 0) < amount:
-                io.send(f"You only have {player.get('gold', 0)} gold.")
-                history.pop()
-                continue
-            player["gold"] = player.get("gold", 0) - amount
-            reply, current_mood = _execute_bribe(npc, amount, player, npc_moods, current_fear, llm, mini_llm)
-            io.send(f"\n{npc['name']}: {reply}\n")
-            history.append(f"{npc['name']}: {reply}")
-            store_exchange(npc["name"], player_msg, reply)
-            io.send(f"__encounter_state__{json.dumps({'npc_mood': current_mood, 'npc_fear': current_fear})}")
+        was_bribe, current_mood = _handle_bribe_in_loop(
+            player_msg, npc, player, npc_moods, current_fear, current_mood, llm, mini_llm, history, io
+        )
+        if was_bribe:
             continue
 
-        # Evaluate attitude and update mood + fear in parallel
         mood_delta = evaluate_mood_delta(player_msg)
         fear_delta = evaluate_fear_delta(player_msg)
         current_mood = max(-100, min(100, current_mood + mood_delta))
@@ -196,9 +249,8 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn, io) -> dict:
         npc_fear[npc["name"]] = current_fear
         debug(f"dialogue: mood delta for '{npc['name']}': {mood_delta:+d} → total: {current_mood}")
         debug(f"dialogue: fear delta for '{npc['name']}': {fear_delta:+d} → total: {current_fear}")
-        io.send(f"__encounter_state__{json.dumps({'npc_mood': current_mood, 'npc_fear': current_fear})}")
+        emit_encounter_state(io, npc_mood=current_mood, npc_fear=current_fear)
 
-        # Retrieve memories relevant to this specific message
         memories = retrieve_memories(npc["name"], player_msg)
         if memories:
             memory_context = "What you already know about this player from past conversations:\n" + "\n".join(f"- {m}" for m in memories)
@@ -209,69 +261,18 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn, io) -> dict:
         mood_tone = mood_tone_for_score(current_mood)
         fear_tone = fear_tone_for_score(current_fear)
 
-        if use_web_search:
-            if current_mood <= -30:
-                debug(f"dialogue: web search blocked — mood too low ({current_mood})")
-                refusal_prompt = WEB_SEARCH_REFUSED_PROMPT.format(
-                    npc_name=npc["name"],
-                    personality=npc["personality"],
-                    player_msg=player_msg,
-                )
-                reply = invoke_with_system(llm, [
-                    SystemMessage(content=refusal_prompt),
-                    HumanMessage(content="Refuse in character now.")
-                ]).content
-                end_conversation = "[END CONVERSATION]" in reply
-                clean_reply = reply.replace("[END CONVERSATION]", "").strip()
-                io.send(f"\n{npc['name']}: {clean_reply}\n")
-                history.append(f"{npc['name']}: {clean_reply}")
-                store_exchange(npc["name"], player_msg, clean_reply)
-                if end_conversation:
-                    io.send(f"({npc['name']} turns away.)")
-                    io.send("__encounter_end__")
-                    break
-                continue
-
-            needs_search = _requires_web_search(player_msg, llm)
-            debug(f"dialogue: web search required: {needs_search}")
-
-            if needs_search:
-                debug(f"dialogue: web search query: '{player_msg}'")
-                search_result = tavily_client.search(player_msg)
-                raw_facts = "\n".join([r["content"] for r in search_result["results"]])
-                debug(f"dialogue: web search returned {len(search_result['results'])} results")
-
-                roleplay_prompt = WEB_SEARCH_ROLEPLAY_PROMPT.format(
-                    npc_name=npc["name"],
-                    personality=npc["personality"],
-                    knowledge=npc["knowledge"],
-                    memory_context=memory_context,
-                    player_msg=player_msg,
-                    raw_facts=raw_facts,
-                    history=chr(10).join(history),
-                )
-                reply = invoke_with_system(llm, [
-                    SystemMessage(content=roleplay_prompt),
-                    HumanMessage(content="Respond in character now.")
-                ]).content
-            else:
-                reply = str(_invoke_npc(llm, npc, room, memory_context, history, player_msg, mood_tone, fear_tone).content)
-
-        else:
-            reply = str(_invoke_npc(llm, npc, room, memory_context, history, player_msg, mood_tone, fear_tone).content)
-
-        end_conversation = "[END CONVERSATION]" in reply
-        clean_reply = reply.replace("[END CONVERSATION]", "").strip()
+        clean_reply, end_conversation = _get_npc_reply(
+            player_msg, npc, room, memory_context, history, mood_tone, fear_tone,
+            current_mood, use_web_search, tavily_client, llm, io
+        )
 
         io.send(f"\n{npc['name']}: {clean_reply}\n")
         history.append(f"{npc['name']}: {clean_reply}")
-
-        # Store facts immediately so they're available for the rest of this conversation
         store_exchange(npc["name"], player_msg, clean_reply)
 
         if end_conversation:
             io.send(f"({npc['name']} turns away.)")
-            io.send("__encounter_end__")
+            emit_encounter_end(io)
             break
 
     return {"player": player, "npc_moods": npc_moods, "npc_fear": npc_fear, "force_full_description": False}

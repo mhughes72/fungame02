@@ -27,7 +27,7 @@ from prompts import (
     ROOM_FEATURES_PROMPT
 )
 
-from utils import invoke_with_system, find_item, visible_items, total_armor_rating, debug, parse_llm_json, emit_player_state
+from utils import invoke_with_system, find_item, visible_items, total_armor_rating, debug, parse_llm_json, emit_player_state, get_mutable_player, get_mutable_room
 from npc_memory import clear_all_memories
 from handlers import (
     handle_go, handle_take, handle_examine, handle_open,
@@ -297,8 +297,7 @@ def describe_room(state: AgentState) -> dict:
 
     room = state["current_room_data"]
     room_id = state["current_room_id"]
-    room_states = dict(state.get("room_states", {}))
-    room_override = dict(room_states.get(room_id, {}))
+    room_states, room_override = get_mutable_room(state, room_id)
 
     already_visited = room_override.get("visited", False)
     force_full_description = state.get("force_full_description", False)
@@ -360,8 +359,7 @@ def check_aggressive(state: AgentState) -> dict:
     return {"route_to": None}
 
 def trigger_win(state: AgentState) -> dict:
-    player = state.get("player", {})
-    inventory = list(player.get("inventory", []))
+    player, inventory = get_mutable_player(state)
 
     prompt = WIN_PROMPT.invoke({
         "gold": player.get("gold", 0),
