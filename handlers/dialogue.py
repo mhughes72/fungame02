@@ -35,6 +35,8 @@ def _run_oracle_loop(oracle_llm, oracle_tools, messages):
         debug(f"oracle loop [{iteration}]: invoking LLM ({len(messages)} messages in context)")
         response = oracle_llm.invoke(messages)
         messages.append(response)
+        if response.content:
+            debug(f"oracle loop [{iteration}]: reasoning: {response.content}")
         if not response.tool_calls:
             debug(f"oracle loop [{iteration}]: no tool calls — final reply ({len(response.content)} chars)")
             return response
