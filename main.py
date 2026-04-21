@@ -156,7 +156,7 @@ DATA_DIR = "data"
 llm = ChatOpenAI(model="gpt-4o", temperature=0.5)
 mini_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.5)
 
-def load_game_data() -> dict:
+def load_game_data() -> tuple[dict, dict]:
     with open(os.path.join(DATA_DIR, "rooms.json"), "r") as f:
         rooms = json.load(f)
     with open(os.path.join(DATA_DIR, "monsters.json"), "r") as f:
@@ -168,13 +168,13 @@ def load_game_data() -> dict:
         room["monsters"] = [copy.deepcopy(monsters[m]) for m in room.get("monsters", [])]
         room["npcs"] = [copy.deepcopy(npcs[n]) for n in room.get("npcs", [])]
 
-    return rooms
+    return rooms, npcs
 
 
 with open(os.path.join(DATA_DIR, "shop.json"), "r") as f:
     SHOPS = json.load(f)
 
-ROOMS = load_game_data()
+ROOMS, NPC_CATALOGUE = load_game_data()
 
 
 def validate_game_data(rooms: dict, shops: dict) -> None:
@@ -511,7 +511,7 @@ graph.add_node("check_aggressive", check_aggressive)
 graph.add_node("get_player_action", get_player_action)
 graph.add_node("resolve_action", resolve_action)
 graph.add_node("combat", lambda state: combat_node(state, ROOMS, mini_llm, io_ctx()))
-graph.add_node("npc_dialogue", lambda state: npc_dialogue(state, SHOPS, llm, mini_llm, parse_command, io_ctx()))
+graph.add_node("npc_dialogue", lambda state: npc_dialogue(state, SHOPS, NPC_CATALOGUE, llm, mini_llm, parse_command, io_ctx()))
 
 graph.add_edge(START, "load_room_data")
 graph.add_edge("load_room_data", "describe_room")

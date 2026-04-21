@@ -49,7 +49,7 @@ def _run_oracle_loop(oracle_llm, oracle_tools, messages):
                 debug(f"oracle loop [{iteration}]:   ← {len(str(result))} chars returned")
                 messages.append(ToolMessage(content=str(result), tool_call_id=tc["id"]))
 
-def _invoke_npc(llm, npc, room, memory_context, history, player_msg, mood_tone, fear_tone, io) -> str:
+def _invoke_npc(llm, npc, room, memory_context, history, player_msg, mood_tone, fear_tone, io, knowledge=None) -> str:
     """Stream NPC response through io with mood/fear injected into the system message. Returns full text."""
     system = GAME_SYSTEM_PROMPT
     overrides = []
@@ -65,7 +65,7 @@ def _invoke_npc(llm, npc, room, memory_context, history, player_msg, mood_tone, 
     prompt = NPC_PROMPT.invoke({
         "npc_name": npc["name"],
         "personality": npc["personality"],
-        "knowledge": npc["knowledge"],
+        "knowledge": knowledge if knowledge is not None else npc["knowledge"],
         "room_name": room["name"],
         "memory_context": memory_context,
         "history": "\n".join(history),
@@ -197,7 +197,23 @@ def _get_npc_reply(player_msg, npc, room, memory_context, history, mood_tone, fe
     return reply.replace("[END CONVERSATION]", "").strip(), "[END CONVERSATION]" in reply
 
 
-def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn, io) -> dict:
+def _build_knowledge(npc: dict, npc_catalogue: dict) -> str:
+    """Append known NPC descriptions to the NPC's own knowledge string."""
+    base = npc.get("knowledge", "")
+    knows_about = npc.get("knows_about", [])
+    if not knows_about:
+        return base
+    entries = []
+    for npc_id in knows_about:
+        other = npc_catalogue.get(npc_id)
+        if other:
+            entries.append(f"{other['name']}: {other['description']}. {other['personality']}")
+    if not entries:
+        return base
+    return base + "\n\nOther residents you know of:\n" + "\n".join(f"- {e}" for e in entries)
+
+
+def npc_dialogue(state, SHOPS, npc_catalogue, llm, mini_llm, parse_command_fn, io) -> dict:
     from handlers.shop import handle_shop
 
     room = state["current_room_data"]
@@ -220,6 +236,7 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn, io) -> dict:
         npc_fear = dict(state.get("npc_fear", {}))
         return handle_shop(state, npc, SHOPS, mini_llm, npc_moods, npc_fear, io)
 
+    npc = {**npc, "knowledge": _build_knowledge(npc, npc_catalogue)}
     npc_slug = make_slug(npc['name'])
     _moods = state.get("npc_moods", {})
     _fear = state.get("npc_fear", {})
