@@ -8,8 +8,11 @@
     "opens_conversation": true,
     "gossips_with": ["Lady Vespera"],
     "knows_about": {
-      "lady_vespera": "Believes she has lived in this mansion for centuries and is not entirely human.",
-      "shadow_cat": "Suspects the cat understands far more than it pretends and may be spying for someone."
+      "npc:lady_vespera": "Believes she has lived in this mansion for centuries and is not entirely human.",
+      "npc:shadow_cat": "Suspects the cat understands far more than it pretends and may be spying for someone.",
+      "monster:ghost": "Recognises the ghost as a former colleague. Will not say how the colleague died.",
+      "item:secret_letter": "Knows the letter exists and has been trying to retrieve it for years. Has not succeeded.",
+      "item:rusty_key": "Knows precisely what it opens but refuses to say directly."
     }
   },
   "the_oracle": {
@@ -32,7 +35,9 @@
     "shop_id": "aldous",
     "gossips_with": ["Shadow"],
     "knows_about": {
-      "shadow_cat": "Once caught the cat rummaging through his stock. Never found anything missing, which somehow made it worse."
+      "npc:shadow_cat": "Once caught the cat rummaging through his stock. Never found anything missing, which somehow made it worse.",
+      "item:magic_staff": "Has been trying to acquire it for years. Considers it the finest item in the mansion and is bitter he does not own it.",
+      "item:ritual_dagger": "Knows it is worth far more than it looks and will not say why."
     }
   },
   "lady_vespera": {
@@ -44,8 +49,11 @@
     "opens_conversation": true,
     "gossips_with": ["Professor Aldric", "Shadow"],
     "knows_about": {
-      "professor_aldric": "Knows he discovered something in the basement he was never meant to see and has been afraid ever since.",
-      "shadow_cat": ""
+      "npc:professor_aldric": "Knows he discovered something in the basement he was never meant to see and has been afraid ever since.",
+      "npc:shadow_cat": "",
+      "monster:vampire": "Knows the vampire personally. The nature of their relationship is something she will not discuss unless pressed hard.",
+      "monster:wraith": "Created the wraith herself, long ago, and feels something close to maternal about it.",
+      "item:strange_amulet": "Recognises it immediately. Will become visibly unsettled if the player mentions it."
     }
   },
   "shadow_cat": {
@@ -57,9 +65,11 @@
     "opens_conversation": true,
     "gossips_with": ["Professor Aldric", "Lady Vespera", "Aldous the Peddler"],
     "knows_about": {
-      "professor_aldric": "",
-      "lady_vespera": "Is absolutely certain she is a vampire but has no real evidence. Will state this as established fact.",
-      "aldous_the_peddler": "Believes he is secretly a renowned chef in disguise. This is completely wrong."
+      "npc:professor_aldric": "",
+      "npc:lady_vespera": "Is absolutely certain she is a vampire but has no real evidence. Will state this as established fact.",
+      "npc:aldous_the_peddler": "Believes he is secretly a renowned chef in disguise. This is completely wrong.",
+      "monster:ghost": "Claims to have spoken with the ghost at length. The ghost categorically denies this.",
+      "item:locket": "Is convinced the locket contains the secret to the entire mansion. It does not."
     }
   }
 }
