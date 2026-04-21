@@ -24,6 +24,7 @@ from fastapi.staticfiles import StaticFiles
 
 from io_context import WebSocketContext, DisconnectedError
 from main import app as game_app, make_initial_state, set_io, load_game_data
+from utils import _debug_io_var
 from npc_memory import clear_all_memories
 
 executor = ThreadPoolExecutor(max_workers=10)
@@ -36,6 +37,7 @@ fastapi_app.mount("/static", StaticFiles(directory="static"), name="static")
 def run_game(ctx: WebSocketContext) -> None:
     """Synchronous game loop — runs in a worker thread."""
     token = set_io(ctx)
+    debug_token = _debug_io_var.set(ctx)
     try:
         clear_all_memories()
         game_app.invoke(make_initial_state())
@@ -46,6 +48,7 @@ def run_game(ctx: WebSocketContext) -> None:
     finally:
         from main import _io_var
         _io_var.reset(token)
+        _debug_io_var.reset(debug_token)
         ctx.close()
 
 
