@@ -28,7 +28,7 @@ from prompts import (
     ROOM_FEATURES_PROMPT
 )
 
-from utils import invoke_with_system, find_item, visible_items, total_armor_rating, debug, parse_llm_json, emit_player_state, get_mutable_player, get_mutable_room
+from utils import invoke_with_system, stream_with_system, find_item, visible_items, total_armor_rating, debug, parse_llm_json, emit_player_state, get_mutable_player, get_mutable_room
 from npc_memory import clear_all_memories
 from handlers import (
     handle_go, handle_take, handle_examine, handle_open,
@@ -341,8 +341,7 @@ def describe_room(state: AgentState) -> dict:
             "exits": ", ".join(room["exits"].keys()) if room["exits"] else "none",
         })
 
-        response = invoke_with_system(llm, prompt)
-        io_ctx().send(response.content)
+        stream_with_system(llm, prompt, io_ctx())
 
         room_override["visited"] = True
         room_states[room_id] = room_override
