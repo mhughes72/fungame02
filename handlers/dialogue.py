@@ -246,6 +246,7 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn, io) -> dict:
         npc_moods[npc["name"]] = current_mood
         npc_fear[npc["name"]] = current_fear
         debug(f"dialogue: gossip adjusted '{npc['name']}' mood → {current_mood}, fear → {current_fear}")
+        emit_encounter_state(io, npc_mood=current_mood, npc_fear=current_fear)
 
     player, _ = get_mutable_player(state)
     debug(f"dialogue: mood for '{npc['name']}': {current_mood} | fear: {current_fear}")
