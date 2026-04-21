@@ -5,7 +5,7 @@ from pinecone import Pinecone, ServerlessSpec
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from utils import debug, parse_llm_json
-from prompts import NPC_MEMORY_HYDE_PROMPT, NPC_MEMORY_EXTRACT_PROMPT, NPC_MOOD_PROMPT, NPC_FEAR_PROMPT
+from prompts import NPC_MEMORY_HYDE_PROMPT, NPC_MEMORY_EXTRACT_PROMPT, NPC_MOOD_PROMPT, NPC_FEAR_PROMPT, NPC_GOSSIP_FILTER_PROMPT
 
 
 INDEX_NAME = "fungame-npc-memory"
@@ -74,8 +74,8 @@ def _upsert_facts(npc_name: str, facts: list[str]) -> None:
     debug(f"npc_memory: upserted {len(vectors)} vectors to namespace '{namespace}'")
 
 
-def store_exchange(npc_name: str, player_msg: str, npc_reply: str, llm=None) -> None:
-    """Extract and store facts from a single player/NPC exchange immediately after it happens."""
+def store_exchange(npc_name: str, player_msg: str, npc_reply: str, llm=None) -> list[str]:
+    """Extract and store facts from a single player/NPC exchange. Returns extracted facts for gossip."""
     exchange = f"Player: {player_msg}\n{npc_name}: {npc_reply}"
 
     response = _get_mini_llm().invoke([
@@ -86,13 +86,40 @@ def store_exchange(npc_name: str, player_msg: str, npc_reply: str, llm=None) -> 
     try:
         facts = json.loads(parse_llm_json(response.content))
         if not isinstance(facts, list) or not facts:
-            return
+            return []
     except Exception as e:
         debug(f"npc_memory: fact extraction failed — {e}")
-        return
+        return []
 
     debug(f"npc_memory: storing {len(facts)} facts for '{npc_name}': {facts}")
     _upsert_facts(npc_name, facts)
+    return facts
+
+
+def gossip_facts(source_npc_name: str, facts: list[str], target_npc_names: list[str]) -> None:
+    """Filter facts for gossip-worthiness and push them to target NPC namespaces with attribution."""
+    if not facts or not target_npc_names:
+        return
+
+    response = _get_mini_llm().invoke([
+        SystemMessage(content=NPC_GOSSIP_FILTER_PROMPT),
+        HumanMessage(content=json.dumps(facts))
+    ])
+
+    try:
+        gossip_worthy = json.loads(parse_llm_json(response.content))
+        if not isinstance(gossip_worthy, list) or not gossip_worthy:
+            debug(f"npc_memory: no gossip-worthy facts from '{source_npc_name}'")
+            return
+    except Exception as e:
+        debug(f"npc_memory: gossip filter failed — {e}")
+        return
+
+    attributed = [f"Rumour (from {source_npc_name}): {f}" for f in gossip_worthy]
+    debug(f"npc_memory: gossiping {len(attributed)} facts from '{source_npc_name}' → {target_npc_names}")
+
+    for target in target_npc_names:
+        _upsert_facts(target, attributed)
 
 
 def _hyde_rewrite(query: str, npc_name: str = "", num_documents: int = None) -> list[str]:

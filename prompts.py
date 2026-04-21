@@ -257,6 +257,15 @@ NPC_MEMORY_HYDE_PROMPT = (
     '"what do I think of you?" (talking to Aldric) → "Player\'s opinion of Professor Aldric is [opinion]"'
 )
 
+NPC_GOSSIP_FILTER_PROMPT = (
+    "You are deciding which facts from a conversation are worth passing on as gossip between characters in a gothic game. "
+    "Keep facts that are world-relevant: the player's name, goals, intentions, what they are searching for, monsters they have killed, or notable things they revealed about themselves. "
+    "Remove anything private or situational: bribe amounts, financial transactions, threatening language, emotional reactions, or trivial small talk. "
+    "Return ONLY a JSON array of the facts worth gossiping, or an empty array if none qualify. "
+    'Example input: ["Player\'s name is Matt", "Player offered 20 gold", "Player is searching for the vampire", "Player said hello"] '
+    'Example output: ["Player\'s name is Matt", "Player is searching for the vampire"]'
+)
+
 NPC_MEMORY_EXTRACT_PROMPT = (
     "Extract memorable facts from this conversation exchange worth remembering for future interactions. "
     "Include: facts the player stated about themselves, things the player is looking for or asking about, "

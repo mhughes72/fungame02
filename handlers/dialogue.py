@@ -13,7 +13,7 @@ from utils import (invoke_with_system, debug, mood_tone_for_score, fear_tone_for
                    CONVERSATION_EXIT_WORDS, get_mutable_player, find_npc, make_slug,
                    emit_encounter_start, emit_encounter_end, emit_encounter_state)
 from prompts import GAME_SYSTEM_PROMPT, NPC_PROMPT, ORACLE_SYSTEM_PROMPT, WEB_SEARCH_REFUSED_PROMPT, NPC_BRIBE_PROMPT, NPC_BRIBE_BOOST_PROMPT
-from npc_memory import store_exchange, retrieve_memories, evaluate_mood_delta, evaluate_fear_delta
+from npc_memory import store_exchange, gossip_facts, retrieve_memories, evaluate_mood_delta, evaluate_fear_delta
 
 
 def _make_oracle_tool(tavily_client):
@@ -283,7 +283,10 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn, io) -> dict:
         )
         io.send("\n")
         history.append(f"{npc['name']}: {clean_reply}")
-        store_exchange(npc["name"], player_msg, clean_reply)
+        facts = store_exchange(npc["name"], player_msg, clean_reply)
+        gossip_targets = npc.get("gossips_with", [])
+        if facts and gossip_targets:
+            gossip_facts(npc["name"], facts, gossip_targets)
 
         if end_conversation:
             io.send(f"({npc['name']} turns away.)")
