@@ -97,6 +97,14 @@ Work through these in priority order. Check off each one as completed.
 - [ ] **`_io_var` naming** — rename to `_io_context_var` in `main.py` for clarity.
 - [ ] **Missing return type hints** — handler functions lack `-> dict`. Add where missing.
 
+## Future AI Feature Ideas
+
+- **Streaming LLM output** — Stream tokens to browser as generated via `.stream()` instead of `.invoke()`. Add `io.stream(chunks)` to IOContext, `__token__` WebSocket prefix, frontend appends tokens to a live span. Affects: room descriptions, NPC dialogue, combat narration, examine. **[IN PROGRESS]**
+- **NPC gossip network** — NPCs share memories via the existing Pinecone RAG. After a conversation, push key facts to other NPCs' namespaces so they react to player reputation, not just direct interaction.
+- **Dungeon master agent** — Background LangGraph node on a timer that monitors game state and injects narrative events autonomously (notes, monster migrations, rumors). Teaches autonomous agent behavior.
+- **Vision-grounded room descriptions** — Feed pre-generated room image into GPT-4o vision when describing a room so text references what's actually visible. Teaches multimodal pipelines.
+- **Player persona inference** — Build a behavioral profile from actions (bribes vs. fights, hoards vs. spends), inject into NPC prompts so characters react to reputation not just words.
+
 ## Workflow
 - Work directly on `main` branch — do NOT create worktrees unless absolutely necessary for a specific change, and always ask first
 - Keep this file under 200 lines
