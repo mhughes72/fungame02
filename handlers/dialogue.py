@@ -13,7 +13,7 @@ from utils import (invoke_with_system, debug, mood_tone_for_score, fear_tone_for
                    CONVERSATION_EXIT_WORDS, get_mutable_player, find_npc, make_slug,
                    emit_encounter_start, emit_encounter_end, emit_encounter_state)
 from prompts import GAME_SYSTEM_PROMPT, NPC_PROMPT, ORACLE_SYSTEM_PROMPT, WEB_SEARCH_REFUSED_PROMPT, NPC_BRIBE_PROMPT, NPC_BRIBE_BOOST_PROMPT
-from npc_memory import store_exchange, gossip_facts, retrieve_memories, evaluate_mood_delta, evaluate_fear_delta
+from npc_memory import store_exchange, gossip_facts, retrieve_memories, evaluate_mood_delta, evaluate_fear_delta, evaluate_gossip_impact
 
 
 def _make_oracle_tool(tavily_client):
@@ -238,6 +238,15 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn, io) -> dict:
     npc_fear = dict(state.get("npc_fear", {}))
     current_mood = npc_moods.get(npc["name"], 0)
     current_fear = npc_fear.get(npc["name"], 0)
+
+    gossip_mood, gossip_fear = evaluate_gossip_impact(npc["name"])
+    if gossip_mood or gossip_fear:
+        current_mood = max(-100, min(100, current_mood + gossip_mood))
+        current_fear = max(0, min(100, current_fear + gossip_fear))
+        npc_moods[npc["name"]] = current_mood
+        npc_fear[npc["name"]] = current_fear
+        debug(f"dialogue: gossip adjusted '{npc['name']}' mood → {current_mood}, fear → {current_fear}")
+
     player, _ = get_mutable_player(state)
     debug(f"dialogue: mood for '{npc['name']}': {current_mood} | fear: {current_fear}")
 

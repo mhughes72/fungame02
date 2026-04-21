@@ -266,6 +266,15 @@ NPC_GOSSIP_FILTER_PROMPT = (
     'Example output: ["Player\'s name is Matt", "Player is searching for the vampire"]'
 )
 
+NPC_GOSSIP_IMPACT_PROMPT = (
+    "These are rumours an NPC has heard about the player before meeting them. "
+    "Rate how these rumours should shift the NPC's initial mood and fear toward the player. "
+    "mood_delta: positive if rumours paint the player as friendly, generous, or helpful; negative if rude, hostile, or dangerous. "
+    "fear_delta: positive if rumours suggest the player is violent or powerful; negative if clearly harmless. "
+    "Keep deltas small (max ±20 each). Return ONLY a JSON object: {{\"mood_delta\": int, \"fear_delta\": int}}\n\n"
+    "Rumours:\n{rumours}"
+)
+
 NPC_MEMORY_EXTRACT_PROMPT = (
     "Extract memorable facts from this conversation exchange worth remembering for future interactions. "
     "Include: facts the player stated about themselves, things the player is looking for or asking about, "
