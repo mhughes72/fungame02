@@ -109,7 +109,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 
 @fastapi_app.get("/rooms")
 async def get_rooms() -> JSONResponse:
-    rooms, _ = load_game_data()
+    rooms, *_ = load_game_data()
     return JSONResponse(rooms)
 
 
