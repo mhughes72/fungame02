@@ -58,8 +58,24 @@ CLI strips all `__`-prefixed messages (`CLIContext.send` in `io_context.py`).
 
 ### NPC Memory
 - `NPC_MEMORY_EXTRACT_PROMPT` captures player interests/goals/questions, not just biographical facts
+- `store_exchange()` in `npc_memory.py` returns extracted facts so the caller can pass them to `gossip_facts()`
 - `last_entity` in `AgentState` tracks the last item/NPC/monster interacted with; injected into `COMMAND_PARSER_PROMPT` for pronoun resolution ("take satchel" → "open it")
 - `_debug_io_var` in `utils.py` (ContextVar) lets `debug()` stream to the web UI Debug tab
+
+### NPC Gossip Network
+- After each exchange, `gossip_facts()` in `npc_memory.py` filters facts via `NPC_GOSSIP_FILTER_PROMPT` (strips bribes/threats, keeps goals/name/kills) then upserts to connected NPCs' namespaces with `"Rumour (from X): "` prefix
+- Social graph defined per NPC in `npcs.json` via `gossips_with: [list of NPC names]`
+- The Oracle has `gossips_with: []` (isolated); Shadow gossips with all
+
+### NPC Conversation Opening
+- `opens_conversation: true` in `npcs.json` triggers a greeting LLM call before the input loop
+- Uses `_get_npc_reply()` with synthetic `"(The player approaches...)"` message — mood, fear, and memory all apply
+- Opening line added to `history`; no `store_exchange` call (no real player input to extract from)
+- The Oracle has `opens_conversation: false`
+
+### Monster Data
+- `monsters.json` has `description` (appearance) and `behavior` (combat style) fields
+- Both injected into `COMBAT_PROMPT` and `FLEE_PROMPT`; description injected inline into `ROOM_DESCRIPTION_PROMPT`
 
 ## Cheat / Debug Panel
 - CHEAT button in header opens modal with room-specific AI feature list
@@ -104,7 +120,7 @@ Work through these in priority order. Check off each one as completed.
 ## Future AI Feature Ideas
 
 - **Streaming LLM output** — Stream tokens to browser as generated via `.stream()` instead of `.invoke()`. Add `io.stream(chunks)` to IOContext, `__token__` WebSocket prefix, frontend appends tokens to a live span. Affects: room descriptions, NPC dialogue, combat narration, examine. **[DONE]**
-- **NPC gossip network** — NPCs share memories via the existing Pinecone RAG. After a conversation, push key facts to other NPCs' namespaces so they react to player reputation, not just direct interaction.
+- **NPC gossip network** — NPCs share memories via the existing Pinecone RAG. After a conversation, push key facts to other NPCs' namespaces so they react to player reputation, not just direct interaction. **[DONE]**
 - **Dungeon master agent** — Background LangGraph node on a timer that monitors game state and injects narrative events autonomously (notes, monster migrations, rumors). Teaches autonomous agent behavior.
 - **Vision-grounded room descriptions** — Feed pre-generated room image into GPT-4o vision when describing a room so text references what's actually visible. Teaches multimodal pipelines.
 - **Player persona inference** — Build a behavioral profile from actions (bribes vs. fights, hoards vs. spends), inject into NPC prompts so characters react to reputation not just words.
