@@ -40,6 +40,21 @@ def invoke_with_system(llm, prompt):
 
     return llm.invoke([SystemMessage(content=GAME_SYSTEM_PROMPT)] + messages)
 
+
+def stream_with_system(llm, prompt, io) -> str:
+    """Stream LLM output through io, prepending GAME_SYSTEM_PROMPT if needed. Returns full text."""
+    if hasattr(prompt, 'to_messages'):
+        messages = prompt.to_messages()
+    elif isinstance(prompt, list):
+        messages = prompt
+    else:
+        messages = [prompt]
+
+    if not (messages and isinstance(messages[0], SystemMessage)):
+        messages = [SystemMessage(content=GAME_SYSTEM_PROMPT)] + messages
+
+    return io.stream(llm.stream(messages))
+
 def mood_tone_for_score(score: int) -> str:
     """Return a prompt-injectable mood instruction based on the NPC's mood score."""
     if score >= 50:

@@ -5,7 +5,7 @@
 # armor reduction, weakness bonuses, and monster drop handling.
 
 import random
-from utils import (invoke_with_system, total_armor_rating, debug, make_slug,
+from utils import (invoke_with_system, stream_with_system, total_armor_rating, debug, make_slug,
                    FLEE_SUCCESS_THRESHOLD, WEAKNESS_BONUS_DAMAGE,
                    ARMOR_REDUCTION_RATE, ARMOR_REDUCTION_CAP, emit_player_state,
                    emit_encounter_start, emit_encounter_end, emit_encounter_state,
@@ -33,7 +33,8 @@ def _handle_flee(state, monster, target, room, room_id, room_override, room_stat
         "monster_name": monster["name"],
         "success": success,
     })
-    io.send(f"\n{invoke_with_system(llm, prompt).content}")
+    io.send("\n")
+    stream_with_system(llm, prompt, io)
 
     if success:
         previous_room = state.get("previous_room_id")
@@ -107,7 +108,8 @@ def _execute_attack_round(player, monster, weapon_data, equipped_weapon, room, l
         "monster_max_health": monster["max_health"],
         "round_events": round_events,
     })
-    io.send(f"\n{invoke_with_system(llm, prompt).content}")
+    io.send("\n")
+    stream_with_system(llm, prompt, io)
     emit_encounter_state(io, player_health=player['health'], player_max_health=player['max_health'],
                          monster_health=max(0, monster['health']), monster_max_health=monster['max_health'])
 

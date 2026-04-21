@@ -49,8 +49,8 @@ def _run_oracle_loop(oracle_llm, oracle_tools, messages):
                 debug(f"oracle loop [{iteration}]:   ← {len(str(result))} chars returned")
                 messages.append(ToolMessage(content=str(result), tool_call_id=tc["id"]))
 
-def _invoke_npc(llm, npc, room, memory_context, history, player_msg, mood_tone, fear_tone):
-    """Invoke NPC response with mood/fear injected into the system message."""
+def _invoke_npc(llm, npc, room, memory_context, history, player_msg, mood_tone, fear_tone, io) -> str:
+    """Stream NPC response through io with mood/fear injected into the system message. Returns full text."""
     system = GAME_SYSTEM_PROMPT
     overrides = []
     if mood_tone:
@@ -72,7 +72,7 @@ def _invoke_npc(llm, npc, room, memory_context, history, player_msg, mood_tone, 
         "player_input": player_msg,
     })
     messages = prompt.to_messages()
-    return llm.invoke([SystemMessage(content=system)] + messages)
+    return io.stream(llm.stream([SystemMessage(content=system)] + messages))
 
 
 def _execute_bribe(npc: dict, amount: int, player: dict, npc_moods: dict,
@@ -190,7 +190,7 @@ def _get_npc_reply(player_msg, npc, room, memory_context, history, mood_tone, fe
         response = _run_oracle_loop(oracle_llm, oracle_tools, messages)
         reply = response.content or ""
     else:
-        reply = str(_invoke_npc(llm, npc, room, memory_context, history, player_msg, mood_tone, fear_tone).content)
+        reply = _invoke_npc(llm, npc, room, memory_context, history, player_msg, mood_tone, fear_tone, io)
 
     return reply.replace("[END CONVERSATION]", "").strip(), "[END CONVERSATION]" in reply
 
@@ -274,12 +274,12 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn, io) -> dict:
         mood_tone = mood_tone_for_score(current_mood)
         fear_tone = fear_tone_for_score(current_fear)
 
+        io.send(f"\n{npc['name']}: ")
         clean_reply, end_conversation = _get_npc_reply(
             player_msg, npc, room, memory_context, history, mood_tone, fear_tone,
             current_mood, use_web_search, tavily_client, llm, io
         )
-
-        io.send(f"\n{npc['name']}: {clean_reply}\n")
+        io.send("\n")
         history.append(f"{npc['name']}: {clean_reply}")
         store_exchange(npc["name"], player_msg, clean_reply)
 

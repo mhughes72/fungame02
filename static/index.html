@@ -1203,6 +1203,7 @@ OTHER
 
   let ws = null;
   let isGameOver = false;
+  let streamSpan = null;
   let isConnected = false;
   let currentRoomId = 'room_1';
   let roomsData = {};
@@ -1321,6 +1322,19 @@ OTHER
       updateHeaderStats(msg);
       if (inEncounter) renderEncounterStats(encounterData);
       drawRoomView(msg);
+    } else if (msg.type === 'token') {
+      if (!streamSpan) {
+        streamSpan = document.createElement('span');
+        streamSpan.className = 'message';
+        outputDiv.appendChild(streamSpan);
+      }
+      streamSpan.textContent += msg.text;
+      scrollToBottom();
+      return;
+    } else if (msg.type === 'token_end') {
+      streamSpan = null;
+      scrollToBottom();
+      return;
     } else if (msg.type === 'debug') {
       appendDebug(msg.text);
       return;
@@ -1392,6 +1406,9 @@ OTHER
 
     // Show loading indicator
     document.getElementById('loading').classList.add('active');
+
+    // Finalize any in-progress stream
+    streamSpan = null;
 
     // Echo player command in a distinct color
     appendOutput('> ' + text, 'command', '> ' + text + '\n');

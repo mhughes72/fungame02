@@ -7,7 +7,7 @@
 #   handle_equip   — equip a weapon or armour piece from inventory
 #   handle_unequip — remove an equipped weapon or armour piece
 
-from utils import find_item, find_npc, invoke_with_system, debug, emit_player_state, get_mutable_player, get_mutable_room
+from utils import find_item, find_npc, invoke_with_system, stream_with_system, debug, emit_player_state, get_mutable_player, get_mutable_room
 from prompts import EXAMINE_PROMPT
 
 def handle_use(state, target, io) -> dict:
@@ -129,8 +129,7 @@ def handle_examine(state, target, llm, io) -> dict:
         "room_description": room["description"],
         "discovery_text": discovery_text,
     })
-    response = invoke_with_system(llm, prompt)
-    io.send(response.content)
+    stream_with_system(llm, prompt, io)
 
     if newly_revealed:
         io.send(f"\n[You find: {', '.join(newly_revealed)}]")

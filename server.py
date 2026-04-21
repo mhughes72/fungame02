@@ -70,6 +70,8 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         "__shop_data__":     ("shop_data",        True),
         "__roomfeatures__":  ("room_features",    True),
         "__debug__":         ("debug",            False),
+        "__token__":         ("token",            False),
+        "__token_end__":     ("token_end",        False),
     }
 
     async def forward_output() -> None:

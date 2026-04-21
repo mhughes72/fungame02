@@ -11,6 +11,7 @@ from typing import Protocol
 class IOContext(Protocol):
     def send(self, message: str) -> None: ...
     def recv(self, prompt: str = "") -> str: ...
+    def stream(self, chunks) -> str: ...
 
 
 class CLIContext:
@@ -22,6 +23,16 @@ class CLIContext:
     def recv(self, prompt: str = "\nWhat do you do? ") -> str:
         print(prompt, end="", flush=True)
         return input().strip().lower()
+
+    def stream(self, chunks) -> str:
+        full = ""
+        for chunk in chunks:
+            text = chunk.content if hasattr(chunk, "content") else str(chunk)
+            if text:
+                print(text, end="", flush=True)
+                full += text
+        print()
+        return full
 
 
 class WebSocketContext:
@@ -40,6 +51,16 @@ class WebSocketContext:
 
     def send(self, message: str) -> None:
         self._loop.call_soon_threadsafe(self.outbox.put_nowait, message)
+
+    def stream(self, chunks) -> str:
+        full = ""
+        for chunk in chunks:
+            text = chunk.content if hasattr(chunk, "content") else str(chunk)
+            if text:
+                self._loop.call_soon_threadsafe(self.outbox.put_nowait, f"__token__{text}")
+                full += text
+        self._loop.call_soon_threadsafe(self.outbox.put_nowait, "__token_end__")
+        return full
 
     def recv(self, prompt: str = "") -> str:
         if prompt:
