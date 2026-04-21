@@ -7,7 +7,10 @@
     "can_search_web": false,
     "opens_conversation": true,
     "gossips_with": ["Lady Vespera"],
-    "knows_about": ["lady_vespera", "shadow_cat"]
+    "knows_about": {
+      "lady_vespera": "Believes she has lived in this mansion for centuries and is not entirely human.",
+      "shadow_cat": "Suspects the cat understands far more than it pretends and may be spying for someone."
+    }
   },
   "the_oracle": {
     "name": "The Oracle",
@@ -17,7 +20,7 @@
     "can_search_web": true,
     "opens_conversation": false,
     "gossips_with": [],
-    "knows_about": []
+    "knows_about": {}
   },
   "aldous_the_peddler": {
     "name": "Aldous the Peddler",
@@ -28,7 +31,9 @@
     "opens_conversation": true,
     "shop_id": "aldous",
     "gossips_with": ["Shadow"],
-    "knows_about": ["shadow_cat"]
+    "knows_about": {
+      "shadow_cat": "Once caught the cat rummaging through his stock. Never found anything missing, which somehow made it worse."
+    }
   },
   "lady_vespera": {
     "name": "Lady Vespera",
@@ -38,7 +43,10 @@
     "can_search_web": false,
     "opens_conversation": true,
     "gossips_with": ["Professor Aldric", "Shadow"],
-    "knows_about": ["professor_aldric", "shadow_cat"]
+    "knows_about": {
+      "professor_aldric": "Knows he discovered something in the basement he was never meant to see and has been afraid ever since.",
+      "shadow_cat": ""
+    }
   },
   "shadow_cat": {
     "name": "Shadow",
@@ -48,6 +56,10 @@
     "can_search_web": false,
     "opens_conversation": true,
     "gossips_with": ["Professor Aldric", "Lady Vespera", "Aldous the Peddler"],
-    "knows_about": ["professor_aldric", "lady_vespera", "aldous_the_peddler"]
+    "knows_about": {
+      "professor_aldric": "",
+      "lady_vespera": "Is absolutely certain she is a vampire but has no real evidence. Will state this as established fact.",
+      "aldous_the_peddler": "Believes he is secretly a renowned chef in disguise. This is completely wrong."
+    }
   }
 }

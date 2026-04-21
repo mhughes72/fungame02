@@ -198,16 +198,19 @@ def _get_npc_reply(player_msg, npc, room, memory_context, history, mood_tone, fe
 
 
 def _build_knowledge(npc: dict, npc_catalogue: dict) -> str:
-    """Append known NPC descriptions to the NPC's own knowledge string."""
+    """Append known NPC descriptions (and any secrets) to the NPC's own knowledge string."""
     base = npc.get("knowledge", "")
-    knows_about = npc.get("knows_about", [])
+    knows_about = npc.get("knows_about", {})
     if not knows_about:
         return base
     entries = []
-    for npc_id in knows_about:
+    for npc_id, secret in knows_about.items():
         other = npc_catalogue.get(npc_id)
         if other:
-            entries.append(f"{other['name']}: {other['description']}. {other['personality']}")
+            entry = f"{other['name']}: {other['description']}. {other['personality']}"
+            if secret:
+                entry += f" (Your private suspicion: {secret})"
+            entries.append(entry)
     if not entries:
         return base
     return base + "\n\nOther residents you know of:\n" + "\n".join(f"- {e}" for e in entries)
