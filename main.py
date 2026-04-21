@@ -8,6 +8,7 @@
 
 
 import contextvars
+import copy
 import os
 import json
 import random
@@ -27,7 +28,7 @@ from prompts import (
     ROOM_FEATURES_PROMPT
 )
 
-from utils import invoke_with_system, stream_with_system, find_item, visible_items, total_armor_rating, debug, parse_llm_json, emit_player_state, get_mutable_player, get_mutable_room
+from utils import invoke_with_system, find_item, visible_items, total_armor_rating, debug, parse_llm_json, emit_player_state, get_mutable_player, get_mutable_room
 from npc_memory import clear_all_memories
 from handlers import (
     handle_go, handle_take, handle_examine, handle_open,
@@ -125,7 +126,6 @@ class HandlerResult(TypedDict, total=False):
     skip_description: bool
     just_fled: bool
     previous_room_id: str
-    last_entity: str
 
 class AgentState(TypedDict):
     current_room_id: str
@@ -145,24 +145,39 @@ class AgentState(TypedDict):
     just_fled: NotRequired[bool]
     npc_moods: NotRequired[Dict[str, int]]
     npc_fear: NotRequired[Dict[str, int]]
-    last_entity: NotRequired[str]
 
 
 
 # ── Setup ────────────────────────────────────────────────────────────────────
 
+DATA_DIR = "data"
+
 llm = ChatOpenAI(model="gpt-4o", temperature=0.5)
 mini_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.5)
 
-with open(os.path.join("data", "rooms.json"), "r") as f:
-    ROOMS = json.load(f)
+def load_game_data() -> dict:
+    with open(os.path.join(DATA_DIR, "rooms.json"), "r") as f:
+        rooms = json.load(f)
+    with open(os.path.join(DATA_DIR, "monsters.json"), "r") as f:
+        monsters = json.load(f)
+    with open(os.path.join(DATA_DIR, "npcs.json"), "r") as f:
+        npcs = json.load(f)
 
-with open(os.path.join("data", "shop.json"), "r") as f:
+    for room_id, room in rooms.items():
+        room["monsters"] = [copy.deepcopy(monsters[m]) for m in room.get("monsters", [])]
+        room["npcs"] = [copy.deepcopy(npcs[n]) for n in room.get("npcs", [])]
+
+    return rooms
+
+
+with open(os.path.join(DATA_DIR, "shop.json"), "r") as f:
     SHOPS = json.load(f)
+
+ROOMS = load_game_data()
 
 
 def validate_game_data(rooms: dict, shops: dict) -> None:
-    """Check referential integrity of rooms.json and shop.json at startup."""
+    """Check referential integrity of game data files at startup."""
     all_room_ids = set(rooms.keys())
     all_shop_ids = set(shops.keys())
     errors = []
@@ -322,7 +337,8 @@ def describe_room(state: AgentState) -> dict:
             "exits": ", ".join(room["exits"].keys()) if room["exits"] else "none",
         })
 
-        stream_with_system(llm, prompt, io_ctx())
+        response = invoke_with_system(llm, prompt)
+        io_ctx().send(response.content)
 
         room_override["visited"] = True
         room_states[room_id] = room_override
@@ -370,8 +386,9 @@ def trigger_win(state: AgentState) -> dict:
         "monsters_defeated": "unknown",
     })
 
+    response = invoke_with_system(llm, prompt)
     io_ctx().send("\n" + "═" * 50)
-    stream_with_system(llm, prompt, io_ctx())
+    io_ctx().send(response.content)
     io_ctx().send("═" * 50 + "\n")
 
     return {"game_won": True, "game_over": True}
@@ -393,7 +410,6 @@ def parse_command(player_input: str, state: AgentState) -> dict:
         "monsters": ", ".join(m["name"] for m in room["monsters"]) or "none",
         "npcs": ", ".join(n["name"] for n in room["npcs"]) or "none",
         "inventory": ", ".join(i["name"] for i in inventory) or "nothing",
-        "last_entity": state.get("last_entity") or "none",
         "player_input": player_input,
     })
 
@@ -444,8 +460,8 @@ def resolve_action(state: AgentState) -> dict:
         "inventory": lambda: handle_inventory(state, io_ctx()),
         "room":      lambda: handle_room(state, io_ctx()),
         "look":      lambda: {"force_full_description": True},
-        "talk":      lambda: {"route_to": "npc_dialogue", "last_entity": target},
-        "attack":    lambda: {"route_to": "combat", "combat_target": target, "last_entity": target},
+        "talk":      lambda: {"route_to": "npc_dialogue"},
+        "attack":    lambda: {"route_to": "combat", "combat_target": target},
         "quit":      lambda: (io_ctx().send("Goodbye.") or {"game_over": True}),
         "unequip":   lambda: handle_unequip(state, target, io_ctx()),
         "use": lambda: handle_use(state, target, io_ctx()),

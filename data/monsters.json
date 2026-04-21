@@ -1,0 +1,83 @@
+{
+  "ghost": {
+    "name": "ghost",
+    "health": 300,
+    "max_health": 300,
+    "defense": 3,
+    "damage": 8,
+    "damage_variance": 4,
+    "weaknesses": ["magic"],
+    "drops": {"gold": 10, "item": null}
+  },
+  "giant_rat": {
+    "name": "giant rat",
+    "health": 20,
+    "max_health": 20,
+    "defense": 1,
+    "damage": 5,
+    "damage_variance": 3,
+    "weaknesses": ["blade"],
+    "drops": {"gold": 5, "item": null}
+  },
+  "shadow": {
+    "name": "shadow",
+    "health": 25,
+    "max_health": 25,
+    "defense": 4,
+    "damage": 10,
+    "damage_variance": 8,
+    "weaknesses": ["magic", "fire"],
+    "drops": {"gold": 8, "item": null}
+  },
+  "spider_swarm": {
+    "name": "spider swarm",
+    "health": 15,
+    "max_health": 15,
+    "defense": 0,
+    "damage": 6,
+    "damage_variance": 4,
+    "weaknesses": ["fire", "blade"],
+    "drops": {"gold": 3, "item": "glass jar"}
+  },
+  "wraith": {
+    "name": "wraith",
+    "health": 40,
+    "max_health": 40,
+    "defense": 6,
+    "damage": 14,
+    "damage_variance": 10,
+    "weaknesses": ["magic"],
+    "drops": {"gold": 20, "item": null}
+  },
+  "vampire": {
+    "name": "vampire",
+    "health": 60,
+    "max_health": 60,
+    "defense": 8,
+    "damage": 18,
+    "damage_variance": 4,
+    "weaknesses": ["blade", "fire"],
+    "drops": {"gold": 40, "item": "iron key"},
+    "aggressive": true
+  },
+  "werewolf": {
+    "name": "werewolf",
+    "health": 50,
+    "max_health": 50,
+    "defense": 6,
+    "damage": 15,
+    "damage_variance": 6,
+    "weaknesses": ["silver"],
+    "drops": {"gold": 30, "item": null}
+  },
+  "ghoul": {
+    "name": "ghoul",
+    "health": 35,
+    "max_health": 35,
+    "defense": 4,
+    "damage": 12,
+    "damage_variance": 4,
+    "weaknesses": ["blade", "magic"],
+    "drops": {"gold": 15, "item": null}
+  }
+}
