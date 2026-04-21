@@ -5,7 +5,7 @@ from pinecone import Pinecone, ServerlessSpec
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
 from utils import debug, parse_llm_json
-from prompts import NPC_MEMORY_HYDE_PROMPT, NPC_MEMORY_EXTRACT_PROMPT, NPC_MOOD_PROMPT, NPC_FEAR_PROMPT, NPC_GOSSIP_FILTER_PROMPT
+from prompts import NPC_MEMORY_HYDE_PROMPT, NPC_MEMORY_EXTRACT_PROMPT, NPC_MOOD_PROMPT, NPC_FEAR_PROMPT, NPC_GOSSIP_FILTER_PROMPT, NPC_GOSSIP_IMPACT_PROMPT
 
 
 INDEX_NAME = "fungame-npc-memory"
@@ -174,6 +174,40 @@ def evaluate_mood_delta(player_msg: str) -> int:
     except (ValueError, AttributeError):
         debug("npc_memory: mood delta parse failed, defaulting to 0")
         return 0
+
+
+def evaluate_gossip_impact(npc_name: str) -> tuple[int, int]:
+    """Query gossip memories and return (mood_delta, fear_delta) to apply at conversation start."""
+    embeddings = _embeddings()
+    index = _get_index()
+    namespace = _namespace(npc_name)
+
+    query_vector = embeddings.embed_query("rumours gossip heard about the player's reputation and actions")
+    results = index.query(vector=query_vector, top_k=5, namespace=namespace, include_metadata=True)
+
+    gossip = [
+        m["metadata"]["text"] for m in results["matches"]
+        if m["score"] > SIMILARITY_THRESHOLD and m["metadata"]["text"].startswith("Rumour")
+    ]
+
+    if not gossip:
+        debug(f"npc_memory: no gossip memories found for '{npc_name}'")
+        return 0, 0
+
+    debug(f"npc_memory: evaluating gossip impact for '{npc_name}': {len(gossip)} rumour(s)")
+    response = _get_mini_llm().invoke([
+        HumanMessage(content=NPC_GOSSIP_IMPACT_PROMPT.format(rumours="\n".join(f"- {r}" for r in gossip)))
+    ])
+
+    try:
+        data = json.loads(parse_llm_json(response.content))
+        mood_delta = max(-20, min(20, int(data.get("mood_delta", 0))))
+        fear_delta = max(-20, min(20, int(data.get("fear_delta", 0))))
+        debug(f"npc_memory: gossip impact for '{npc_name}': mood {mood_delta:+d}, fear {fear_delta:+d}")
+        return mood_delta, fear_delta
+    except Exception as e:
+        debug(f"npc_memory: gossip impact parse failed — {e}")
+        return 0, 0
 
 
 def retrieve_memories(npc_name: str, query: str, k: int = 3, llm=None) -> list[str]:
