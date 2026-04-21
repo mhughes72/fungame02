@@ -20,6 +20,9 @@ find hidden items, trade with merchants, and converse with mysterious NPCs
 | **Short-term coreference resolution** | Command parsing — the last entity the player interacted with (item, NPC, monster) is tracked in game state and injected into the command parser, so pronouns like "it", "him", "them" resolve correctly across consecutive commands |
 | **Streaming LLM output** | Room descriptions, NPC dialogue, combat narration, examine — tokens are streamed to the browser as generated via LangChain `.stream()` and WebSocket token messages, so text appears as it's written rather than after a full wait |
 | **NPC gossip network** | Facts learned in one conversation propagate to other NPCs via a directed social graph. After each exchange, gossip-worthy facts are filtered by GPT-4o-mini and pushed to connected NPCs' Pinecone namespaces with attribution, so Lady Vespera can reference what the player told Aldric |
+| **Gossip emotional impact** | Rumours an NPC has heard about the player shift their mood and fear before the conversation starts. `evaluate_gossip_impact()` queries the NPC's Pinecone namespace at greeting time and asks GPT-4o-mini to rate the emotional effect — arriving with a bad reputation has immediate consequences |
+| **NPC knowledge graph** | Each NPC has a `knows_about` dict in `npcs.json` mapping namespaced entity keys (`npc:`, `monster:`, `item:`) to private supplemental knowledge. At conversation start, descriptions are pulled from the relevant catalogue and injected into the NPC's knowledge string alongside any secret they hold about that entity |
+| **Conversation openings** | NPCs greet the player when approached using a live LLM call that incorporates current mood, fear, and retrieved memories — the opening line varies based on your relationship history |
 
 ## Tech Stack
 
@@ -39,7 +42,8 @@ fungame/
   data/
     rooms.json          # Room definitions — layout, exits, items (monsters/NPCs referenced by ID)
     monsters.json       # Monster catalogue — stats, description, behavior (keyed by ID)
-    npcs.json           # NPC catalogue — personality, memory config, gossip graph (keyed by ID)
+    npcs.json           # NPC catalogue — personality, memory config, gossip graph, knows_about (keyed by ID)
+    items.json          # Item descriptions catalogue — used by knows_about lookups (keyed by slug)
     shop.json           # Merchant stock and pricing
   handlers/
     __init__.py         # Exports all action handlers
@@ -264,7 +268,22 @@ After each exchange, gossip-worthy facts (player name, goals, monsters killed) a
 
 The next time you talk to a connected NPC, they retrieve that rumour during memory lookup and can reference it naturally. The Oracle is isolated by design. Shadow the cat gossips with everyone.
 
+Rumours also affect the NPC's **emotional state before you speak**. When a conversation starts, the NPC's gossip memories are queried and rated by GPT-4o-mini for mood and fear impact. Arriving with a dangerous reputation makes NPCs fearful from the first word; being known as generous makes them warmer.
+
 The Oracle uses a ReAct-style tool-calling loop — she is given a `web_search` tool and decides herself whether to use it, and can search multiple times if the first result is insufficient. No separate routing classifier is needed.
+
+### NPC Knowledge Graph
+Each NPC can be given structured knowledge of other characters, monsters, and items through a `knows_about` dict in `npcs.json`. Keys are namespaced by type (`npc:`, `monster:`, `item:`) and the value is private supplemental knowledge — suspicions, secrets, or personal history that isn't part of the entity's public description.
+
+```json
+"knows_about": {
+  "npc:lady_vespera": "Believes she has lived in this mansion for centuries and is not entirely human.",
+  "monster:ghost": "Recognises the ghost as a former colleague. Will not say how the colleague died.",
+  "item:rusty_key": "Knows precisely what it opens but refuses to say directly."
+}
+```
+
+At conversation start, descriptions are pulled from the relevant catalogue (`npcs.json`, `monsters.json`, `items.json`) and injected into the NPC's knowledge string. Empty value = description only; non-empty value = appended as private knowledge the NPC holds but may or may not reveal.
 
 ### Health Potions
 Health potions restore a set amount of health when used. Different potions restore different amounts. They can be found in rooms or purchased from Aldous.
@@ -369,7 +388,7 @@ State is stored in `AgentState` which tracks:
 Edit `data/rooms.json` — add a new room entry and connect it via `exits` in an existing room. Add `locked_exits` if the door requires a key.
 
 ### Add a new NPC
-1. Add a definition to `data/npcs.json` with a unique key. Set `can_search_web: true` for Tavily access, `shop_id` to connect to a merchant, `opens_conversation: false` to make them wait silently, and `gossips_with: [...]` with NPC names they share rumours with.
+1. Add a definition to `data/npcs.json` with a unique key. Set `can_search_web: true` for Tavily access, `shop_id` to connect to a merchant, `opens_conversation: false` to make them wait silently, `gossips_with: [...]` with NPC names they share rumours with, and `knows_about: {"npc:<id>": "secret", "monster:<id>": "", "item:<id>": "secret"}` for structured entity knowledge.
 2. Reference the key in the room's `npcs` list in `data/rooms.json`.
 
 ### Add a new merchant
