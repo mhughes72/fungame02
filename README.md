@@ -19,6 +19,7 @@ find hidden items, trade with merchants, and converse with mysterious NPCs
 | **Per-exchange fact extraction** | NPC memory — after every player/NPC exchange, GPT-4o-mini extracts discrete facts about the player and upserts them as separate vector embeddings |
 | **Short-term coreference resolution** | Command parsing — the last entity the player interacted with (item, NPC, monster) is tracked in game state and injected into the command parser, so pronouns like "it", "him", "them" resolve correctly across consecutive commands |
 | **Streaming LLM output** | Room descriptions, NPC dialogue, combat narration, examine — tokens are streamed to the browser as generated via LangChain `.stream()` and WebSocket token messages, so text appears as it's written rather than after a full wait |
+| **NPC gossip network** | Facts learned in one conversation propagate to other NPCs via a directed social graph. After each exchange, gossip-worthy facts are filtered by GPT-4o-mini and pushed to connected NPCs' Pinecone namespaces with attribution, so Lady Vespera can reference what the player told Aldric |
 
 ## Tech Stack
 
@@ -36,7 +37,9 @@ find hidden items, trade with merchants, and converse with mysterious NPCs
 ```
 fungame/
   data/
-    rooms.json          # All room definitions, items, monsters, NPCs
+    rooms.json          # Room definitions — layout, exits, items (monsters/NPCs referenced by ID)
+    monsters.json       # Monster catalogue — stats, description, behavior (keyed by ID)
+    npcs.json           # NPC catalogue — personality, memory config, gossip graph (keyed by ID)
     shop.json           # Merchant stock and pricing
   handlers/
     __init__.py         # Exports all action handlers
@@ -131,6 +134,8 @@ PYTHONUTF8=1 uvicorn server:fastapi_app --port 8765
 ```
 Then open `http://localhost:8765` in your browser.
 
+> **Development tip:** add `--reload` to auto-restart the server on file changes: `uvicorn server:fastapi_app --port 8765 --reload`
+
 ## Mansion Map
 
 ![Mansion Map](docs/mansion_map.png)
@@ -220,7 +225,7 @@ Some items are concealed behind other items or features. Examine things in the r
 Some exits are locked and require a specific key. Use `unlock [direction]` to unlock a door if you're carrying the right key. Doors stay unlocked for the rest of the session.
 
 ### NPCs
-Several NPCs can be found throughout the mansion. Regular NPCs engage in conversation powered by GPT-4o. The Oracle has real-time web search capability via Tavily. Aldous the Peddler runs a shop where you can buy weapons, armour, and health potions using LangChain tools for actual transactions.
+Several NPCs can be found throughout the mansion. Most NPCs open the conversation themselves when you approach — their greeting reflects their personality, current mood, and any memories they hold about you. Regular NPCs engage in conversation powered by GPT-4o. The Oracle waits silently for you to speak first. Aldous the Peddler runs a shop where you can buy weapons, armour, and health potions using LangChain tools for actual transactions.
 
 ### NPC Emotional State
 Every NPC tracks two independent emotional scores that persist across conversations within a session:
@@ -251,6 +256,13 @@ NPCs remember what you tell them across conversations using a RAG (Retrieval-Aug
 **Example:** Tell Professor Aldric your name in one session, come back later and ask "do you know who I am?" — he'll remember.
 
 **Memory is wiped at the start of every new game.** Use the `clearmemory` debug command to wipe manually mid-session.
+
+### NPC Gossip Network
+Facts you share in one conversation can spread to other NPCs through a directed social graph defined in `npcs.json` via `gossips_with`.
+
+After each exchange, gossip-worthy facts (player name, goals, monsters killed) are filtered by GPT-4o-mini — bribe amounts, threats, and small talk are stripped — then pushed to connected NPCs' Pinecone namespaces with attribution: `"Rumour (from Aldric): Player is searching for the vampire"`.
+
+The next time you talk to a connected NPC, they retrieve that rumour during memory lookup and can reference it naturally. The Oracle is isolated by design. Shadow the cat gossips with everyone.
 
 The Oracle uses a ReAct-style tool-calling loop — she is given a `web_search` tool and decides herself whether to use it, and can search multiple times if the first result is insufficient. No separate routing classifier is needed.
 
@@ -357,10 +369,11 @@ State is stored in `AgentState` which tracks:
 Edit `data/rooms.json` — add a new room entry and connect it via `exits` in an existing room. Add `locked_exits` if the door requires a key.
 
 ### Add a new NPC
-Add an NPC dict to a room's `npcs` list in `rooms.json`. Set `can_search_web: true` to give them Tavily access. Set `shop_id` to connect them to a merchant shop.
+1. Add a definition to `data/npcs.json` with a unique key. Set `can_search_web: true` for Tavily access, `shop_id` to connect to a merchant, `opens_conversation: false` to make them wait silently, and `gossips_with: [...]` with NPC names they share rumours with.
+2. Reference the key in the room's `npcs` list in `data/rooms.json`.
 
 ### Add a new merchant
-Add a new entry to `data/shop.json` and set `shop_id` on the NPC to match.
+Add a new entry to `data/shop.json` and set `shop_id` on the NPC definition to match.
 
 ### Add a new action
 1. Add the action rule to `COMMAND_PARSER_PROMPT` in `prompts.py`
@@ -369,7 +382,8 @@ Add a new entry to `data/shop.json` and set `shop_id` on the NPC to match.
 4. Add it to the `handlers` dict in `resolve_action` in `main.py`
 
 ### Add a new monster
-Add a monster dict to a room's `monsters` list in `rooms.json`. Set `aggressive: true` to make it auto-attack on room entry.
+1. Add a definition to `data/monsters.json` with a unique key. Include `description` (appearance) and `behavior` (how it fights). Set `aggressive: true` to make it auto-attack on room entry.
+2. Reference the key in the room's `monsters` list in `data/rooms.json`.
 
 ## Notes
 
