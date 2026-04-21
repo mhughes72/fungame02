@@ -197,26 +197,50 @@ def _get_npc_reply(player_msg, npc, room, memory_context, history, mood_tone, fe
     return reply.replace("[END CONVERSATION]", "").strip(), "[END CONVERSATION]" in reply
 
 
-def _build_knowledge(npc: dict, npc_catalogue: dict) -> str:
-    """Append known NPC descriptions (and any secrets) to the NPC's own knowledge string."""
+def _build_knowledge(npc: dict, npc_catalogue: dict, monster_catalogue: dict, item_catalogue: dict) -> str:
+    """Append known entity descriptions (and any secrets) to the NPC's own knowledge string.
+
+    knows_about keys are namespaced: "npc:<id>", "monster:<id>", "item:<id>".
+    Values are supplemental secret knowledge (empty string if none).
+    """
     base = npc.get("knowledge", "")
     knows_about = npc.get("knows_about", {})
     if not knows_about:
         return base
+
     entries = []
-    for npc_id, secret in knows_about.items():
-        other = npc_catalogue.get(npc_id)
+    for key, secret in knows_about.items():
+        if ":" in key:
+            kind, entity_id = key.split(":", 1)
+        else:
+            kind, entity_id = "npc", key  # backwards-compat with un-namespaced keys
+
+        if kind == "npc":
+            other = npc_catalogue.get(entity_id)
+            if other:
+                entry = f"{other['name']} (person): {other['description']}. {other['personality']}"
+        elif kind == "monster":
+            other = monster_catalogue.get(entity_id)
+            if other:
+                entry = f"{other['name']} (creature): {other['description']}"
+        elif kind == "item":
+            other = item_catalogue.get(entity_id)
+            if other:
+                entry = f"{other['name']} (object): {other['description']}"
+        else:
+            other = None
+
         if other:
-            entry = f"{other['name']}: {other['description']}. {other['personality']}"
             if secret:
-                entry += f" (Your private suspicion: {secret})"
+                entry += f" (Your private knowledge: {secret})"
             entries.append(entry)
+
     if not entries:
         return base
-    return base + "\n\nOther residents you know of:\n" + "\n".join(f"- {e}" for e in entries)
+    return base + "\n\nThings you know about:\n" + "\n".join(f"- {e}" for e in entries)
 
 
-def npc_dialogue(state, SHOPS, npc_catalogue, llm, mini_llm, parse_command_fn, io) -> dict:
+def npc_dialogue(state, SHOPS, npc_catalogue, monster_catalogue, item_catalogue, llm, mini_llm, parse_command_fn, io) -> dict:
     from handlers.shop import handle_shop
 
     room = state["current_room_data"]
@@ -239,7 +263,7 @@ def npc_dialogue(state, SHOPS, npc_catalogue, llm, mini_llm, parse_command_fn, i
         npc_fear = dict(state.get("npc_fear", {}))
         return handle_shop(state, npc, SHOPS, mini_llm, npc_moods, npc_fear, io)
 
-    npc = {**npc, "knowledge": _build_knowledge(npc, npc_catalogue)}
+    npc = {**npc, "knowledge": _build_knowledge(npc, npc_catalogue, monster_catalogue, item_catalogue)}
     npc_slug = make_slug(npc['name'])
     _moods = state.get("npc_moods", {})
     _fear = state.get("npc_fear", {})
