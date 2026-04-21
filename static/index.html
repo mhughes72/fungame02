@@ -1202,12 +1202,17 @@ OTHER
           <strong>AI Techniques:</strong>
         </p>
         <ul style="margin-left: 12px; margin-bottom: 12px; line-height: 1.8;">
-          <li><strong>NPC Memory (RAG):</strong> NPCs remember past conversations and facts about you using vector embeddings.</li>
-          <li><strong>Emotional State:</strong> Each NPC tracks mood and fear, dynamically changing their behavior and dialogue.</li>
+          <li><strong>NPC Memory (RAG):</strong> NPCs remember past conversations and facts about you using vector embeddings stored in Pinecone, retrieved via HyDE-rewritten semantic search.</li>
+          <li><strong>Emotional State:</strong> Each NPC tracks mood and fear independently, scored by GPT-4o-mini after every message and injected as system-level behavioural overrides.</li>
+          <li><strong>Gossip Network:</strong> Facts you share propagate through a social graph — GPT-4o-mini filters gossip-worthy information and pushes it to connected NPCs' memory, so they can reference what you told someone else.</li>
+          <li><strong>Gossip Emotional Impact:</strong> Rumours an NPC has heard about you shift their mood and fear before your first word — arriving with a bad reputation has consequences.</li>
+          <li><strong>NPC Knowledge Graph:</strong> NPCs have structured knowledge of other characters, monsters, and items — including private suspicions not visible to the player — authored per NPC in a data file.</li>
+          <li><strong>Conversation Openings:</strong> NPCs greet you when you approach using a live LLM call that factors in their mood, fear, and memory of past interactions.</li>
           <li><strong>Intelligent Shop:</strong> Merchants use agentic tool-calling to process real transactions in character.</li>
-          <li><strong>Web Search:</strong> The Oracle can search the internet in real-time to answer questions about the outside world.</li>
+          <li><strong>Web Search:</strong> The Oracle uses a ReAct-style tool-calling loop to decide autonomously whether to search the web before replying.</li>
+          <li><strong>Streaming Output:</strong> LLM responses stream token-by-token to the browser so text appears as it is written.</li>
           <li><strong>Natural Language Commands:</strong> All interactions are parsed and understood through GPT, not keyword matching.</li>
-          <li><strong>Dynamic Routing:</strong> The entire game is a state graph that intelligently routes between exploration, combat, dialogue, and more.</li>
+          <li><strong>Dynamic Routing:</strong> The entire game is a LangGraph state graph that intelligently routes between exploration, combat, dialogue, and more.</li>
         </ul>
         <p style="margin-top: 16px;">
           <a href="https://github.com/mhughes72/fungame02" target="_blank" style="color: #c8a96e; text-decoration: underline;">View on GitHub</a>

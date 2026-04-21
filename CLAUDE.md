@@ -14,6 +14,7 @@ Gothic text adventure powered by LangGraph + OpenAI. FastAPI WebSocket server, C
 - `data/rooms.json` — room definitions (items inline; monsters/npcs as ID references)
 - `data/monsters.json` — monster definitions catalogue (keyed by ID)
 - `data/npcs.json` — NPC definitions catalogue (keyed by ID)
+- `data/items.json` — item descriptions catalogue (keyed by slug; used by knows_about lookups)
 - `data/shop.json` — shop inventory
 
 ## Models
@@ -67,11 +68,23 @@ CLI strips all `__`-prefixed messages (`CLIContext.send` in `io_context.py`).
 - Social graph defined per NPC in `npcs.json` via `gossips_with: [list of NPC names]`
 - The Oracle has `gossips_with: []` (isolated); Shadow gossips with all
 
+### Gossip Emotional Impact
+- `evaluate_gossip_impact(npc_name)` in `npc_memory.py` queries the NPC's Pinecone namespace for rumour-type memories at conversation start
+- Passes found rumours to `gpt-4o-mini` via `NPC_GOSSIP_IMPACT_PROMPT` → returns `(mood_delta, fear_delta)` capped at ±20
+- Applied once in `npc_dialogue` before the greeting; `emit_encounter_state` fires immediately so the UI reflects the adjusted scores
+
 ### NPC Conversation Opening
 - `opens_conversation: true` in `npcs.json` triggers a greeting LLM call before the input loop
 - Uses `_get_npc_reply()` with synthetic `"(The player approaches...)"` message — mood, fear, and memory all apply
 - Opening line added to `history`; no `store_exchange` call (no real player input to extract from)
 - The Oracle has `opens_conversation: false`
+
+### NPC Knowledge Graph
+- `knows_about` field in `npcs.json` is a dict of namespaced entity keys → supplemental secret text
+- Key format: `"npc:<id>"`, `"monster:<id>"`, `"item:<id>"` (bare keys treated as NPC for backwards compat)
+- `_build_knowledge()` in `handlers/dialogue.py` resolves each key against `NPC_CATALOGUE`, `MONSTER_CATALOGUE`, or `ITEM_CATALOGUE` and appends name + description + secret to the NPC's knowledge string
+- Empty secret string = description only; non-empty = appended as "Your private knowledge: ..."
+- `data/items.json` is the item descriptions catalogue; gameplay data (damage, armor, etc.) stays inline in `rooms.json`
 
 ### Monster Data
 - `monsters.json` has `description` (appearance) and `behavior` (combat style) fields
