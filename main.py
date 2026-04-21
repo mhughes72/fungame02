@@ -145,6 +145,7 @@ class AgentState(TypedDict):
     just_fled: NotRequired[bool]
     npc_moods: NotRequired[Dict[str, int]]
     npc_fear: NotRequired[Dict[str, int]]
+    last_entity: NotRequired[str]
 
 
 
@@ -332,7 +333,10 @@ def describe_room(state: AgentState) -> dict:
             "description": room["description"],
             "items": ", ".join(visible) if visible else "none",
             "containers": ". ".join(container_hints) if container_hints else "none",
-            "monsters": ", ".join(m["name"] for m in room["monsters"]) if room["monsters"] else "none",
+            "monsters": "; ".join(
+                f"{m['name']} — {m['description']}" if m.get("description") else m["name"]
+                for m in room["monsters"]
+            ) if room["monsters"] else "none",
             "npcs": ", ".join(n["name"] for n in room["npcs"]) if room["npcs"] else "none",
             "exits": ", ".join(room["exits"].keys()) if room["exits"] else "none",
         })
@@ -411,6 +415,7 @@ def parse_command(player_input: str, state: AgentState) -> dict:
         "npcs": ", ".join(n["name"] for n in room["npcs"]) or "none",
         "inventory": ", ".join(i["name"] for i in inventory) or "nothing",
         "player_input": player_input,
+        "last_entity": state.get("last_entity") or "none",
     })
 
     response = invoke_with_system(mini_llm, prompt)

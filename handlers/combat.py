@@ -31,6 +31,7 @@ def _handle_flee(state, monster, target, room, room_id, room_override, room_stat
     prompt = FLEE_PROMPT.invoke({
         "room_name": room["name"],
         "monster_name": monster["name"],
+        "monster_behavior": monster.get("behavior", ""),
         "success": success,
     })
     io.send("\n")
@@ -104,6 +105,8 @@ def _execute_attack_round(player, monster, weapon_data, equipped_weapon, room, l
         "player_max_health": player["max_health"],
         "weapon": equipped_weapon if equipped_weapon else "bare hands",
         "monster_name": monster["name"],
+        "monster_description": monster.get("description", ""),
+        "monster_behavior": monster.get("behavior", ""),
         "monster_health": max(0, monster["health"]),
         "monster_max_health": monster["max_health"],
         "round_events": round_events,

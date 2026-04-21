@@ -35,7 +35,8 @@ Monsters: {monsters}
 NPCs present: {npcs}
 Exits: {exits}
 
-Keep it immersive and concise. Mention monsters threateningly. Mention NPCs naturally.
+Keep it immersive and concise. When mentioning monsters, draw on their appearance to set the threat.
+Mention NPCs naturally.
 If there are containers, subtly hint they might hold something without being explicit.
 """)
 
@@ -101,12 +102,15 @@ Room: {room_name}
 Player health: {player_health}/{player_max_health}
 Player weapon: {weapon}
 Monster: {monster_name} (health: {monster_health}/{monster_max_health})
+Monster appearance: {monster_description}
+Monster behavior: {monster_behavior}
 
 What happened this round:
 {round_events}
 
 Write 2-3 sentences narrating this combat round vividly and dramatically.
-Match the tone to the monster and room. Keep it dark and visceral but concise.
+Use the monster's appearance and behavior to shape how it moves, sounds, and strikes.
+Keep it dark and visceral but concise.
 """)
 
 FLEE_PROMPT = ChatPromptTemplate.from_template("""
@@ -114,9 +118,11 @@ You are narrating a flee attempt in a dark gothic text adventure.
 
 Room: {room_name}
 Monster: {monster_name}
+Monster behavior: {monster_behavior}
 Flee succeeded: {success}
 
-Write 1-2 sentences narrating the flee attempt. 
+Write 1-2 sentences narrating the flee attempt.
+Use the monster's behavior to shape how it pursues or lets the player go.
 If successful, the player barely escapes. If failed, the monster catches them.
 """)
 
