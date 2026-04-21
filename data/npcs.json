@@ -6,7 +6,8 @@
     "knowledge": "Knows about the ghost, the secret letter behind the old book, and that the rusty key opens something in the basement.",
     "can_search_web": false,
     "opens_conversation": true,
-    "gossips_with": ["Lady Vespera"]
+    "gossips_with": ["Lady Vespera"],
+    "knows_about": ["lady_vespera", "shadow_cat"]
   },
   "the_oracle": {
     "name": "The Oracle",
@@ -15,7 +16,8 @@
     "knowledge": "Has an uncanny knowledge of American politics, current events, and world affairs.",
     "can_search_web": true,
     "opens_conversation": false,
-    "gossips_with": []
+    "gossips_with": [],
+    "knows_about": []
   },
   "aldous_the_peddler": {
     "name": "Aldous the Peddler",
@@ -25,7 +27,8 @@
     "can_search_web": false,
     "opens_conversation": true,
     "shop_id": "aldous",
-    "gossips_with": ["Shadow"]
+    "gossips_with": ["Shadow"],
+    "knows_about": ["shadow_cat"]
   },
   "lady_vespera": {
     "name": "Lady Vespera",
@@ -34,7 +37,8 @@
     "knowledge": "Knows the true nature of every monster in the mansion, hints that not everything is what it seems, and seems suspiciously familiar with the layout of the basement.",
     "can_search_web": false,
     "opens_conversation": true,
-    "gossips_with": ["Professor Aldric", "Shadow"]
+    "gossips_with": ["Professor Aldric", "Shadow"],
+    "knows_about": ["professor_aldric", "shadow_cat"]
   },
   "shadow_cat": {
     "name": "Shadow",
@@ -43,6 +47,7 @@
     "knowledge": "Thinks it knows everything but is usually wrong. Occasionally stumbles onto something true completely by accident.",
     "can_search_web": false,
     "opens_conversation": true,
-    "gossips_with": ["Professor Aldric", "Lady Vespera", "Aldous the Peddler"]
+    "gossips_with": ["Professor Aldric", "Lady Vespera", "Aldous the Peddler"],
+    "knows_about": ["professor_aldric", "lady_vespera", "aldous_the_peddler"]
   }
 }
