@@ -144,6 +144,7 @@ def emit_player_state(player: dict, room_id: str, io, room_data: dict = None) ->
         ],
     }
     if room_data:
+        data["room_name"] = room_data.get("name", "")
         data["room_monsters"] = [
             {"name": m["name"], "health": m.get("health", 0), "max_health": m.get("max_health", 1)}
             for m in room_data.get("monsters", [])

@@ -61,7 +61,7 @@
     .header-right {
       display: flex;
       gap: 24px;
-      font-size: 12px;
+      font-size: 14px;
     }
 
     .stat-label {
@@ -290,7 +290,7 @@
       margin: 12px 20px 0 20px;
       white-space: pre-wrap;
       word-wrap: break-word;
-      font-size: 14px;
+      font-size: 16px;
       line-height: 1.6;
       background: #0d0d0d;
       color: #c8a96e;
@@ -355,6 +355,28 @@
 
     #room-image.loaded { opacity: 1; }
     #room-image.combat-blur { filter: blur(2px); }
+
+    #room-name-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 60px 16px 16px;
+      background: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.6) 50%, rgba(0,0,0,0.97) 100%);
+      color: #e8c87a;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 26px;
+      font-weight: bold;
+      letter-spacing: 7px;
+      text-transform: uppercase;
+      text-align: left;
+      text-shadow:
+        0 0 8px rgba(232,180,80,0.9),
+        0 0 24px rgba(196,120,30,0.6),
+        0 0 60px rgba(180,80,10,0.35),
+        0 3px 8px rgba(0,0,0,1);
+      pointer-events: none;
+    }
 
     /* Combat overlays on room image */
     #room-combat-vignette {
@@ -534,7 +556,7 @@
       border: 1px solid #3d3d3d;
       padding: 8px 12px;
       font-family: 'Courier New', Courier, monospace;
-      font-size: 14px;
+      font-size: 16px;
       outline: none;
       transition: border-color 0.2s;
     }
@@ -1063,6 +1085,7 @@
       <div id="room-image-container">
         <img id="room-image" src="" alt="">
         <div id="room-image-placeholder">AI DRIVEN HAUNTED MANSION</div>
+        <div id="room-name-overlay"></div>
         <div id="room-combat-vignette"></div>
         <div id="room-combat-border"></div>
         <svg id="room-combat-splatter" width="100%" height="100%"></svg>
@@ -1317,6 +1340,9 @@ OTHER
         visitedRooms.add(msg.room_id);
         drawMap();
         updateRoomImage(msg.room_id);
+        if (msg.room_name) {
+          document.getElementById('room-name-overlay').textContent = msg.room_name;
+        }
       }
       updateInventoryTab(msg);
       updateHeaderStats(msg);
