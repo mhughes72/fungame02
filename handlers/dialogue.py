@@ -172,6 +172,7 @@ def _get_npc_reply(player_msg, npc, room, memory_context, history, mood_tone, fe
                 SystemMessage(content=refusal_prompt),
                 HumanMessage(content="Refuse in character now.")
             ]).content
+            io.send(reply)
             return reply.replace("[END CONVERSATION]", "").strip(), "[END CONVERSATION]" in reply
 
         overrides = [t for t in [mood_tone, fear_tone] if t]
@@ -189,6 +190,7 @@ def _get_npc_reply(player_msg, npc, room, memory_context, history, mood_tone, fe
         messages = [SystemMessage(content=system), HumanMessage(content=player_msg)]
         response = _run_oracle_loop(oracle_llm, oracle_tools, messages)
         reply = response.content or ""
+        io.send(reply)
     else:
         reply = _invoke_npc(llm, npc, room, memory_context, history, player_msg, mood_tone, fear_tone, io)
 
