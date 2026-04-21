@@ -241,6 +241,23 @@ def npc_dialogue(state, SHOPS, llm, mini_llm, parse_command_fn, io) -> dict:
     player, _ = get_mutable_player(state)
     debug(f"dialogue: mood for '{npc['name']}': {current_mood} | fear: {current_fear}")
 
+    if npc.get("opens_conversation", True):
+        opening_memories = retrieve_memories(npc["name"], "(player approaches)")
+        memory_context = (
+            "What you already know about this player from past conversations:\n"
+            + "\n".join(f"- {m}" for m in opening_memories)
+        ) if opening_memories else ""
+        mood_tone = mood_tone_for_score(current_mood)
+        fear_tone = fear_tone_for_score(current_fear)
+        io.send(f"\n{npc['name']}: ")
+        opening, _ = _get_npc_reply(
+            "(The player approaches. Open the conversation with a greeting in character.)",
+            npc, room, memory_context, [], mood_tone, fear_tone,
+            current_mood, use_web_search, tavily_client, llm, io
+        )
+        io.send("\n")
+        history.append(f"{npc['name']}: {opening}")
+
     while True:
         player_msg = io.recv("You: ")
         history.append(f"Player: {player_msg}")
