@@ -1,6 +1,8 @@
 {
   "ghost": {
     "name": "ghost",
+    "description": "A translucent figure in tattered Victorian dress, its face a smear of anguish frozen at the moment of death. It flickers in and out of visibility like a guttering candle.",
+    "behavior": "Drifts slowly and deliberately, as if it has all eternity. Lets out a low moan before each attack. Seems drawn to the player's fear rather than their body.",
     "health": 300,
     "max_health": 300,
     "defense": 3,
@@ -11,6 +13,8 @@
   },
   "giant_rat": {
     "name": "giant rat",
+    "description": "A rat the size of a dog, matted fur slick with grease, yellow teeth permanently bared. Its eyes catch the light with an unsettling intelligence.",
+    "behavior": "Skittish but vicious when cornered. Darts and feints before lunging, going for the ankles and hands. Squeals horribly when wounded.",
     "health": 20,
     "max_health": 20,
     "defense": 1,
@@ -21,6 +25,8 @@
   },
   "shadow": {
     "name": "shadow",
+    "description": "A living darkness that peels itself off the wall and holds a vaguely humanoid shape. It has no face, only two points of cold grey light where eyes should be.",
+    "behavior": "Silent and patient. Circles slowly, testing angles. Attacks by rushing through the player rather than striking — the damage is felt as a sudden bone-deep cold.",
     "health": 25,
     "max_health": 25,
     "defense": 4,
@@ -31,6 +37,8 @@
   },
   "spider_swarm": {
     "name": "spider swarm",
+    "description": "Hundreds of thumb-sized spiders moving as a single rippling mass, pouring across the floor and walls like a living stain. The sound they make is a dry, papery rustling.",
+    "behavior": "Overwhelms through sheer numbers, splitting to attack from multiple directions at once. Impossible to reason with. Retreats briefly if hit with fire, then surges back.",
     "health": 15,
     "max_health": 15,
     "defense": 0,
@@ -41,6 +49,8 @@
   },
   "wraith": {
     "name": "wraith",
+    "description": "A tall, robed figure with no solid form beneath its hood — just a swirling void. The temperature drops several degrees in its presence and the air smells faintly of grave soil.",
+    "behavior": "Eerily calm and methodical. Raises one skeletal hand before each strike as if in formal greeting. Seems to enjoy prolonging the encounter.",
     "health": 40,
     "max_health": 40,
     "defense": 6,
@@ -51,6 +61,8 @@
   },
   "vampire": {
     "name": "vampire",
+    "description": "Impeccably dressed in clothes two centuries out of fashion, pale as chalk, moving with the fluid grace of something that has had a very long time to practice violence. Its smile shows too many teeth.",
+    "behavior": "Arrogant and theatrical. Taunts between attacks, treating the fight as a performance. Becomes genuinely dangerous and direct when wounded — the composure drops, replaced by cold fury.",
     "health": 60,
     "max_health": 60,
     "defense": 8,
@@ -62,6 +74,8 @@
   },
   "werewolf": {
     "name": "werewolf",
+    "description": "Seven feet of muscle and matted fur, caught mid-transformation — half man, half wolf, entirely wrong. Its hands end in curved black claws and its jaw is too wide for its skull.",
+    "behavior": "Pure aggression with no strategy. Charges immediately and fights in a sustained frenzy, roaring continuously. Wounds seem to slow it for only a moment before rage takes over again.",
     "health": 50,
     "max_health": 50,
     "defense": 6,
@@ -72,6 +86,8 @@
   },
   "ghoul": {
     "name": "ghoul",
+    "description": "A gaunt, grey-skinned humanoid that moves on all fours as often as two legs, its joints bending at angles that suggest something is badly wrong with its skeleton. Its eyes are milky white and it navigates largely by smell.",
+    "behavior": "Sniffs the air constantly and cocks its head as if listening to something only it can hear. Attacks in sudden explosive bursts followed by eerie stillness, as if resetting.",
     "health": 35,
     "max_health": 35,
     "defense": 4,
