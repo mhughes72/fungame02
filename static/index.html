@@ -206,6 +206,19 @@
       100% { background: transparent; }
     }
 
+    @keyframes token-fade {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    .token-chunk {
+      animation: token-fade 0.18s ease-out forwards;
+    }
+
+    .health-good { color: #6abf69; }
+    .health-warn { color: #e6b800; }
+    .health-low  { color: #e05252; }
+
     @keyframes hp-shake {
       0%, 100% { transform: scaleX(1); }
       10% { transform: scaleX(0.95); }
@@ -1171,7 +1184,6 @@ OTHER
   <div id="cheat-modal">
     <div id="cheat-modal-content">
       <div id="cheat-modal-title">⚗ Cheat & Debug Panel</div>
-      <div id="cheat-ai-features"></div>
       <div style="margin-bottom: 12px;">
         <div style="color: #a89060; font-size: 10px; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px; border-bottom: 1px solid #3a3a3a; padding-bottom: 4px;">Debug Commands</div>
         <table style="width: 100%; border-collapse: collapse; font-size: 12px; line-height: 1.9;">
@@ -1181,10 +1193,11 @@ OTHER
           <tr><td style="color: #7a9a7a;">clearmemory</td><td style="color: #a89060;">wipe all NPC memory embeddings</td></tr>
         </table>
       </div>
-      <div style="display: flex; gap: 8px; align-items: center;">
+      <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 16px;">
         <button id="get-gold-btn">Get Gold (+100)</button>
         <button id="cheat-modal-close">Close</button>
       </div>
+      <div id="cheat-ai-features"></div>
     </div>
   </div>
 
@@ -1199,6 +1212,9 @@ OTHER
     — Winston Churchill
 </p>
           
+        <p style="margin-bottom: 12px;">
+          <a href="https://github.com/mhughes72/fungame02" target="_blank" style="color: #c8a96e; text-decoration: underline;">View on GitHub</a>
+        </p>
           <strong>AI Techniques:</strong>
         </p>
         <ul style="margin-left: 12px; margin-bottom: 12px; line-height: 1.8;">
@@ -1214,9 +1230,6 @@ OTHER
           <li><strong>Natural Language Commands:</strong> All interactions are parsed and understood through GPT, not keyword matching.</li>
           <li><strong>Dynamic Routing:</strong> The entire game is a LangGraph state graph that intelligently routes between exploration, combat, dialogue, and more.</li>
         </ul>
-        <p style="margin-top: 16px;">
-          <a href="https://github.com/mhughes72/fungame02" target="_blank" style="color: #c8a96e; text-decoration: underline;">View on GitHub</a>
-        </p>
       </div>
       <button id="about-modal-close">Close</button>
     </div>
@@ -1360,7 +1373,10 @@ OTHER
         streamSpan.className = 'message';
         outputDiv.appendChild(streamSpan);
       }
-      streamSpan.textContent += msg.text;
+      const chunk = document.createElement('span');
+      chunk.className = 'token-chunk';
+      chunk.textContent = msg.text;
+      streamSpan.appendChild(chunk);
       scrollToBottom();
       return;
     } else if (msg.type === 'token_end') {
@@ -2055,7 +2071,11 @@ OTHER
   }
 
   function updateHeaderStats(state) {
-    if (state.health !== undefined) healthSpan.textContent = state.health;
+    if (state.health !== undefined) {
+      healthSpan.textContent = state.health;
+      const pct = state.max_health ? state.health / state.max_health : 1;
+      healthSpan.className = 'stat-value' + (pct > 0.5 ? ' health-good' : pct > 0.25 ? ' health-warn' : ' health-low');
+    }
     if (state.gold !== undefined) goldSpan.textContent = state.gold;
   }
 
@@ -2080,7 +2100,8 @@ OTHER
       let tag = '';
       if (item.weapon_type) tag = `<span class="inv-tag">[${item.weapon_type}, ${item.damage} dmg]</span>`;
       else if (item.armor_slot) tag = `<span class="inv-tag">[${item.armor_slot}, ${item.armor_rating} def]</span>`;
-      return `<div class="inv-item${isEquipped ? ' equipped' : ''}">${isEquipped ? '▶ ' : '  '}${item.name} ${tag}</div>`;
+      const tooltip = item.description ? ` title="${item.description.replace(/"/g, '&quot;')}"` : '';
+      return `<div class="inv-item${isEquipped ? ' equipped' : ''}"${tooltip}>${isEquipped ? '▶ ' : '  '}${item.name} ${tag}</div>`;
     }
 
     let html = '';

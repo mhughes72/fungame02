@@ -121,10 +121,23 @@ def emit_encounter_state(io, **kwargs) -> None:
     io.send(f"__encounter_state__{json.dumps(kwargs)}")
 
 
+_item_catalogue_cache: dict | None = None
+
+def _get_item_catalogue() -> dict:
+    global _item_catalogue_cache
+    if _item_catalogue_cache is None:
+        import json, os
+        path = os.path.join(os.path.dirname(__file__), "data", "items.json")
+        with open(path) as f:
+            _item_catalogue_cache = json.load(f)
+    return _item_catalogue_cache
+
+
 def emit_player_state(player: dict, room_id: str, io, room_data: dict = None) -> None:
     """Send a structured player state update to the frontend via the IO context."""
     import json
     inventory = player.get("inventory", [])
+    item_cat = _get_item_catalogue()
     data = {
         "room_id": room_id,
         "health": player.get("health", 100),
@@ -139,6 +152,7 @@ def emit_player_state(player: dict, room_id: str, io, room_data: dict = None) ->
                 "weapon_type": i.get("weapon_type"),
                 "armor_slot": i.get("armor_slot"),
                 "armor_rating": i.get("armor_rating", 0),
+                "description": item_cat.get(make_slug(i["name"]), {}).get("description", ""),
             }
             for i in inventory
         ],
