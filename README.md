@@ -24,6 +24,31 @@ find hidden items, trade with merchants, and converse with mysterious NPCs
 | **NPC knowledge graph** | Each NPC has a `knows_about` dict in `npcs.json` mapping namespaced entity keys (`npc:`, `monster:`, `item:`) to private supplemental knowledge. At conversation start, descriptions are pulled from the relevant catalogue and injected into the NPC's knowledge string alongside any secret they hold about that entity |
 | **Conversation openings** | NPCs greet the player when approached using a live LLM call that incorporates current mood, fear, and retrieved memories — the opening line varies based on your relationship history |
 
+## LLM Calls
+
+Every LLM call in the game uses one of two OpenAI models. `gpt-4o` handles all player-facing narrative; `gpt-4o-mini` handles all background evaluation and memory operations.
+
+| Purpose | Model |
+|---|---|
+| Room description | gpt-4o |
+| Win epilogue | gpt-4o |
+| NPC dialogue | gpt-4o |
+| NPC bribe reaction | gpt-4o |
+| Oracle web search | gpt-4o |
+| Shop merchant (Aldous) | gpt-4o |
+| Combat narration | gpt-4o |
+| Flee narration | gpt-4o |
+| Item examination | gpt-4o |
+| Command parsing | gpt-4o-mini |
+| Room features (cheat modal) | gpt-4o-mini |
+| Bribe mood evaluation | gpt-4o-mini |
+| Fact extraction from exchanges | gpt-4o-mini |
+| Gossip filtering | gpt-4o-mini |
+| HyDE query rewrite | gpt-4o-mini |
+| Threat evaluation (fear delta) | gpt-4o-mini |
+| Mood delta evaluation | gpt-4o-mini |
+| Gossip impact on NPC mood/fear | gpt-4o-mini |
+
 ## Tech Stack
 
 - **LangGraph** — game loop and state management
