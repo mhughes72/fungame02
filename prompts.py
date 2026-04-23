@@ -206,6 +206,22 @@ CRITICAL RULES:
 - Be concise — 2-4 sentences
 - Only end the conversation if the player uses an explicit farewell word. If ending, add exactly: [END CONVERSATION]
 {mood_overrides}"""
+JOURNAL_ENTRY_PROMPT = (
+    "Write a 2-sentence journal entry for a player in a gothic text adventure.\n"
+    "Event: {event_description}\n\n"
+    "Sentence 1: State plainly and specifically what happened.\n"
+    "Sentence 2: Give a useful, concrete hint about what this means or what the player should do next.\n"
+    "Gothic tone, but never obscure — the entry must help the player, not mystify them.\n"
+    "Return only the two sentences, nothing else."
+)
+
+NPC_GIFT_TRIGGER_PROMPT = (
+    "An NPC will give the player a hidden item if the player says the right thing.\n"
+    "Trigger condition: {trigger_description}\n"
+    "Player said: \"{player_message}\"\n\n"
+    "Did the player satisfy the trigger condition? Answer YES or NO only."
+)
+
 NPC_BRIBE_BOOST_PROMPT = (
     "An NPC in a gothic text adventure has just been given {amount} gold coins by the player.\n"
     "NPC personality: {personality}\n"

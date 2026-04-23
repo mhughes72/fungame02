@@ -67,6 +67,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         "__encounter_start__": ("encounter_start", True),
         "__encounter_end__": ("encounter_end",    False),
         "__encounter_state__": ("encounter_state", True),
+        "__journal_entry__":   ("journal_entry",   True),
         "__shop_data__":     ("shop_data",        True),
         "__roomfeatures__":  ("room_features",    True),
         "__token__":         ("token",            False),

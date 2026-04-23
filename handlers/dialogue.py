@@ -11,8 +11,9 @@ from langchain_core.messages import SystemMessage, HumanMessage, ToolMessage
 from langchain_core.tools import tool
 from utils import (invoke_with_system, debug, mood_tone_for_score, fear_tone_for_score,
                    CONVERSATION_EXIT_WORDS, get_mutable_player, find_npc, make_slug,
-                   emit_encounter_start, emit_encounter_end, emit_encounter_state)
-from prompts import GAME_SYSTEM_PROMPT, NPC_PROMPT, ORACLE_SYSTEM_PROMPT, WEB_SEARCH_REFUSED_PROMPT, NPC_BRIBE_PROMPT, NPC_BRIBE_BOOST_PROMPT
+                   emit_encounter_start, emit_encounter_end, emit_encounter_state,
+                   emit_player_state, add_journal_entry)
+from prompts import GAME_SYSTEM_PROMPT, NPC_PROMPT, ORACLE_SYSTEM_PROMPT, WEB_SEARCH_REFUSED_PROMPT, NPC_BRIBE_PROMPT, NPC_BRIBE_BOOST_PROMPT, NPC_GIFT_TRIGGER_PROMPT
 from npc_memory import store_exchange, gossip_facts, retrieve_memories, evaluate_mood_delta, evaluate_fear_delta, evaluate_gossip_impact
 
 
@@ -240,6 +241,104 @@ def _build_knowledge(npc: dict, npc_catalogue: dict, monster_catalogue: dict, it
     return base + "\n\nThings you know about:\n" + "\n".join(f"- {e}" for e in entries)
 
 
+def _check_gift_trigger(npc: dict, player_msg: str, npc_gifts_given: list,
+                        player: dict, state: dict, mini_llm, io) -> bool:
+    """Evaluate if player said the right thing to unlock the NPC's gift (item, secret, or both).
+
+    Returns True if triggered. Mutates player inventory and npc_gifts_given in place.
+    """
+    gift = npc.get("gift")
+    if not gift or npc["name"] in npc_gifts_given:
+        return False
+
+    response = mini_llm.invoke([HumanMessage(content=NPC_GIFT_TRIGGER_PROMPT.format(
+        trigger_description=gift["trigger_description"],
+        player_message=player_msg,
+    ))])
+    if "YES" not in response.content.strip().upper():
+        return False
+
+    npc_gifts_given.append(npc["name"])
+
+    parts = []
+    if gift.get("item_name"):
+        item_entry = {
+            "name": gift["item_name"], "openable": False, "is_open": False,
+            "gold": 0, "damage": 0, "weapon_type": None, "armor_slot": None, "armor_rating": 0,
+        }
+        player.setdefault("inventory", []).append(item_entry)
+        parts.append(f"received the {gift['item_name']} from {npc['name']}")
+        debug(f"gift: '{npc['name']}' gave item '{gift['item_name']}' to player")
+
+    if gift.get("secret"):
+        io.send(f"\n[You learn: {gift['secret']}]\n")
+        parts.append(f"learned a secret from {npc['name']}: {gift['secret']}")
+        debug(f"gift: '{npc['name']}' revealed secret to player")
+
+    emit_player_state(player, state["current_room_id"], io, room_data=state.get("current_room_data"))
+    add_journal_entry(", and ".join(parts), player, state["current_room_id"], io, mini_llm)
+    return True
+
+
+def _handle_give_in_loop(player_msg: str, npc: dict, player: dict, npc_trades_done: list,
+                         state: dict, io, mini_llm) -> tuple[bool, str | None]:
+    """Detect 'give <item>' in player message and process a matching NPC trade.
+
+    Returns (was_give, history_note).
+    - was_give=False: no give intent detected; caller handles normally.
+    - was_give=True, note=str: trade completed or rejected; note injected into history for NPC reply.
+    - was_give=True, note=None: player doesn't own the named item; error already sent.
+    """
+    if not re.search(r'\b(?:give|hand|offer|trade)\b', player_msg.lower()):
+        return False, None
+
+    inventory = player.get("inventory", [])
+    msg_lower = player_msg.lower()
+
+    # Find which inventory item the player is trying to give
+    offered = next((it for it in inventory if it["name"].lower() in msg_lower), None)
+    if not offered:
+        return False, None  # give keyword but no inventory item named — let LLM handle naturally
+
+    trades = npc.get("trades", [])
+    for trade in trades:
+        trade_key = f"{npc['name']}:{trade['required_item']}"
+        if trade_key in npc_trades_done:
+            continue
+        if offered["name"].lower() != trade["required_item"].lower():
+            continue
+
+        inventory.remove(offered)
+        npc_trades_done.append(trade_key)
+
+        parts = []
+        if trade.get("item_name"):
+            item_entry = {
+                "name": trade["item_name"], "openable": False, "is_open": False,
+                "gold": 0, "damage": 0, "weapon_type": None, "armor_slot": None, "armor_rating": 0,
+            }
+            inventory.append(item_entry)
+            parts.append(f"accepted the {trade['required_item']} and gave the player your {trade['item_name']}")
+
+        if trade.get("gold"):
+            player["gold"] = player.get("gold", 0) + trade["gold"]
+            parts.append(f"paid the player {trade['gold']} gold for the {trade['required_item']}")
+
+        if trade.get("secret"):
+            io.send(f"\n[You learn: {trade['secret']}]\n")
+            parts.append(f"revealed the secret: {trade['secret']}")
+
+        emit_player_state(player, state["current_room_id"], io, room_data=state.get("current_room_data"))
+        debug(f"trade: '{npc['name']}' traded for '{trade['required_item']}'")
+        event = f"Player gave {npc['name']} the {trade['required_item']} and {', and '.join(parts)}"
+        add_journal_entry(event, player, state["current_room_id"], io, mini_llm)
+        return True, f"[You just {' and '.join(parts)}. Acknowledge this naturally in your next reply.]"
+
+    # Player offered an item but NPC has no use for it — reject in character
+    debug(f"trade: '{npc['name']}' has no use for '{offered['name']}'")
+    return True, f"[The player just tried to give you their {offered['name']}. Refuse it in character — you have no use for it.]"
+
+
 def npc_dialogue(state, SHOPS, npc_catalogue, monster_catalogue, item_catalogue, llm, mini_llm, parse_command_fn, io) -> dict:
     from handlers.shop import handle_shop
 
@@ -280,6 +379,8 @@ def npc_dialogue(state, SHOPS, npc_catalogue, monster_catalogue, item_catalogue,
     history = []
     npc_moods = dict(state.get("npc_moods", {}))
     npc_fear = dict(state.get("npc_fear", {}))
+    npc_gifts_given = list(state.get("npc_gifts_given", []))
+    npc_trades_done = list(state.get("npc_trades_done", []))
     current_mood = npc_moods.get(npc["name"], 0)
     current_fear = npc_fear.get(npc["name"], 0)
 
@@ -327,6 +428,20 @@ def npc_dialogue(state, SHOPS, npc_catalogue, monster_catalogue, item_catalogue,
         if was_bribe:
             continue
 
+        was_give, give_note = _handle_give_in_loop(player_msg, npc, player, npc_trades_done, state, io, mini_llm)
+        if give_note:
+            history.append(give_note)
+
+        gift_given = _check_gift_trigger(npc, player_msg, npc_gifts_given, player, state, mini_llm, io)
+        if gift_given:
+            gift = npc["gift"]
+            parts = []
+            if gift.get("item_name"):
+                parts.append(f"gave the player your {gift['item_name']}")
+            if gift.get("secret"):
+                parts.append(f"revealed the secret: {gift['secret']}")
+            history.append(f"[You just {' and '.join(parts)}. Acknowledge this naturally in your next reply.]")
+
         mood_delta = evaluate_mood_delta(player_msg)
         fear_delta = evaluate_fear_delta(player_msg)
         current_mood = max(-100, min(100, current_mood + mood_delta))
@@ -364,4 +479,6 @@ def npc_dialogue(state, SHOPS, npc_catalogue, monster_catalogue, item_catalogue,
             emit_encounter_end(io)
             break
 
-    return {"player": player, "npc_moods": npc_moods, "npc_fear": npc_fear, "force_full_description": False}
+    return {"player": player, "npc_moods": npc_moods, "npc_fear": npc_fear,
+            "npc_gifts_given": npc_gifts_given, "npc_trades_done": npc_trades_done,
+            "force_full_description": False}

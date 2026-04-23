@@ -142,5 +142,17 @@
   "chain_gloves": {
     "name": "chain gloves",
     "description": "Gloves of fine chain mail, each link no larger than a thumbnail. They are supple enough to wear and heavy enough to matter."
+  },
+  "iron_key": {
+    "name": "iron key",
+    "description": "A heavy iron key etched with a skull, warm to the touch as if recently held. It opens something that was meant to stay closed."
+  },
+  "silver_vial": {
+    "name": "silver vial",
+    "description": "A slender vial of silver liquid on a fine chain. The contents neutralise any poison. It smells faintly of something ancient and cold."
+  },
+  "enchanted_crossbow": {
+    "name": "enchanted crossbow",
+    "description": "A compact crossbow wound with copper wire that hums faintly. Aldous claims it never needs reloading. This is almost certainly an exaggeration."
   }
 }

@@ -3,10 +3,21 @@
     "name": "Professor Aldric",
     "description": "A frail old man hunched over a desk, scribbling notes by candlelight.",
     "personality": "Speaks in riddles, knows secrets about the mansion, cryptic but helpful if you earn his trust.",
-    "knowledge": "Knows about the ghost, the secret letter behind the old book, and that the rusty key opens something in the basement.",
+    "knowledge": "Knows about the ghost, the secret letter behind the old book, and that the rusty key opens something in the basement. Keeps an iron key hidden in his coat — he will only part with it if someone speaks the old scholar's oath: 'knowledge demands descent'.",
     "can_search_web": false,
     "opens_conversation": true,
     "gossips_with": ["Lady Vespera"],
+    "gift": {
+      "item_name": "iron key",
+      "item_description": "A heavy iron key etched with a skull, warm to the touch.",
+      "trigger_description": "Player speaks the scholar's oath 'knowledge demands descent', or convincingly demonstrates they understand the cost of seeking truth below and are willing to face what waits in the basement"
+    },
+    "trades": [
+      {
+        "required_item": "secret letter",
+        "secret": "The letter is from Lord Harwick Vane, the mansion's original owner, confessing that he made a bargain with something in the basement — his family's blood in exchange for immortality. The bargain was accepted. The family is gone. The thing below is still waiting for more."
+      }
+    ],
     "knows_about": {
       "npc:lady_vespera": "Believes she has lived in this mansion for centuries and is not entirely human.",
       "npc:shadow_cat": "Suspects the cat understands far more than it pretends and may be spying for someone.",
@@ -38,16 +49,35 @@
       "npc:shadow_cat": "Once caught the cat rummaging through his stock. Never found anything missing, which somehow made it worse.",
       "item:magic_staff": "Has been trying to acquire it for years. Considers it the finest item in the mansion and is bitter he does not own it.",
       "item:ritual_dagger": "Knows it is worth far more than it looks and will not say why."
-    }
+    },
+    "trades": [
+      {
+        "required_item": "magic staff",
+        "gold": 80,
+        "item_name": "enchanted crossbow",
+        "secret": "Aldous reveals in hushed excitement that the staff was originally used to bind the creature in the basement. Selling it was the worst decision of his life and he has been trying to buy it back ever since."
+      }
+    ]
   },
   "lady_vespera": {
     "name": "Lady Vespera",
     "description": "A strikingly beautiful woman draped in deep crimson, her smile never quite reaching her dark, unblinking eyes.",
     "personality": "Charming, seductive, and unnervingly calm. Speaks in a way that makes everything sound like a veiled threat. Never raises her voice. Always seems to know more than she lets on.",
-    "knowledge": "Knows the true nature of every monster in the mansion, hints that not everything is what it seems, and seems suspiciously familiar with the layout of the basement.",
+    "knowledge": "Knows the true nature of every monster in the mansion, hints that not everything is what it seems, and seems suspiciously familiar with the layout of the basement. She wears a silver vial of antidote around her neck — a relic from a time she does not discuss. She will give it only to someone who addresses her true nature directly and without flinching.",
     "can_search_web": false,
     "opens_conversation": true,
     "gossips_with": ["Professor Aldric", "Shadow"],
+    "gift": {
+      "item_name": "silver vial",
+      "item_description": "A slender vial of silver liquid on a chain. Neutralises any poison.",
+      "trigger_description": "Player directly and calmly addresses Lady Vespera as a vampire or immortal — not as an accusation but as an acknowledgement of what she is, showing they are not afraid"
+    },
+    "trades": [
+      {
+        "required_item": "strange amulet",
+        "secret": "The amulet was the sealing key for the creature in the basement. Carrying it is an invitation — the creature can sense it and will be drawn to whoever holds it. Lady Vespera had it removed from the basement herself, years ago, hoping to keep the creature dormant. She is visibly relieved it is no longer in your hands."
+      }
+    ],
     "knows_about": {
       "npc:professor_aldric": "Knows he discovered something in the basement he was never meant to see and has been afraid ever since.",
       "npc:shadow_cat": "",
@@ -64,6 +94,10 @@
     "can_search_web": false,
     "opens_conversation": true,
     "gossips_with": ["Professor Aldric", "Lady Vespera", "Aldous the Peddler"],
+    "gift": {
+      "secret": "The werewolf in the garden is guarding something buried beneath the dead oak. It is not protecting its territory — it is protecting a grave.",
+      "trigger_description": "Player asks the cat about the garden, the werewolf, or what is hidden outside — showing genuine curiosity rather than dismissing the cat's ramblings"
+    },
     "knows_about": {
       "npc:professor_aldric": "",
       "npc:lady_vespera": "Is absolutely certain she is a vampire but has no real evidence. Will state this as established fact.",

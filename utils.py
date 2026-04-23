@@ -133,6 +133,20 @@ def _get_item_catalogue() -> dict:
     return _item_catalogue_cache
 
 
+def add_journal_entry(event_description: str, player: dict, room_id: str, io, mini_llm) -> None:
+    """Generate a gothic-but-helpful journal entry via LLM and emit it to the frontend."""
+    import json
+    from langchain_core.messages import HumanMessage
+    from prompts import JOURNAL_ENTRY_PROMPT
+    response = mini_llm.invoke([HumanMessage(content=JOURNAL_ENTRY_PROMPT.format(
+        event_description=event_description
+    ))])
+    entry = {"text": response.content.strip()}
+    player.setdefault("journal", []).append(entry)
+    io.send(f"__journal_entry__{json.dumps(entry)}")
+    debug(f"journal: new entry written")
+
+
 def emit_player_state(player: dict, room_id: str, io, room_data: dict = None) -> None:
     """Send a structured player state update to the frontend via the IO context."""
     import json
@@ -145,6 +159,7 @@ def emit_player_state(player: dict, room_id: str, io, room_data: dict = None) ->
         "gold": player.get("gold", 0),
         "equipped_weapon": player.get("equipped_weapon"),
         "equipped_armor": player.get("equipped_armor", {}),
+        "journal": player.get("journal", []),
         "inventory": [
             {
                 "name": i["name"],

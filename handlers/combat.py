@@ -191,6 +191,11 @@ def combat_node(state, ROOMS, llm, io) -> dict:
         io.send("What do you do? (attack / flee)")
         combat_input = io.recv("> ")
 
+        if combat_input.strip().lower() == "cheat kill":
+            io.send(f"[CHEAT] {monster['name']} obliterated.")
+            monster["health"] = 0
+            break
+
         if any(word in combat_input for word in ["flee", "run", "escape", "retreat"]):
             result = _handle_flee(state, monster, target, room, room_id, room_override, room_states, player, llm, io)
             if result is not None:

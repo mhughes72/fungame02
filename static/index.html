@@ -73,6 +73,48 @@
       color: #c8a96e;
     }
 
+    /* Help modal */
+    #help-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    #help-modal.active { display: flex; }
+    #help-modal-content {
+      background: #1a1a1a;
+      border: 2px solid #3d3d3d;
+      padding: 24px;
+      max-width: 420px;
+      width: 100%;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+    #help-modal-title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #d4a574;
+      margin-bottom: 16px;
+      text-shadow: 0 0 10px rgba(196, 137, 74, 0.3);
+    }
+    .help-section { margin-bottom: 14px; }
+    .help-section-title {
+      color: #a89060;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      border-bottom: 1px solid #3a3a3a;
+      padding-bottom: 4px;
+    }
+    .help-row { display: flex; gap: 12px; font-size: 12px; line-height: 1.9; }
+    .help-cmd { color: #7a9a7a; min-width: 140px; }
+    .help-desc { color: #a89060; }
+
     /* Cheat modal */
     #cheat-modal {
       display: none;
@@ -700,6 +742,37 @@
       padding: 8px 10px;
     }
 
+    #sidebar-journal {
+      padding: 8px 10px;
+      font-size: 11px;
+    }
+    .journal-empty {
+      color: #5a4a3a;
+      font-style: italic;
+      padding: 12px 0;
+    }
+    .journal-entry {
+      border-left: 2px solid #5a4a2a;
+      padding: 6px 0 6px 10px;
+      margin-bottom: 10px;
+      color: #c8b88a;
+      line-height: 1.55;
+    }
+    .journal-entry + .journal-entry {
+      border-top: 1px solid #2a2a2a;
+      padding-top: 10px;
+    }
+    .journal-new-badge {
+      display: inline-block;
+      background: #3a5a3a;
+      color: #90c84a;
+      font-size: 9px;
+      padding: 1px 5px;
+      margin-bottom: 4px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
     #sidebar-inventory {
       padding: 8px 10px;
       font-size: 11px;
@@ -1088,6 +1161,7 @@
 <div class="header">
   <div class="header-left">⚰ AI DRIVEN HAUNTED MANSION ⚰</div>
   <div class="header-right">
+    <button id="help-btn" style="margin-right: 8px;">HELP</button>
     <button id="cheat-btn" style="margin-right: 8px;">CHEAT</button>
     <button id="about-btn" style="margin-right: 20px;">ABOUT</button>
     <div>
@@ -1152,7 +1226,7 @@
     <div id="sidebar-tab-bar">
       <button class="sidebar-tab active" data-panel="inventory">Inventory</button>
       <button class="sidebar-tab" data-panel="shop" id="tab-shop" style="display:none">Shop</button>
-      <button class="sidebar-tab" data-panel="help">Help</button>
+      <button class="sidebar-tab" data-panel="journal">Journal<span class="tab-badge" id="journal-badge" style="display:none">0</span></button>
       <button class="sidebar-tab" data-panel="debug">Debug<span class="tab-badge" id="debug-badge" style="display:none">0</span></button>
     </div>
     <div id="panel-inventory" class="sidebar-panel active">
@@ -1161,35 +1235,49 @@
     <div id="panel-shop" class="sidebar-panel">
       <div id="sidebar-shop"></div>
     </div>
+    <div id="panel-journal" class="sidebar-panel">
+      <div id="sidebar-journal"></div>
+    </div>
     <div id="panel-debug" class="sidebar-panel">
       <div id="debug-log"><span class="debug-empty">No debug messages yet.</span></div>
     </div>
-    <div id="panel-help" class="sidebar-panel">
-      <div id="sidebar-help">MOVEMENT
-  go [direction]   — north, south, east, west
+  </div>
 
-INTERACTION
-  talk [npc]       — start conversation
-  take [item]      — pick up item
-  examine [item]   — inspect something
-  open [item]      — open container
-  use [item]       — use an item
-  bribe [npc] [N]  — offer N gold
-
-COMBAT
-  attack [enemy]   — attack target
-  flee             — attempt to escape
-
-INVENTORY
-  inventory        — show items & stats
-  equip [item]     — equip weapon/armour
-  unequip [item]   — remove equipped item
-
-OTHER
-  look             — redescribe room
-  room             — show room summary
-  help             — show this list
-  quit             — end game</div>
+  <div id="help-modal">
+    <div id="help-modal-content">
+      <div id="help-modal-title">Commands</div>
+      <div class="help-section">
+        <div class="help-section-title">Movement</div>
+        <div class="help-row"><span class="help-cmd">go [direction]</span><span class="help-desc">north, south, east, west, up, down</span></div>
+      </div>
+      <div class="help-section">
+        <div class="help-section-title">Interaction</div>
+        <div class="help-row"><span class="help-cmd">talk [npc]</span><span class="help-desc">start a conversation</span></div>
+        <div class="help-row"><span class="help-cmd">give [item] to [npc]</span><span class="help-desc">offer an item to someone</span></div>
+        <div class="help-row"><span class="help-cmd">take [item]</span><span class="help-desc">pick up an item</span></div>
+        <div class="help-row"><span class="help-cmd">examine [item]</span><span class="help-desc">inspect something closely</span></div>
+        <div class="help-row"><span class="help-cmd">open [item]</span><span class="help-desc">open a container</span></div>
+        <div class="help-row"><span class="help-cmd">use [item]</span><span class="help-desc">use an item</span></div>
+        <div class="help-row"><span class="help-cmd">bribe [npc] [N]</span><span class="help-desc">offer N gold to an NPC</span></div>
+      </div>
+      <div class="help-section">
+        <div class="help-section-title">Combat</div>
+        <div class="help-row"><span class="help-cmd">attack [enemy]</span><span class="help-desc">attack a target</span></div>
+        <div class="help-row"><span class="help-cmd">flee</span><span class="help-desc">attempt to escape</span></div>
+      </div>
+      <div class="help-section">
+        <div class="help-section-title">Inventory</div>
+        <div class="help-row"><span class="help-cmd">inventory</span><span class="help-desc">show items and stats</span></div>
+        <div class="help-row"><span class="help-cmd">equip [item]</span><span class="help-desc">equip a weapon or armour</span></div>
+        <div class="help-row"><span class="help-cmd">unequip [item]</span><span class="help-desc">remove equipped item</span></div>
+      </div>
+      <div class="help-section">
+        <div class="help-section-title">Other</div>
+        <div class="help-row"><span class="help-cmd">look</span><span class="help-desc">redescribe the room</span></div>
+        <div class="help-row"><span class="help-cmd">room</span><span class="help-desc">show room summary</span></div>
+        <div class="help-row"><span class="help-cmd">quit</span><span class="help-desc">end the game</span></div>
+      </div>
+      <button onclick="document.getElementById('help-modal').classList.remove('active')" style="margin-top:8px;width:100%">Close</button>
     </div>
   </div>
 
@@ -1202,6 +1290,7 @@ OTHER
           <tr><td style="color: #7a9a7a; width: 120px;">win</td><td style="color: #a89060;">trigger the win condition</td></tr>
           <tr><td style="color: #7a9a7a;">room</td><td style="color: #a89060;">print current room summary</td></tr>
           <tr><td style="color: #7a9a7a;">goto room_X</td><td style="color: #a89060;">teleport to any room (e.g. goto room_5)</td></tr>
+          <tr><td style="color: #7a9a7a;">cheat kill</td><td style="color: #a89060;">instantly defeat current monster (in combat only)</td></tr>
           <tr><td style="color: #7a9a7a;">clearmemory</td><td style="color: #a89060;">wipe all NPC memory embeddings</td></tr>
         </table>
       </div>
@@ -1264,6 +1353,10 @@ OTHER
   let roomPositions = {};
   let visitedRooms = new Set();
   let roomViewEntities = [];
+
+  // Journal state
+  let journalEntries = [];
+  let journalUnread = 0;
 
   // Encounter state
   let inEncounter = false;
@@ -1362,6 +1455,10 @@ OTHER
       goldSpan.textContent = msg.player_gold;
       renderShopTab();
       renderEncounterStats(encounterData);
+    } else if (msg.type === 'journal_entry') {
+      journalEntries.unshift({...msg, isNew: true});
+      renderJournal();
+      bumpJournalBadge();
     } else if (msg.type === 'state') {
       Object.assign(currentPlayerState, {
         health: msg.health,
@@ -1371,6 +1468,10 @@ OTHER
         equipped_weapon: msg.equipped_weapon,
         equipped_armor: msg.equipped_armor || {}
       });
+      if (msg.journal && journalEntries.length === 0 && msg.journal.length > 0) {
+        journalEntries = [...msg.journal].reverse();
+        renderJournal();
+      }
       if (msg.room_id) {
         currentRoomId = msg.room_id;
         visitedRooms.add(msg.room_id);
@@ -1527,6 +1628,31 @@ OTHER
     if (wasActive) {
       document.querySelector('[data-panel="inventory"]').classList.add('active');
       document.getElementById('panel-inventory').classList.add('active');
+    }
+  }
+
+  function renderJournal() {
+    const container = document.getElementById('sidebar-journal');
+    if (!container) return;
+    if (journalEntries.length === 0) {
+      container.innerHTML = '<div class="journal-empty">Nothing recorded yet.</div>';
+      return;
+    }
+    container.innerHTML = journalEntries.map((e, i) =>
+      `<div class="journal-entry">
+        ${e.isNew && i === 0 ? '<div class="journal-new-badge">New</div>' : ''}
+        ${e.text}
+      </div>`
+    ).join('');
+  }
+
+  function bumpJournalBadge() {
+    const journalTab = document.querySelector('[data-panel="journal"]');
+    if (journalTab && !journalTab.classList.contains('active')) {
+      const badge = document.getElementById('journal-badge');
+      journalUnread++;
+      badge.textContent = journalUnread;
+      badge.style.display = 'inline-block';
     }
   }
 
@@ -2036,34 +2162,41 @@ OTHER
     const tooltip = document.getElementById('map-tooltip');
     if (!canvas || !tooltip) return;
 
+    function hitTestMap(mx, my) {
+      const { RW, RH } = MAP;
+      for (const [roomId, pos] of Object.entries(roomPositions)) {
+        const x = mapX(pos), y = mapY(pos);
+        if (mx >= x - RW / 2 && mx <= x + RW / 2 && my >= y - RH / 2 && my <= y + RH / 2) {
+          return roomId;
+        }
+      }
+      return null;
+    }
+
     canvas.addEventListener('mousemove', (e) => {
       const rect = canvas.getBoundingClientRect();
       const mx = e.clientX - rect.left;
       const my = e.clientY - rect.top;
-      const { RW, RH } = MAP;
 
-      let hovered = null;
-      for (const [roomId, pos] of Object.entries(roomPositions)) {
-        const x = mapX(pos), y = mapY(pos);
-        if (mx >= x - RW / 2 && mx <= x + RW / 2 && my >= y - RH / 2 && my <= y + RH / 2) {
-          hovered = roomId;
-          break;
-        }
-      }
+      const hovered = hitTestMap(mx, my);
 
       if (!hovered) {
         tooltip.style.display = 'none';
+        canvas.style.cursor = '';
         return;
       }
 
       const room = roomsData[hovered];
-      if (!room) { tooltip.style.display = 'none'; return; }
+      if (!room) { tooltip.style.display = 'none'; canvas.style.cursor = ''; return; }
+
+      canvas.style.cursor = hovered !== currentRoomId ? 'pointer' : '';
 
       const monsters = (room.monsters || []).map(m => m.name);
       const npcs = (room.npcs || []).map(n => n.name);
       const exits = Object.keys(room.exits || {});
 
       let html = `<div class="tt-name">${room.name}</div>`;
+      if (hovered !== currentRoomId) html += `<div class="tt-exits" style="color:#6a8a5a">click to go here</div>`;
       if (monsters.length) html += `<div class="tt-monster">⚔ ${monsters.join(', ')}</div>`;
       if (npcs.length)     html += `<div class="tt-npc">👤 ${npcs.join(', ')}</div>`;
       if (exits.length)    html += `<div class="tt-exits">↔ ${exits.join(', ')}</div>`;
@@ -2076,6 +2209,14 @@ OTHER
 
     canvas.addEventListener('mouseleave', () => {
       tooltip.style.display = 'none';
+      canvas.style.cursor = '';
+    });
+
+    canvas.addEventListener('click', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const roomId = hitTestMap(e.clientX - rect.left, e.clientY - rect.top);
+      if (!roomId || roomId === currentRoomId) return;
+      sendShopCommand(`goto ${roomId}`);
     });
   }
 
@@ -2351,6 +2492,12 @@ OTHER
       } else {
         debugTabActive = false;
       }
+      if (tab.dataset.panel === 'journal') {
+        journalUnread = 0;
+        document.getElementById('journal-badge').style.display = 'none';
+        journalEntries.forEach(e => e.isNew = false);
+        renderJournal();
+      }
     });
   });
 
@@ -2374,6 +2521,14 @@ OTHER
 
     document.getElementById('cheat-ai-features').innerHTML = html;
   }
+
+  document.getElementById('help-btn').addEventListener('click', () => {
+    document.getElementById('help-modal').classList.add('active');
+  });
+  document.getElementById('help-modal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('help-modal'))
+      document.getElementById('help-modal').classList.remove('active');
+  });
 
   const cheatBtn = document.getElementById('cheat-btn');
   const cheatModal = document.getElementById('cheat-modal');

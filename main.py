@@ -145,6 +145,9 @@ class AgentState(TypedDict):
     just_fled: NotRequired[bool]
     npc_moods: NotRequired[Dict[str, int]]
     npc_fear: NotRequired[Dict[str, int]]
+    npc_gifts_given: NotRequired[List[str]]
+    npc_trades_done: NotRequired[List[str]]
+    rooms_visited: NotRequired[List[str]]
     last_entity: NotRequired[str]
 
 
@@ -241,10 +244,18 @@ def load_room_data(state: AgentState) -> dict:
 
     emit_player_state(state.get("player", {}), new_room_id, io_ctx(), room_data=room)
 
+    rooms_visited = list(state.get("rooms_visited", []))
+    if new_room_id not in rooms_visited:
+        rooms_visited.append(new_room_id)
+        import json as _json
+        _entry = _json.dumps({"text": f"Discovered: {room['name']}."})
+        io_ctx().send(f"__journal_entry__{_entry}")
+
     return {
         "current_room_data": room,
         "route_to": None,
-        "previous_room_id": previous_room_id
+        "previous_room_id": previous_room_id,
+        "rooms_visited": rooms_visited
     }
 
 
@@ -559,6 +570,9 @@ def make_initial_state() -> AgentState:
         },
         npc_moods={},
         npc_fear={},
+        npc_gifts_given=[],
+        npc_trades_done=[],
+        rooms_visited=[],
     )
 
 
