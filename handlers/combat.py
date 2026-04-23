@@ -9,7 +9,7 @@ from utils import (invoke_with_system, stream_with_system, total_armor_rating, d
                    FLEE_SUCCESS_THRESHOLD, WEAKNESS_BONUS_DAMAGE,
                    ARMOR_REDUCTION_RATE, ARMOR_REDUCTION_CAP, emit_player_state,
                    emit_encounter_start, emit_encounter_end, emit_encounter_state,
-                   get_mutable_player, get_mutable_room)
+                   get_mutable_player, get_mutable_room, add_journal_entry)
 from prompts import COMBAT_PROMPT, FLEE_PROMPT
 
 
@@ -119,7 +119,7 @@ def _execute_attack_round(player, monster, weapon_data, equipped_weapon, room, l
     return player["health"] > 0
 
 
-def _handle_victory(monster, target, room, room_override, room_states, room_id, player, inventory, io):
+def _handle_victory(monster, target, room, room_override, room_states, room_id, player, inventory, io, mini_llm):
     """Process monster defeat: loot drops, room update, and player state emit."""
     drops = monster.get("drops", {})
     gold_drop = drops.get("gold", 0)
@@ -149,6 +149,17 @@ def _handle_victory(monster, target, room, room_override, room_states, room_id, 
     updated_room = {**room, "monsters": new_monsters}
     emit_player_state(player, room_id, io, room_data=updated_room)
 
+    drop_parts = []
+    if gold_drop > 0:
+        drop_parts.append(f"{gold_drop} gold")
+    if item_drop:
+        drop_parts.append(item_drop)
+    drop_desc = f" Drops: {', '.join(drop_parts)}." if drop_parts else " Nothing was dropped."
+    add_journal_entry(
+        f"Defeated the {monster['name']} in combat.{drop_desc}",
+        player, room_id, io, mini_llm
+    )
+
     return {
         "room_states": room_states,
         "player": player,
@@ -158,7 +169,7 @@ def _handle_victory(monster, target, room, room_override, room_states, room_id, 
     }
 
 
-def combat_node(state, ROOMS, llm, io) -> dict:
+def combat_node(state, ROOMS, llm, mini_llm, io) -> dict:
     target = state.get("combat_target")
     room = state["current_room_data"]
     room_id = state["current_room_id"]
@@ -210,4 +221,4 @@ def combat_node(state, ROOMS, llm, io) -> dict:
 
     io.send(f"\n[{monster['name'].upper()} DEFEATED]")
     emit_encounter_end(io)
-    return _handle_victory(monster, target, room, room_override, room_states, room_id, player, inventory, io)
+    return _handle_victory(monster, target, room, room_override, room_states, room_id, player, inventory, io, mini_llm)

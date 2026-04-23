@@ -523,7 +523,7 @@ graph.add_node("describe_room", describe_room)
 graph.add_node("check_aggressive", check_aggressive)
 graph.add_node("get_player_action", get_player_action)
 graph.add_node("resolve_action", resolve_action)
-graph.add_node("combat", lambda state: combat_node(state, ROOMS, mini_llm, io_ctx()))
+graph.add_node("combat", lambda state: combat_node(state, ROOMS, llm, mini_llm, io_ctx()))
 graph.add_node("npc_dialogue", lambda state: npc_dialogue(state, SHOPS, NPC_CATALOGUE, MONSTER_CATALOGUE, ITEM_CATALOGUE, llm, mini_llm, parse_command, io_ctx()))
 
 graph.add_edge(START, "load_room_data")
