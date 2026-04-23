@@ -374,6 +374,10 @@ Browser  ←──── ws ─────────────────�
 
 The game is built as a LangGraph state graph. Each turn flows through these nodes:
 
+![LangGraph state graph](docs/graph.png)
+
+Solid edges are unconditional transitions; dashed edges are conditional — `check_aggressive` can jump straight to `combat` if a monster auto-attacks on entry, and `resolve_action` routes to `combat`, `npc_dialogue`, or `__end__` depending on what the player did. Everything loops back to `load_room_data` after each action.
+
 ```
 START
   → load_room_data        # Load room from JSON, apply state overrides
