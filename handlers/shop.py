@@ -126,7 +126,8 @@ def _emit_shop_data(player: dict, shop_data: dict, npc: dict, npc_moods: dict, n
                 entry["heal_amount"] = item["heal_amount"]
             items.append(entry)
 
-    io.send(f"__shop_data__{json.dumps({'items': items, 'mood_score': mood_score, 'fear_score': fear_score, 'price_multiplier': round(price_mult, 2), 'player_gold': player.get('gold', 0)})}")
+    owned = [i["name"].lower() for i in player.get("inventory", [])]
+    io.send(f"__shop_data__{json.dumps({'items': items, 'mood_score': mood_score, 'fear_score': fear_score, 'price_multiplier': round(price_mult, 2), 'player_gold': player.get('gold', 0), 'player_inventory': owned})}")
 
 
 def _run_tool_loop(shop_llm, tools, history):
@@ -198,6 +199,13 @@ def handle_shop(state: dict, npc: dict, shops: dict, llm, npc_moods: dict = None
         if any(word in player_msg.lower() for word in CONVERSATION_EXIT_WORDS):
             io.send(f"\n{npc['name']}: Safe travels, and remember — Aldous always has the best prices!")
             break
+
+        if player_msg.strip() == "cheat gold":
+            player["gold"] = player.get("gold", 0) + 100
+            emit_player_state(player, state["current_room_id"], io, room_data=state.get("current_room_data"))
+            io.send("[CHEAT] +100 gold conjured from thin air.")
+            _emit_shop_data(player, shop_data, npc, npc_moods, npc_fear, io)
+            continue
 
         history.append(HumanMessage(content=player_msg))
         response = _run_tool_loop(shop_llm, tools, history)
