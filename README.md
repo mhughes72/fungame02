@@ -38,8 +38,8 @@ Every LLM call in the game uses one of two OpenAI models. `gpt-4o` handles all p
 | NPC bribe reaction | gpt-4o |
 | Oracle web search | gpt-4o |
 | Shop merchant (Aldous) | gpt-4o |
-| Combat narration | gpt-4o |
-| Flee narration | gpt-4o |
+| Combat narration | gpt-4o-mini |
+| Flee narration | gpt-4o-mini |
 | Item examination | gpt-4o |
 | Command parsing | gpt-4o-mini |
 | Room features (cheat modal) | gpt-4o-mini |
