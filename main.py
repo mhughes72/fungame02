@@ -477,7 +477,7 @@ def resolve_action(state: AgentState) -> dict:
     handlers = {
         "go":        lambda: handle_go(state, target, io_ctx()),
         "take":      lambda: handle_take(state, target, io_ctx()),
-        "examine":   lambda: handle_examine(state, target, mini_llm, io_ctx()),
+        "examine":   lambda: handle_examine(state, target, mini_llm, io_ctx(), mini_llm),
         "open":      lambda: handle_open(state, target, io_ctx()),
         "equip":     lambda: handle_equip(state, target, io_ctx()),
         "inventory": lambda: handle_inventory(state, io_ctx()),

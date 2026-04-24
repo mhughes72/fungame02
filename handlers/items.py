@@ -7,7 +7,7 @@
 #   handle_equip   — equip a weapon or armour piece from inventory
 #   handle_unequip — remove an equipped weapon or armour piece
 
-from utils import find_item, find_npc, invoke_with_system, stream_with_system, debug, emit_player_state, get_mutable_player, get_mutable_room
+from utils import find_item, find_npc, invoke_with_system, stream_with_system, debug, emit_player_state, get_mutable_player, get_mutable_room, add_journal_entry
 from prompts import EXAMINE_PROMPT
 
 def handle_use(state, target, io) -> dict:
@@ -77,7 +77,7 @@ def handle_take(state, target, io) -> dict:
     return {"force_full_description": False}
 
 
-def handle_examine(state, target, llm, io) -> dict:
+def handle_examine(state, target, llm, io, mini_llm=None) -> dict:
     room = state["current_room_data"]
     room_id = state["current_room_id"]
     room_states, room_override = get_mutable_room(state, room_id)
@@ -105,26 +105,32 @@ def handle_examine(state, target, llm, io) -> dict:
         return {"force_full_description": True}
 
     # Item
+    player, inventory = get_mutable_player(state)
     new_items = []
-    newly_revealed = []
+    newly_collected = []
     for item in room["items"]:
         if item["hidden"] and item["revealed_by"] == target:
-            new_items.append({**item, "hidden": False})
-            newly_revealed.append(item["name"])
+            inventory.append(item)
+            newly_collected.append(item["name"])
         else:
             new_items.append(item)
 
-    if newly_revealed:
+    if newly_collected:
+        player["inventory"] = inventory
         room_override["items"] = new_items
         room_states[room_id] = room_override
-        debug(f"examine '{target}': revealed {newly_revealed}")
+        debug(f"examine '{target}': collected {newly_collected}")
+        emit_player_state(player, room_id, io, room_data=state.get("current_room_data"))
+        if mini_llm:
+            for name in newly_collected:
+                add_journal_entry(f"Found {name} hidden inside the {target}.", player, room_id, io, mini_llm)
     else:
-        debug(f"examine '{target}': nothing revealed")
+        debug(f"examine '{target}': nothing found")
 
-    if newly_revealed:
+    if newly_collected:
         discovery_instruction = (
-            f"As the player examines the {target}, they discover hidden within it: {', '.join(newly_revealed)}. "
-            f"Narrate the act of finding this naturally — describe what physical detail leads to the discovery."
+            f"As the player examines the {target}, they find hidden within it: {', '.join(newly_collected)}. "
+            f"Narrate the moment of discovery and picking it up naturally — describe what physical detail leads to finding it."
         )
     else:
         discovery_instruction = ""
@@ -137,9 +143,10 @@ def handle_examine(state, target, llm, io) -> dict:
     })
     stream_with_system(llm, prompt, io)
 
-    if newly_revealed:
+    if newly_collected:
         return {
             "room_states": room_states,
+            "player": player,
             "force_full_description": False,
             "last_entity": target,
         }
