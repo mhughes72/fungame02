@@ -23,7 +23,7 @@ def _find_monster(room, target, io):
     return dict(monster)
 
 
-def _handle_flee(state, monster, target, room, room_id, room_override, room_states, player, llm, io):
+def _handle_flee(state, monster, target, room, room_id, room_override, room_states, player, mini_llm, io):
     """Process a flee attempt. Returns a final state dict on success or player death, None if flee fails harmlessly."""
     flee_chance = random.randint(1, 100)
     success = flee_chance > FLEE_SUCCESS_THRESHOLD
@@ -35,7 +35,7 @@ def _handle_flee(state, monster, target, room, room_id, room_override, room_stat
         "success": success,
     })
     io.send("\n")
-    stream_with_system(llm, prompt, io)
+    stream_with_system(mini_llm, prompt, io)
 
     if success:
         previous_room = state.get("previous_room_id")
@@ -69,7 +69,7 @@ def _handle_flee(state, monster, target, room, room_id, room_override, room_stat
     return None
 
 
-def _execute_attack_round(player, monster, weapon_data, equipped_weapon, room, llm, io):
+def _execute_attack_round(player, monster, weapon_data, equipped_weapon, room, mini_llm, io):
     """Execute one full combat round (player attack + monster retaliation). Mutates health on both sides. Returns True if player is alive."""
     base_damage = weapon_data.get("damage", 1) if weapon_data else 1
     dice_roll = random.randint(1, 6)
@@ -112,7 +112,7 @@ def _execute_attack_round(player, monster, weapon_data, equipped_weapon, room, l
         "round_events": round_events,
     })
     io.send("\n")
-    stream_with_system(llm, prompt, io)
+    stream_with_system(mini_llm, prompt, io)
     emit_encounter_state(io, player_health=player['health'], player_max_health=player['max_health'],
                          monster_health=max(0, monster['health']), monster_max_health=monster['max_health'])
 
@@ -169,7 +169,7 @@ def _handle_victory(monster, target, room, room_override, room_states, room_id, 
     }
 
 
-def combat_node(state, ROOMS, llm, mini_llm, io) -> dict:
+def combat_node(state, ROOMS, mini_llm, io) -> dict:
     target = state.get("combat_target")
     room = state["current_room_data"]
     room_id = state["current_room_id"]
@@ -208,12 +208,12 @@ def combat_node(state, ROOMS, llm, mini_llm, io) -> dict:
             break
 
         if any(word in combat_input for word in ["flee", "run", "escape", "retreat"]):
-            result = _handle_flee(state, monster, target, room, room_id, room_override, room_states, player, llm, io)
+            result = _handle_flee(state, monster, target, room, room_id, room_override, room_states, player, mini_llm, io)
             if result is not None:
                 return result
             continue
 
-        player_alive = _execute_attack_round(player, monster, weapon_data, equipped_weapon, room, llm, io)
+        player_alive = _execute_attack_round(player, monster, weapon_data, equipped_weapon, room, mini_llm, io)
         if not player_alive:
             io.send("\nYou have been slain. Game over.")
             emit_encounter_end(io)
