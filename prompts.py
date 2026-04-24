@@ -34,10 +34,11 @@ Containers that look like they might hold something: {containers}
 Monsters: {monsters}
 NPCs present: {npcs}
 Exits: {exits}
-
+{hidden_hints}
 Keep it immersive and concise. When mentioning monsters, draw on their appearance to set the threat.
 Mention NPCs naturally.
 If there are containers, subtly hint they might hold something without being explicit.
+If hidden_hints are provided, weave one subtle sensory detail into the description that suggests something is concealed — do NOT name the hidden object or make it obvious.
 """)
 
 COMMAND_PARSER_PROMPT = ChatPromptTemplate.from_template("""
@@ -86,12 +87,10 @@ You are a dungeon master narrating a text adventure game.
 
 The player examines: {target}
 Room: {room_name}
-Description of the item/feature: {target} is in a {room_description}
-
-{discovery_text}
-
-Write 2-3 immersive sentences describing what the player sees when they examine it.
-If something is discovered, make it feel like a genuine find — exciting but not over the top.
+Room description: {room_description}
+{discovery_instruction}
+Write 2-3 immersive sentences. If something is being discovered, narrate the moment of finding it naturally — make it feel earned, not announced.
+Do NOT write "[You find: ...]" or any bracketed game mechanic text. Let the discovery emerge from the description itself.
 """)
 
 

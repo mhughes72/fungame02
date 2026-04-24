@@ -341,6 +341,11 @@ def describe_room(state: AgentState) -> dict:
             if not i["hidden"] and i.get("openable") and not i.get("is_open"):
                 container_hints.append(f"The {i['name']} looks like it might contain something")
 
+        hidden_hints = [
+            f"Something may be concealed within or beneath the {i['revealed_by']}"
+            for i in room["items"] if i.get("hidden") and i.get("revealed_by")
+        ]
+
         prompt = ROOM_DESCRIPTION_PROMPT.invoke({
             "name": room["name"],
             "description": room["description"],
@@ -352,6 +357,7 @@ def describe_room(state: AgentState) -> dict:
             ) if room["monsters"] else "none",
             "npcs": ", ".join(n["name"] for n in room["npcs"]) if room["npcs"] else "none",
             "exits": ", ".join(room["exits"].keys()) if room["exits"] else "none",
+            "hidden_hints": "Concealment hints (do not reveal directly): " + "; ".join(hidden_hints) if hidden_hints else "",
         })
 
         stream_with_system(llm, prompt, io_ctx())

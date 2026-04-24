@@ -121,18 +121,23 @@ def handle_examine(state, target, llm, io) -> dict:
     else:
         debug(f"examine '{target}': nothing revealed")
 
-    discovery_text = f"The player discovers: {', '.join(newly_revealed)}" if newly_revealed else ""
+    if newly_revealed:
+        discovery_instruction = (
+            f"As the player examines the {target}, they discover hidden within it: {', '.join(newly_revealed)}. "
+            f"Narrate the act of finding this naturally — describe what physical detail leads to the discovery."
+        )
+    else:
+        discovery_instruction = ""
 
     prompt = EXAMINE_PROMPT.invoke({
         "target": target,
         "room_name": room["name"],
         "room_description": room["description"],
-        "discovery_text": discovery_text,
+        "discovery_instruction": discovery_instruction,
     })
     stream_with_system(llm, prompt, io)
 
     if newly_revealed:
-        io.send(f"\n[You find: {', '.join(newly_revealed)}]")
         return {
             "room_states": room_states,
             "force_full_description": False,

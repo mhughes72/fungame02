@@ -180,6 +180,7 @@ def emit_player_state(player: dict, room_id: str, io, room_data: dict = None) ->
         ]
         data["room_npcs"]  = [{"name": n["name"]} for n in room_data.get("npcs", [])]
         data["room_items"] = [{"name": i["name"], "openable": i.get("openable", False)} for i in room_data.get("items", []) if not i.get("hidden")]
+        data["room_hidden_items"] = [{"name": i["name"], "revealed_by": i.get("revealed_by")} for i in room_data.get("items", []) if i.get("hidden")]
         data["room_exits"] = list(room_data.get("exits", {}).keys())
     io.send(f"__statejson__{json.dumps(data)}")
 

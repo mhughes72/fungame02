@@ -2101,6 +2101,7 @@
     const n = entity.name.toLowerCase();
     const cmds = { monster: `attack ${n}`, npc: `talk ${n}`, player: 'inventory' };
     if (entity.kind === 'item') return entity.openable ? `open ${n}` : `get ${n}`;
+    if (entity.kind === 'hidden') return entity.revealedBy ? `examine ${entity.revealedBy.toLowerCase()}` : '';
     return cmds[entity.kind] || `examine ${n}`;
   }
 
@@ -2123,12 +2124,16 @@
 
       if (!hit) { tooltip.style.display = 'none'; canvas.style.cursor = ''; return; }
 
-      const kindLabel = hit.kind === 'item' && hit.openable ? 'Container'
+      const kindLabel = hit.kind === 'hidden' ? 'Hidden item'
+                      : hit.kind === 'item' && hit.openable ? 'Container'
                       : { monster: 'Monster', npc: 'NPC', item: 'Item', player: 'Player' }[hit.kind] || hit.kind;
-      const hint = hit.kind === 'item'
-        ? (hit.openable ? 'click to open' : 'click to get')
-        : (actionHint[hit.kind] || '');
-      tooltip.innerHTML = `<div class="tt-name">${hit.name}</div><div class="tt-${hit.kind}">${kindLabel}${hint ? ` — ${hint}` : ''}</div>`;
+      const hint = hit.kind === 'hidden'
+        ? `click to examine ${(hit.revealedBy || '').toLowerCase()}`
+        : hit.kind === 'item'
+          ? (hit.openable ? 'click to open' : 'click to get')
+          : (actionHint[hit.kind] || '');
+      const ttClass = hit.kind === 'hidden' ? 'tt-item' : `tt-${hit.kind}`;
+      tooltip.innerHTML = `<div class="tt-name">${hit.name}</div><div class="${ttClass}">${kindLabel}${hint ? ` — ${hint}` : ''}</div>`;
       tooltip.style.display = 'block';
       tooltip.style.left = (e.clientX + 14) + 'px';
       tooltip.style.top  = (e.clientY - 10) + 'px';
@@ -2323,11 +2328,21 @@
     if (exits.includes('west'))
       drawExit(0, midY - GAP/2, WALL + 1, GAP, 'W', 5, midY);
 
+    // Cheat label
+    ctx.fillStyle = '#3a2a10';
+    ctx.fillRect(WALL, WALL, 42, 11);
+    ctx.fillStyle = '#7a5a20';
+    ctx.font = '7px Courier New';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText('[CHEAT]', WALL + 3, WALL + 2);
+
     // Build entity list
-    const monsters = (state.room_monsters || []).map(m => ({ ...m, kind: 'monster' }));
-    const npcs     = (state.room_npcs    || []).map(n => ({ ...n, kind: 'npc' }));
-    const items    = (state.room_items   || []).map(i => ({ ...i, kind: 'item' }));
-    const entities = [...monsters, ...npcs, ...items];
+    const monsters    = (state.room_monsters     || []).map(m => ({ ...m, kind: 'monster' }));
+    const npcs        = (state.room_npcs         || []).map(n => ({ ...n, kind: 'npc' }));
+    const items       = (state.room_items        || []).map(i => ({ ...i, kind: 'item' }));
+    const hiddenItems = (state.room_hidden_items || []).map(i => ({ ...i, kind: 'hidden' }));
+    const entities = [...monsters, ...npcs, ...items, ...hiddenItems];
 
     // Layout entities in a grid inside the room interior
     const inner = { x: WALL + 4, y: WALL + 4, w: W - WALL * 2 - 8, h: H - WALL * 2 - 8 };
@@ -2341,7 +2356,7 @@
       const x = inner.x + col * cellW + cellW / 2;
       const y = inner.y + row * (R * 2 + 18) + R + 6;
       drawEntity(ctx, e, x, y, R);
-      roomViewEntities.push({ x, y, R, name: e.name, kind: e.kind, openable: e.openable });
+      roomViewEntities.push({ x, y, R, name: e.name, kind: e.kind, openable: e.openable, revealedBy: e.revealed_by });
     });
 
     // Player icon at bottom-centre
@@ -2355,6 +2370,7 @@
       monster: { fill: '#2a0e0e', stroke: '#8b3535', icon: '☠', text: '#aa5555' },
       npc:     { fill: '#0a1525', stroke: '#2a5080', icon: '♟', text: '#5585b0' },
       item:    { fill: '#1e1800', stroke: '#7a6010', icon: '✦', text: '#a08030' },
+      hidden:  { fill: '#0e0e0e', stroke: '#3a3a3a', icon: '?', text: '#4a4a4a' },
       player:  { fill: '#2a1a04', stroke: '#c8a96e', icon: '⚔', text: '#c8a96e' },
     };
     const s = styles[entity.kind] || styles.item;
@@ -2363,9 +2379,14 @@
     ctx.arc(x, y, R, 0, Math.PI * 2);
     ctx.fillStyle = s.fill;
     ctx.fill();
+
+    if (entity.kind === 'hidden') {
+      ctx.setLineDash([3, 2]);
+    }
     ctx.strokeStyle = s.stroke;
     ctx.lineWidth = 1.5;
     ctx.stroke();
+    ctx.setLineDash([]);
 
     ctx.fillStyle = s.stroke;
     ctx.font = `${R}px serif`;
