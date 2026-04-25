@@ -20,9 +20,12 @@ import sys
 import time
 from pathlib import Path
 
+import io
+
 import requests
 from dotenv import load_dotenv
 from openai import OpenAI
+from PIL import Image, ImageOps
 
 from image_cache import load_checksums, save_checksums, hash_prompt, should_generate
 
@@ -164,7 +167,8 @@ def generate_image(client: OpenAI, label: str, prompt: str, out_path: Path, dry_
 
     image_url = response.data[0].url
     img_data = requests.get(image_url, timeout=30).content
-    out_path.write_bytes(img_data)
+    img = ImageOps.exif_transpose(Image.open(io.BytesIO(img_data)))
+    img.save(out_path)
     print(f"  Saved to {out_path}")
 
 
