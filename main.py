@@ -187,10 +187,24 @@ def load_game_data() -> tuple[dict, dict, dict, dict]:
     return rooms, npcs, monsters, items
 
 
+def resolve_shop_stock(shops: dict, items: dict) -> None:
+    item_defaults = {"damage": 0, "weapon_type": None, "armor_slot": None,
+                     "armor_rating": 0, "heal_amount": 0}
+    for shop in shops.values():
+        resolved = []
+        for ref in shop.get("stock", []):
+            item_id = ref["id"]
+            catalogue_entry = copy.deepcopy(items.get(item_id, {}))
+            merged = {**item_defaults, **catalogue_entry, **ref}
+            resolved.append(merged)
+        shop["stock"] = resolved
+
+
 with open(os.path.join(DATA_DIR, "shop.json"), "r") as f:
     SHOPS = json.load(f)
 
 ROOMS, NPC_CATALOGUE, MONSTER_CATALOGUE, ITEM_CATALOGUE = load_game_data()
+resolve_shop_stock(SHOPS, ITEM_CATALOGUE)
 
 
 def validate_game_data(rooms: dict, shops: dict, items: dict | None = None) -> None:
@@ -215,6 +229,12 @@ def validate_game_data(rooms: dict, shops: dict, items: dict | None = None) -> N
             item_id = item.get("id")
             if item_id and all_item_ids and item_id not in all_item_ids:
                 errors.append(f"{room_id}: item '{item_id}' not found in items.json")
+
+    for shop_id, shop in shops.items():
+        for item in shop.get("stock", []):
+            item_id = item.get("id")
+            if item_id and all_item_ids and item_id not in all_item_ids:
+                errors.append(f"shop '{shop_id}': item '{item_id}' not found in items.json")
 
     if errors:
         raise ValueError("Game data validation failed:\n" + "\n".join(f"  - {e}" for e in errors))

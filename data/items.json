@@ -88,7 +88,7 @@
     "name": "iron helmet",
     "description": "A simple iron helmet with no visor, dented along one side in a way that suggests it was not enough.",
     "armor_slot": "helmet",
-    "armor_rating": 3
+    "armor_rating": 4
   },
   "ornate_box": {
     "name": "ornate box",
@@ -189,5 +189,35 @@
     "description": "A compact crossbow wound with copper wire that hums faintly. Aldous claims it never needs reloading. This is almost certainly an exaggeration.",
     "damage": 22,
     "weapon_type": "magic"
+  },
+  "iron_sword": {
+    "name": "iron sword",
+    "description": "A serviceable iron blade, well-balanced and recently sharpened. Nothing special — but reliable, which counts for something in a haunted mansion.",
+    "damage": 12,
+    "weapon_type": "blade"
+  },
+  "silver_dagger": {
+    "name": "silver dagger",
+    "description": "A short blade cast entirely in silver, its edge holding an unnatural keenness. Certain creatures find its touch particularly unpleasant.",
+    "damage": 15,
+    "weapon_type": "silver"
+  },
+  "magic_wand": {
+    "name": "magic wand",
+    "description": "A slender rod of pale wood that grows warm in the hand. It channels something — what exactly, Aldous declines to specify.",
+    "damage": 18,
+    "weapon_type": "magic"
+  },
+  "leather_armour": {
+    "name": "leather armour",
+    "description": "A fitted cuirass of boiled leather, lacquered dark. It will not stop a determined blade, but it will slow one down considerably.",
+    "armor_slot": "chest",
+    "armor_rating": 5
+  },
+  "sturdy_boots": {
+    "name": "sturdy boots",
+    "description": "Heavy-soled boots with reinforced toe caps and ankle guards. They add a deliberate weight to each step, which feels appropriate in a place like this.",
+    "armor_slot": "boots",
+    "armor_rating": 3
   }
 }
