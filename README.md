@@ -349,15 +349,26 @@ The game runs in the browser via a FastAPI WebSocket server. The UI features:
 - **Help modal** — command reference available via the HELP button in the header
 - **Loading indicator** — "The mansion stirs..." animated prompt while the AI generates a response
 
-### Generating room images
+### Generating images
 
 Images are pre-generated and committed. To regenerate:
 
+**Room images** (saved to `static/rooms/<room_id>.png`):
 ```bash
-python scripts/generate_room_images.py           # all rooms (~$0.44, ~2.5 min)
-python scripts/generate_room_images.py --room room_3   # single room
-python scripts/generate_room_images.py --overwrite     # force regenerate
+python scripts/generate_room_images.py                  # all rooms (~$0.44)
+python scripts/generate_room_images.py --room room_3    # single room
+python scripts/generate_room_images.py --overwrite      # force regenerate all
 ```
+
+**NPC and monster portraits** (saved to `static/npcs/<slug>.png` and `static/monsters/<slug>.png`):
+```bash
+python scripts/generate_encounter_images.py                        # all NPCs and monsters
+python scripts/generate_encounter_images.py --npc "Mara the Herbalist"  # single NPC
+python scripts/generate_encounter_images.py --monster "giant rat"  # single monster
+python scripts/generate_encounter_images.py --overwrite            # force regenerate all
+```
+
+Each image costs ~$0.08 (DALL-E 3 standard, 1024×1792). Existing images are skipped unless `--overwrite` is passed.
 
 ### How the CLI game becomes a web app
 
