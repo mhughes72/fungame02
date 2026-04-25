@@ -21,19 +21,26 @@
   },
   "wooden_chest": {
     "name": "wooden chest",
-    "description": "A sturdy wooden chest bound in iron strips, its surface carved with small repeating symbols that may or may not be decorative."
+    "description": "A sturdy wooden chest bound in iron strips, its surface carved with small repeating symbols that may or may not be decorative.",
+    "openable": true,
+    "gold": 15
   },
   "letter_opener": {
     "name": "letter opener",
-    "description": "A slim blade made for correspondence, too delicate to be called a knife but sharp enough to be dangerous in the wrong hands."
+    "description": "A slim blade made for correspondence, too delicate to be called a knife but sharp enough to be dangerous in the wrong hands.",
+    "damage": 3,
+    "weapon_type": "blade"
   },
   "tattered_cloak": {
     "name": "tattered cloak",
-    "description": "A heavy wool cloak, deep grey, with the hem torn away unevenly. Still serviceable as protection against the cold and incidental contact."
+    "description": "A heavy wool cloak, deep grey, with the hem torn away unevenly. Still serviceable as protection against the cold and incidental contact.",
+    "armor_slot": "chest",
+    "armor_rating": 2
   },
   "health_potion": {
     "name": "health potion",
-    "description": "A small glass vial stoppered with wax, containing a viscous liquid the colour of old blood. It smells faintly of copper and something floral."
+    "description": "A small glass vial stoppered with wax, containing a viscous liquid the colour of old blood. It smells faintly of copper and something floral.",
+    "heal_amount": 30
   },
   "knife": {
     "name": "knife",
@@ -49,11 +56,15 @@
   },
   "battered_tin_box": {
     "name": "battered tin box",
-    "description": "A small tin box dented on every face, its lid bent but functional. It rattles faintly when moved."
+    "description": "A small tin box dented on every face, its lid bent but functional. It rattles faintly when moved.",
+    "openable": true,
+    "gold": 8
   },
   "kitchen_knife": {
     "name": "kitchen knife",
-    "description": "A heavier blade than the small knife nearby, clearly made for the butcher's block. Its weight makes it an effective weapon."
+    "description": "A heavier blade than the small knife nearby, clearly made for the butcher's block. Its weight makes it an effective weapon.",
+    "damage": 5,
+    "weapon_type": "blade"
   },
   "ancient_tome": {
     "name": "ancient tome",
@@ -69,15 +80,21 @@
   },
   "fire_poker": {
     "name": "fire poker",
-    "description": "A long iron rod with a hook at one end, designed for managing fires. Heavy enough to make a person reconsider their choices."
+    "description": "A long iron rod with a hook at one end, designed for managing fires. Heavy enough to make a person reconsider their choices.",
+    "damage": 6,
+    "weapon_type": "blunt"
   },
   "iron_helmet": {
     "name": "iron helmet",
-    "description": "A simple iron helmet with no visor, dented along one side in a way that suggests it was not enough."
+    "description": "A simple iron helmet with no visor, dented along one side in a way that suggests it was not enough.",
+    "armor_slot": "helmet",
+    "armor_rating": 3
   },
   "ornate_box": {
     "name": "ornate box",
-    "description": "A small box lacquered in black and inlaid with a pattern of pale bones. It is very beautiful and very unsettling."
+    "description": "A small box lacquered in black and inlaid with a pattern of pale bones. It is very beautiful and very unsettling.",
+    "openable": true,
+    "gold": 30
   },
   "golden_goblet": {
     "name": "golden goblet",
@@ -89,7 +106,9 @@
   },
   "dusty_lockbox": {
     "name": "dusty lockbox",
-    "description": "A metal box sealed with a combination lock, the numbers worn smooth with use. Someone opened this regularly, once."
+    "description": "A metal box sealed with a combination lock, the numbers worn smooth with use. Someone opened this regularly, once.",
+    "openable": true,
+    "gold": 50
   },
   "glass_jar": {
     "name": "glass jar",
@@ -105,15 +124,21 @@
   },
   "ritual_dagger": {
     "name": "ritual dagger",
-    "description": "A narrow blade with a groove running its full length, its handle wrapped in cord that has been dyed black. It was made to pierce something specific."
+    "description": "A narrow blade with a groove running its full length, its handle wrapped in cord that has been dyed black. It was made to pierce something specific.",
+    "damage": 12,
+    "weapon_type": "blade"
   },
   "magic_staff": {
     "name": "magic staff",
-    "description": "A length of wood that has no grain and casts no shadow. It hums at a frequency just below hearing when held."
+    "description": "A length of wood that has no grain and casts no shadow. It hums at a frequency just below hearing when held.",
+    "damage": 15,
+    "weapon_type": "magic"
   },
   "leather_boots": {
     "name": "leather boots",
-    "description": "Tall leather boots, well-made and barely worn. They fit anyone who puts them on, regardless of foot size, which is convenient and disturbing."
+    "description": "Tall leather boots, well-made and barely worn. They fit anyone who puts them on, regardless of foot size, which is convenient and disturbing.",
+    "armor_slot": "boots",
+    "armor_rating": 2
   },
   "herbs": {
     "name": "herbs",
@@ -121,7 +146,9 @@
   },
   "silver_bullet": {
     "name": "silver bullet",
-    "description": "A single bullet cast in pure silver, sitting at the centre of the herb bundle as if left there deliberately. It fits no gun currently in the mansion."
+    "description": "A single bullet cast in pure silver, sitting at the centre of the herb bundle as if left there deliberately. It fits no gun currently in the mansion.",
+    "damage": 20,
+    "weapon_type": "silver"
   },
   "broken_chain": {
     "name": "broken chain",
@@ -133,15 +160,21 @@
   },
   "rotting_satchel": {
     "name": "rotting satchel",
-    "description": "A leather satchel in advanced decay, its strap giving way and its buckles green with oxidation. It was expensive once."
+    "description": "A leather satchel in advanced decay, its strap giving way and its buckles green with oxidation. It was expensive once.",
+    "openable": true,
+    "gold": 12
   },
   "rusty_sword": {
     "name": "rusty sword",
-    "description": "A broadsword corroded to a deep orange-brown along most of its length, but the edge has been kept free of rust with deliberate care. Someone maintained this weapon long after hope had gone."
+    "description": "A broadsword corroded to a deep orange-brown along most of its length, but the edge has been kept free of rust with deliberate care. Someone maintained this weapon long after hope had gone.",
+    "damage": 8,
+    "weapon_type": "blade"
   },
   "chain_gloves": {
     "name": "chain gloves",
-    "description": "Gloves of fine chain mail, each link no larger than a thumbnail. They are supple enough to wear and heavy enough to matter."
+    "description": "Gloves of fine chain mail, each link no larger than a thumbnail. They are supple enough to wear and heavy enough to matter.",
+    "armor_slot": "gloves",
+    "armor_rating": 2
   },
   "iron_key": {
     "name": "iron key",
@@ -153,6 +186,8 @@
   },
   "enchanted_crossbow": {
     "name": "enchanted crossbow",
-    "description": "A compact crossbow wound with copper wire that hums faintly. Aldous claims it never needs reloading. This is almost certainly an exaggeration."
+    "description": "A compact crossbow wound with copper wire that hums faintly. Aldous claims it never needs reloading. This is almost certainly an exaggeration.",
+    "damage": 22,
+    "weapon_type": "magic"
   }
 }

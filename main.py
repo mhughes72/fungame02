@@ -169,9 +169,20 @@ def load_game_data() -> tuple[dict, dict, dict, dict]:
     with open(os.path.join(DATA_DIR, "items.json"), "r") as f:
         items = json.load(f)
 
+    item_defaults = {"damage": 0, "weapon_type": None, "armor_slot": None,
+                     "armor_rating": 0, "heal_amount": 0, "openable": False,
+                     "gold": 0, "is_open": False, "revealed_by": None}
+
     for room_id, room in rooms.items():
         room["monsters"] = [copy.deepcopy(monsters[m]) for m in room.get("monsters", [])]
         room["npcs"] = [copy.deepcopy(npcs[n]) for n in room.get("npcs", [])]
+        resolved_items = []
+        for ref in room.get("items", []):
+            item_id = ref["id"]
+            catalogue_entry = copy.deepcopy(items.get(item_id, {}))
+            merged = {**item_defaults, **catalogue_entry, **ref}
+            resolved_items.append(merged)
+        room["items"] = resolved_items
 
     return rooms, npcs, monsters, items
 
@@ -182,10 +193,11 @@ with open(os.path.join(DATA_DIR, "shop.json"), "r") as f:
 ROOMS, NPC_CATALOGUE, MONSTER_CATALOGUE, ITEM_CATALOGUE = load_game_data()
 
 
-def validate_game_data(rooms: dict, shops: dict) -> None:
+def validate_game_data(rooms: dict, shops: dict, items: dict | None = None) -> None:
     """Check referential integrity of game data files at startup."""
     all_room_ids = set(rooms.keys())
     all_shop_ids = set(shops.keys())
+    all_item_ids = set(items.keys()) if items else set()
     errors = []
 
     for room_id, room in rooms.items():
@@ -199,6 +211,10 @@ def validate_game_data(rooms: dict, shops: dict) -> None:
         for direction, lock in room.get("locked_exits", {}).items():
             if direction not in room.get("exits", {}):
                 errors.append(f"{room_id}: locked_exit '{direction}' has no matching exit")
+        for item in room.get("items", []):
+            item_id = item.get("id")
+            if item_id and all_item_ids and item_id not in all_item_ids:
+                errors.append(f"{room_id}: item '{item_id}' not found in items.json")
 
     if errors:
         raise ValueError("Game data validation failed:\n" + "\n".join(f"  - {e}" for e in errors))
@@ -206,7 +222,7 @@ def validate_game_data(rooms: dict, shops: dict) -> None:
     debug(f"validate: {len(rooms)} rooms, {len(shops)} shops — OK")
 
 
-validate_game_data(ROOMS, SHOPS)
+validate_game_data(ROOMS, SHOPS, ITEM_CATALOGUE)
     
 # ── Nodes ────────────────────────────────────────────────────────────────────
 
