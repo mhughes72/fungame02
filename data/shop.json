@@ -11,5 +11,15 @@
       {"id": "chain_gloves",    "price": 20}
     ],
     "sell_multiplier": 0.5
+  },
+  "mara": {
+    "stock": [
+      {"id": "health_potion", "price": 15},
+      {"id": "silver_vial",   "price": 35},
+      {"id": "herbs",         "price": 5},
+      {"id": "leather_armour","price": 35},
+      {"id": "sturdy_boots",  "price": 20}
+    ],
+    "sell_multiplier": 0.6
   }
 }

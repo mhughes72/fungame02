@@ -105,5 +105,21 @@
       "monster:ghost": "Claims to have spoken with the ghost at length. The ghost categorically denies this.",
       "item:locket": "Is convinced the locket contains the secret to the entire mansion. It does not."
     }
+  },
+  "mara_the_herbalist": {
+    "name": "Mara the Herbalist",
+    "description": "A lean woman crouched among the dead garden beds, sorting roots and dried stems by touch. She does not look up when you approach.",
+    "personality": "Quiet and unhurried. Speaks in short sentences and means every word. Not unfriendly, but has no patience for small talk or haggling. Prices are what they are.",
+    "knowledge": "Has an encyclopaedic knowledge of plants, poisons, and the things that live in dark gardens. Has been here long enough to learn the mansion's rhythms. Distrusts Aldous completely.",
+    "can_search_web": false,
+    "opens_conversation": true,
+    "shop_id": "mara",
+    "gossips_with": ["Lady Vespera"],
+    "knows_about": {
+      "monster:werewolf": "Knows the werewolf by name — calls it Edmund. Says it was a groundskeeper once. Silver hurts it badly but will not kill it permanently unless given willingly.",
+      "item:silver_bullet": "Made it herself, years ago. Left it in the herbs as a warning or an invitation — she will not say which.",
+      "item:silver_vial": "Her own preparation. Neutralises any poison in the mansion, including the ones she sells.",
+      "item:herbs": "Grows them herself in the corner that still gets light. The medicinal properties are real. The other properties she does not advertise."
+    }
   }
 }

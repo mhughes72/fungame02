@@ -113,7 +113,7 @@
       {"id": "herbs",        "hidden": false, "revealed_by": null},
       {"id": "silver_bullet","hidden": true,  "revealed_by": "herbs"}
     ],
-    "npcs": []
+    "npcs": ["mara_the_herbalist"]
   },
   "room_10": {
     "name": "Basement Stairs",
