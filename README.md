@@ -72,8 +72,8 @@ fungame/
     rooms.json          # Room definitions — layout, exits, items (monsters/NPCs referenced by ID)
     monsters.json       # Monster catalogue — stats, description, behavior (keyed by ID)
     npcs.json           # NPC catalogue — personality, memory config, gossip graph, knows_about (keyed by ID)
-    items.json          # Item descriptions catalogue — used by knows_about lookups (keyed by slug)
-    shop.json           # Merchant stock and pricing
+    items.json          # Item catalogue — single source of truth for all item stats (damage, armor, heal, description)
+    shop.json           # Merchant stock — {id, price} refs into items.json; resolved at load time
   handlers/
     __init__.py         # Exports all action handlers
     movement.py         # Movement and door unlocking
@@ -348,6 +348,7 @@ The game runs in the browser via a FastAPI WebSocket server. The UI features:
 - **Journal tab** — LLM-generated entries for secrets, trades, and room discoveries; unread badge when new entries arrive
 - **Help modal** — command reference available via the HELP button in the header
 - **Loading indicator** — "The mansion stirs..." animated prompt while the AI generates a response
+- **Mobile responsive** — CSS media query at 768px stacks the sidebar below the game panel; room image goes full-width; works on any modern phone browser without a separate mobile version
 
 ### Generating images
 
@@ -452,7 +453,11 @@ Edit `data/rooms.json` — add a new room entry and connect it via `exits` in an
 2. Reference the key in the room's `npcs` list in `data/rooms.json`.
 
 ### Add a new merchant
-Add a new entry to `data/shop.json` and set `shop_id` on the NPC definition to match.
+1. Add the NPC to `data/npcs.json` with a `shop_id` field (e.g. `"shop_id": "mara"`).
+2. Add a matching entry to `data/shop.json` with `stock` (list of `{id, price}` referencing `items.json` slugs) and `sell_multiplier`.
+3. Add any new items the merchant sells to `data/items.json` first.
+4. Place the NPC in a room's `npcs` list in `data/rooms.json`.
+5. Add a portrait prompt to `NPC_PROMPTS` in `scripts/generate_encounter_images.py` and run the script.
 
 ### Add an NPC gift (say the right thing)
 Add a `gift` field to an NPC in `data/npcs.json`. At least one of `item_name` or `secret` is required:
