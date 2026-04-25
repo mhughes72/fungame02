@@ -61,6 +61,12 @@ NPC_PROMPTS = {
         "Two faint points of pale light where eyes would be. Ancient, patient, unhurried. "
         "A sense of vast age and cryptic wisdom radiating from the darkness itself."
     ),
+    "mara_the_herbalist": (
+        "A lean, weathered woman crouching in an overgrown Victorian garden at night. Dark practical "
+        "clothing, hands stained with soil and plant matter, bundles of dried herbs hanging from her "
+        "belt. Sharp, knowing eyes that have seen too much. Calm and unhurried, utterly at ease among "
+        "the dead garden beds. An air of quiet authority and contained danger."
+    ),
 }
 
 MONSTER_PROMPTS = {
@@ -117,19 +123,24 @@ def discover_from_rooms(rooms_path: Path) -> tuple[dict[str, str], dict[str, str
     for anything not already in the hand-written prompt tables.
     Unknown entries are reported so prompts can be added.
     """
+    data_dir = rooms_path.parent
     with open(rooms_path) as f:
         rooms = json.load(f)
+    with open(data_dir / "npcs.json") as f:
+        npcs = json.load(f)
+    with open(data_dir / "monsters.json") as f:
+        monsters = json.load(f)
 
     found_npcs: dict[str, str] = {}
     found_monsters: dict[str, str] = {}
 
     for room in rooms.values():
-        for npc in room.get("npcs", []):
-            slug = slugify(npc["name"])
-            found_npcs[slug] = npc["name"]
-        for monster in room.get("monsters", []):
-            slug = slugify(monster["name"])
-            found_monsters[slug] = monster["name"]
+        for npc_id in room.get("npcs", []):
+            name = npcs.get(npc_id, {}).get("name", npc_id)
+            found_npcs[slugify(name)] = name
+        for monster_id in room.get("monsters", []):
+            name = monsters.get(monster_id, {}).get("name", monster_id)
+            found_monsters[slugify(name)] = name
 
     return found_npcs, found_monsters
 
