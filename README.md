@@ -500,3 +500,95 @@ Add a `trades` list to an NPC in `data/npcs.json`. Each trade fires once:
 - OpenAI costs accrue per session — monitor usage at platform.openai.com/usage
 - Aggressive monsters retain wounded health between room visits
 - Flee from combat always returns you to the previous room
+
+---
+
+## QA Checklist
+
+Run through these in order after any significant change. Each item tests one system end-to-end.
+
+### Startup
+- [ ] `uvicorn server:app --reload` starts without errors
+- [ ] Browser connects to `http://localhost:8000` and the WebSocket handshakes
+- [ ] Entry Hall loads with a gothic room description and a room image
+- [ ] Player stats panel shows 100 HP, 0 gold, empty inventory
+
+### Movement
+- [ ] Type `go north` (or `north`) — move to an adjacent room
+- [ ] Type an invalid direction (e.g. `go up` from a room with no upward exit) — get an in-character refusal
+- [ ] Navigate back south — confirm room re-describes correctly
+- [ ] Find the locked door (north exit from the Hallway) — try to pass through it, get blocked
+- [ ] `unlock north` with the correct key in inventory — door opens and movement succeeds
+
+### Items & Inventory
+- [ ] `take [item]` — item moves from room list to inventory tab
+- [ ] `examine [item]` — 2-3 sentence atmospheric description, no bracket artefacts
+- [ ] `examine [NPC]` — description uses NPC personality voice
+- [ ] `examine [monster]` — monster appears more threatening up close
+- [ ] `open [container]` — chest/box opens; gold transfers if present; `__statejson__` updates gold counter
+- [ ] Examine a room object that has a hidden item linked — hidden item is revealed and can now be taken
+- [ ] `equip [weapon]` — equipped weapon shown in stats panel; damage value updates
+- [ ] `unequip [weapon]` — slot clears in stats panel
+- [ ] `equip [armour piece]` — armour slot fills; wear multiple pieces, all show in stats
+- [ ] Pick up a health potion; `use health potion` while damaged — HP increases, potion leaves inventory
+
+### Combat
+- [ ] `attack [monster]` — combat begins; encounter panel slides in
+- [ ] Player takes damage each round — HP bar decreases
+- [ ] Equip armour before fighting — damage received is visibly lower (armor_rating × 0.05 reduction)
+- [ ] Equip a weapon whose type matches a monster's weakness — deal extra 5 damage per round
+- [ ] Kill a monster — victory message; encounter panel closes; monster gone from room
+- [ ] Start combat with health below max — `flee` returns you to the previous room and ends combat
+- [ ] Enter a room with an `aggressive: true` monster — combat starts automatically without typing `attack`
+- [ ] `cheat kill` in the cheat modal — monster health drops to 0 instantly
+
+### NPC Conversations
+- [ ] `talk to [NPC]` — encounter panel opens; NPC greets you (if `opens_conversation: true`)
+- [ ] Send a friendly message ("Thank you, you're wonderful") — mood score rises; NPC tone warms
+- [ ] Send a rude message ("You're useless") — mood score drops; NPC becomes short or cold
+- [ ] Send a threat ("I'll kill you if you don't help") — fear score rises; NPC becomes nervous/compliant
+- [ ] `bribe [NPC] 50` — gold deducted; NPC reacts in character; mood shifts based on their personality
+- [ ] Say the trigger phrase for an NPC with a gift condition — NPC hands over the hidden item
+- [ ] Talk to Shadow (the gossip node) — in a second conversation with another NPC, confirm they already know your name or goal (gossip propagated)
+- [ ] End conversation with `goodbye` — `[END CONVERSATION]` fires; encounter panel closes
+- [ ] End conversation with `stop` — same result as above
+- [ ] Talk to an NPC for 50+ turns — conversation auto-ends with an in-character closing line
+
+### Shop (Aldous the Peddler)
+- [ ] `talk to Aldous` — shop panel opens; stock list appears immediately (tool-call fires on turn 0)
+- [ ] `buy [item]` — gold deducted; item added to inventory; shop panel refreshes prices
+- [ ] `buy [item]` with insufficient gold — purchase refused with remaining gold shown
+- [ ] `sell [item]` — item removed from inventory; gold added at sell_multiplier price
+- [ ] Lower Aldous's mood first (rude messages), then check prices — prices should be higher
+- [ ] Frighten Aldous (threats), then check prices — prices should be lower
+- [ ] Type `cheat gold` during the shop conversation — +100 gold; shop panel updates instantly
+
+### Oracle (Lady Vespera)
+- [ ] `talk to Lady Vespera` and ask a real-world factual question — web search fires; answer delivered as a gothic vision
+- [ ] Ask a follow-up requiring a second search — Oracle calls the tool again autonomously
+- [ ] Lower Vespera's mood below −30 first, then ask a factual question — in-character refusal, no search fires
+- [ ] Ask something the Oracle knows from NPC knowledge graph (no search needed) — answers without tool call
+
+### NPC Memory
+- [ ] Tell an NPC your name in one session; restart; talk to the same NPC — they remember your name
+- [ ] Ask an NPC about something you discussed previously — retrieved memory injected into their reply
+- [ ] `clearmemory` (debug command or chat input) — confirm all Pinecone namespaces wiped; NPC forgets past facts
+
+### Frontend Panels
+- [ ] Inventory tab updates immediately when you pick up, equip, or drop an item — no page refresh needed
+- [ ] Journal tab gains a new entry after significant events (monster kill, item found, etc.)
+- [ ] Map panel highlights the correct room as you move
+- [ ] Encounter panel appears on combat/dialogue start; disappears cleanly on end
+- [ ] Debug tab (in cheat modal) streams `▸` debug lines in real time during actions
+- [ ] CHEAT button opens the modal; feature list matches the current room's NPCs and monsters
+
+### Debug & Cheat Commands
+- [ ] `goto room_2` — teleports to that room instantly, room re-describes
+- [ ] `win` — triggers the win screen with gothic victory narration and player stats
+- [ ] `cheat gold` (outside shop) — +100 gold; stat bar updates without room re-description
+- [ ] `room` — re-describes the current room without moving
+
+### Edge Cases
+- [ ] Navigate to every room in the mansion — no room causes a crash or missing description
+- [ ] Open every container — none errors; gold/items transfer correctly
+- [ ] Start a new game session after a full playthrough — all state resets to defaults; NPC moods/fear start at zero
