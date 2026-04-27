@@ -127,8 +127,8 @@ Work through these in priority order. Check off each one as completed.
 ### LOW — Polish
 
 - [x] **Hardcoded cache path** — `DATA_DIR = "data"` constant added to `main.py`. Used in loader and cache path.
-- [ ] **`_io_var` naming** — rename to `_io_context_var` in `main.py` for clarity.
-- [ ] **Missing return type hints** — handler functions lack `-> dict`. Add where missing.
+- [x] **`_io_var` naming** — renamed to `_io_context_var` in `main.py`.
+- [x] **Missing return type hints** — added `-> dict` and other return types across all handlers, utils, and private helpers.
 
 ## Future AI Feature Ideas
 

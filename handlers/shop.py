@@ -9,13 +9,14 @@
 import json
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
-from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from prompts import GAME_SYSTEM_PROMPT, SHOP_SYSTEM_PROMPT
-from utils import (debug, CONVERSATION_EXIT_WORDS, mood_price_multiplier, fear_price_multiplier,
+from utils import (debug, CONVERSATION_EXIT_WORDS, MAX_CONVERSATION_TURNS, MAX_TOOL_CALL_ITERATIONS,
+                   mood_price_multiplier, fear_price_multiplier,
                    emit_player_state, emit_encounter_start, emit_encounter_end, get_mutable_player, make_slug)
 from npc_memory import store_exchange, retrieve_memories
 
-def make_shop_tools(player: dict, shop_data: dict, shops: dict, mood_score: int = 0, fear_score: int = 0):
+def make_shop_tools(player: dict, shop_data: dict, shops: dict, mood_score: int = 0, fear_score: int = 0) -> list:
     """Create shop tools with current game state baked in."""
 
     stock = shop_data["stock"]
@@ -130,12 +131,16 @@ def _emit_shop_data(player: dict, shop_data: dict, npc: dict, npc_moods: dict, n
     io.send(f"__shop_data__{json.dumps({'items': items, 'mood_score': mood_score, 'fear_score': fear_score, 'price_multiplier': round(price_mult, 2), 'player_gold': player.get('gold', 0), 'player_inventory': owned})}")
 
 
-def _run_tool_loop(shop_llm, tools, history):
+def _run_tool_loop(shop_llm, tools, history) -> AIMessage:
     """Invoke shop LLM and execute any tool calls until the LLM responds without tool calls. Returns final response."""
+    iteration = 0
     while True:
+        iteration += 1
         response = shop_llm.invoke(history)
         history.append(response)
-        if not response.tool_calls:
+        if not response.tool_calls or iteration >= MAX_TOOL_CALL_ITERATIONS:
+            if iteration >= MAX_TOOL_CALL_ITERATIONS:
+                debug(f"shop tool loop: hit {MAX_TOOL_CALL_ITERATIONS}-iteration cap — returning")
             return response
         for tool_call in response.tool_calls:
             tool_fn = next((t for t in tools if t.name == tool_call["name"]), None)
@@ -193,7 +198,14 @@ def handle_shop(state: dict, npc: dict, shops: dict, llm, npc_moods: dict = None
     response = _run_tool_loop(shop_llm, tools, history)
     io.send(f"\n{npc['name']}: {response.content}\n")
 
+    turn = 0
     while True:
+        turn += 1
+        if turn > MAX_CONVERSATION_TURNS:
+            debug(f"shop: hit {MAX_CONVERSATION_TURNS}-turn cap for '{npc['name']}'")
+            io.send(f"\n{npc['name']}: I need to close up shop. Come back another time!")
+            break
+
         player_msg = io.recv("You: ")
 
         if any(word in player_msg.lower() for word in CONVERSATION_EXIT_WORDS):

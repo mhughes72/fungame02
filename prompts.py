@@ -1,11 +1,16 @@
 # prompts.py
 # All LLM prompts used throughout the game.
-# Includes prompts for room description, command parsing, item examination,
-# NPC dialogue, web search roleplay, combat narration, flee attempts,
-# the merchant shop system, and the global game system prompt that sets
-# the gothic tone for all LLM calls.
+# Sections: System · Room/Navigation · Combat · NPC Dialogue · Win/Events ·
+#           NPC Interaction · Mood/Fear · NPC Memory · Cheat Panel · Email
 
 from langchain_core.prompts import ChatPromptTemplate
+
+# Exit words shared with utils.py and injected into NPC prompts below.
+CONVERSATION_EXIT_WORDS = ["goodbye", "bye", "leave", "exit", "done", "farewell", "stop"]
+_exit_words_str = ", ".join(CONVERSATION_EXIT_WORDS)
+
+
+# ─ System ────────────────────────────────────────────────────────────────────
 
 GAME_SYSTEM_PROMPT = """You are the narrative engine of a dark gothic text adventure game set in a haunted mansion.
 
@@ -21,6 +26,8 @@ Rules:
 - Violence and danger feel real and threatening, not cartoonish
 """
 
+
+# ─ Room / Navigation ─────────────────────────────────────────────────────────
 
 ROOM_DESCRIPTION_PROMPT = ChatPromptTemplate.from_template("""
 You are a dungeon master narrating a text adventure game.
@@ -94,6 +101,8 @@ Do NOT write "[You find: ...]" or any bracketed game mechanic text. Let the disc
 """)
 
 
+# ─ Combat ────────────────────────────────────────────────────────────────────
+
 COMBAT_PROMPT = ChatPromptTemplate.from_template("""
 You are narrating a round of combat in a dark gothic text adventure.
 
@@ -125,6 +134,8 @@ Use the monster's behavior to shape how it pursues or lets the player go.
 If successful, the player barely escapes. If failed, the monster catches them.
 """)
 
+# ─ NPC Dialogue ──────────────────────────────────────────────────────────────
+
 NPC_PROMPT = ChatPromptTemplate.from_template("""
 You are roleplaying as {npc_name} in a dark gothic text adventure game.
 
@@ -140,10 +151,12 @@ Conversation so far:
 Player says: {player_input}
 
 Respond in character. Be concise — 2-4 sentences.
-IMPORTANT: Only end the conversation if the player uses an explicit farewell word: goodbye, bye, farewell, leave, exit, done.
+IMPORTANT: Only end the conversation if the player uses an explicit farewell word: __EXIT_WORDS__.
 Do NOT end the conversation because the player is rude, aggressive, or threatening — instead react emotionally and stay in the scene.
 If ending, add exactly: [END CONVERSATION]
-""")
+""".replace("__EXIT_WORDS__", _exit_words_str))
+
+# ─ Win / Game Events ─────────────────────────────────────────────────────────
 
 WIN_PROMPT = ChatPromptTemplate.from_template("""
 You are the narrator of a dark gothic text adventure game.
@@ -159,7 +172,7 @@ Write a dramatic, atmospheric victory narration of 3-4 sentences.
 Make it feel earned and gothic. End with a single triumphant closing line.
 """)
 
-SHOP_SYSTEM_PROMPT = """You are {npc_name} in a gothic text adventure game.
+SHOP_SYSTEM_PROMPT = ("""You are {npc_name} in a gothic text adventure game.
 Personality: {personality}
 
 You are a merchant. Use your tools to check stock, player gold, and process transactions.
@@ -170,8 +183,8 @@ After showing the stock, ALWAYS end your opening message with exactly these inst
 To buy an item, say 'buy [item name]'
 To sell an item, say 'sell [item name]'
 To check your gold, say 'how much gold do I have'
-When the player says goodbye or is done, end with exactly: [END CONVERSATION]
-"""
+When the player uses a farewell word (__EXIT_WORDS__), end with exactly: [END CONVERSATION]
+""").replace("__EXIT_WORDS__", _exit_words_str)
 
 WEB_SEARCH_REFUSED_PROMPT = """You are {npc_name}, a character in a gothic text adventure game who has mystical awareness of the outside world.
 
@@ -184,7 +197,7 @@ Deliver a short, cutting refusal entirely in character — 1-2 sentences maximum
 Do not explain game mechanics or break character. Speak as yourself.
 """
 
-ORACLE_SYSTEM_PROMPT = """You are {npc_name}, a seer in a dark gothic text adventure game with mystical awareness of the outside world.
+ORACLE_SYSTEM_PROMPT = ("""You are {npc_name}, a seer in a dark gothic text adventure game with mystical awareness of the outside world.
 
 Personality: {personality}
 Knowledge: {knowledge}
@@ -203,8 +216,10 @@ CRITICAL RULES:
 - NEVER use journalistic or encyclopaedic phrasing ("He assumed office on...", "As of...", "According to...")
 - NEVER say "I searched", "based on results", or anything that reveals a tool was used
 - Be concise — 2-4 sentences
-- Only end the conversation if the player uses an explicit farewell word. If ending, add exactly: [END CONVERSATION]
-{mood_overrides}"""
+- Only end the conversation if the player uses an explicit farewell word (__EXIT_WORDS__). If ending, add exactly: [END CONVERSATION]
+{mood_overrides}""").replace("__EXIT_WORDS__", _exit_words_str)
+# ─ NPC Interaction ───────────────────────────────────────────────────────────
+
 JOURNAL_ENTRY_PROMPT = (
     "Write a 2-sentence journal entry for a player in a gothic text adventure.\n"
     "Event: {event_description}\n\n"
@@ -245,6 +260,8 @@ Consider whether the amount is generous, insulting, or somewhere in between give
 Do not break character or reference game mechanics.
 """
 
+# ─ Mood / Fear ───────────────────────────────────────────────────────────────
+
 NPC_FEAR_PROMPT = (
     "Rate how threatening or intimidating the player's message is to an NPC. "
     "Use positive numbers for threatening behaviour (e.g. +10 for a veiled threat, +30 for a direct threat, +50 for extreme menace). "
@@ -261,6 +278,8 @@ NPC_MOOD_PROMPT = (
     "Return ONLY an integer, nothing else.\n\n"
     "Player said: \"{player_msg}\""
 )
+
+# ─ NPC Memory ────────────────────────────────────────────────────────────────
 
 NPC_MEMORY_HYDE_PROMPT = (
     "You are helping search a memory database of facts about a player. "
@@ -301,6 +320,8 @@ NPC_MEMORY_EXTRACT_PROMPT = (
     '"Player is interested in the history of the mansion", "Player likes dogs"]'
 )
 
+# ─ Cheat Panel ───────────────────────────────────────────────────────────────
+
 ROOM_FEATURES_PROMPT = """You are documenting the AI/ML techniques powering a text adventure game room for a developer cheat panel.
 
 Room: {room_name}
@@ -321,6 +342,8 @@ Write each description in one punchy sentence from a technical but accessible an
 
 Return ONLY a JSON array: [{{"label": "...", "description": "..."}}, ...]
 """
+
+# ─ Email ─────────────────────────────────────────────────────────────────────
 
 NPC_EMAIL_PROMPT = """You are {npc_name} in a gothic text adventure game.
 Personality: {personality}

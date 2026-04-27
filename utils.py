@@ -1,32 +1,32 @@
-# audio_utils.py
-# Text-to-speech utility for narrating game output.
-# Currently unused (speak() calls are commented out in main.py).
-# Can be re-enabled to have room descriptions and NPC dialogue spoken aloud.
+# utils.py
+# Shared helpers: LLM invocation, item/NPC finders, state mutation helpers,
+# emit functions, price multipliers, mood/fear scoring.
 
 from langchain_core.messages import SystemMessage
-from prompts import GAME_SYSTEM_PROMPT
+from prompts import GAME_SYSTEM_PROMPT, CONVERSATION_EXIT_WORDS
 
 import os
 import contextvars
+from typing import Any
 
 DEBUG = os.getenv("DEBUG", "true").lower() == "true"
 _debug_io_var: contextvars.ContextVar = contextvars.ContextVar('debug_io', default=None)
 
-def debug(msg):
+def debug(msg) -> None:
     if DEBUG:
         print(f"\033[2m  ▸ {msg}\033[0m")
         _io = _debug_io_var.get()
         if _io is not None:
             _io.send(f"__debug__{msg}")
 
-def visible_items(room):
+def visible_items(room) -> list:
     return [i for i in room["items"] if not i["hidden"]]
 
-def find_item(room, name, include_hidden=False):
+def find_item(room, name, include_hidden=False) -> dict | None:
     items = room["items"] if include_hidden else visible_items(room)
     return next((i for i in items if i["name"] == name), None)
 
-def invoke_with_system(llm, prompt):
+def invoke_with_system(llm, prompt) -> Any:
     if hasattr(prompt, 'to_messages'):
         messages = prompt.to_messages()
     elif isinstance(prompt, list):
@@ -71,17 +71,19 @@ def mood_tone_for_score(score: int) -> str:
 
 def fear_tone_for_score(score: int) -> str:
     """Return a prompt-injectable fear instruction based on the NPC's fear score."""
-    if score >= 60:
+    if score >= FEAR_THRESHOLD_TERRIFIED:
         return "FEAR INSTRUCTION: You are terrified of this player. You are visibly shaking and will do almost anything to avoid provoking them — including volunteering information or help you'd normally withhold."
-    elif score >= 30:
+    elif score >= FEAR_THRESHOLD_AFRAID:
         return "FEAR INSTRUCTION: You are afraid of this player. You are nervous and choosing your words very carefully to avoid angering them."
-    elif score >= 10:
+    elif score >= FEAR_THRESHOLD_NERVOUS:
         return "FEAR INSTRUCTION: This player unnerves you slightly. There is a cautious edge to your manner."
     else:
         return ""  # not afraid — no injection
 
 
-CONVERSATION_EXIT_WORDS = ["goodbye", "bye", "leave", "exit", "done", "farewell", "stop"]
+FEAR_THRESHOLD_TERRIFIED = 60
+FEAR_THRESHOLD_AFRAID    = 30
+FEAR_THRESHOLD_NERVOUS   = 10
 
 
 def mood_price_multiplier(score: int) -> float:
@@ -95,13 +97,17 @@ def mood_price_multiplier(score: int) -> float:
 
 def fear_price_multiplier(score: int) -> float:
     """Shop price multiplier based on NPC fear. More scared = steeper discount."""
-    if score >= 60:  return 0.70
-    elif score >= 30: return 0.82
-    elif score >= 10: return 0.93
-    else:            return 1.0
+    if score >= FEAR_THRESHOLD_TERRIFIED: return 0.70
+    elif score >= FEAR_THRESHOLD_AFRAID:  return 0.82
+    elif score >= FEAR_THRESHOLD_NERVOUS: return 0.93
+    else:                                 return 1.0
 
 # Combat constants
 FLEE_SUCCESS_THRESHOLD = 40       # d100 roll must exceed this to flee
+
+# Loop safety caps
+MAX_CONVERSATION_TURNS  = 50   # max player turns before conversation auto-ends
+MAX_TOOL_CALL_ITERATIONS = 10  # max LLM tool-call iterations before loop breaks
 WEAKNESS_BONUS_DAMAGE = 5         # extra damage when weapon type matches weakness
 ARMOR_REDUCTION_RATE = 0.05       # damage reduction per armor point
 ARMOR_REDUCTION_CAP = 0.75        # maximum damage reduction (75%)

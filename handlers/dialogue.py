@@ -7,17 +7,18 @@
 import os
 import re
 from tavily import TavilyClient
-from langchain_core.messages import SystemMessage, HumanMessage, ToolMessage
+from langchain_core.messages import AIMessage, SystemMessage, HumanMessage, ToolMessage
 from langchain_core.tools import tool
 from utils import (invoke_with_system, debug, mood_tone_for_score, fear_tone_for_score,
-                   CONVERSATION_EXIT_WORDS, get_mutable_player, find_npc, make_slug,
+                   CONVERSATION_EXIT_WORDS, MAX_CONVERSATION_TURNS, MAX_TOOL_CALL_ITERATIONS,
+                   get_mutable_player, find_npc, make_slug,
                    emit_encounter_start, emit_encounter_end, emit_encounter_state,
                    emit_player_state, add_journal_entry)
 from prompts import GAME_SYSTEM_PROMPT, NPC_PROMPT, ORACLE_SYSTEM_PROMPT, WEB_SEARCH_REFUSED_PROMPT, NPC_BRIBE_PROMPT, NPC_BRIBE_BOOST_PROMPT, NPC_GIFT_TRIGGER_PROMPT
 from npc_memory import store_exchange, gossip_facts, retrieve_memories, evaluate_mood_delta, evaluate_fear_delta, evaluate_gossip_impact
 
 
-def _make_oracle_tool(tavily_client):
+def _make_oracle_tool(tavily_client) -> list:
     @tool
     def web_search(query: str) -> str:
         """Search the web for real-world facts, current events, people, or information."""
@@ -28,7 +29,7 @@ def _make_oracle_tool(tavily_client):
     return [web_search]
 
 
-def _run_oracle_loop(oracle_llm, oracle_tools, messages):
+def _run_oracle_loop(oracle_llm, oracle_tools, messages) -> AIMessage:
     """Invoke Oracle LLM and execute web_search tool calls until the model responds without tools."""
     iteration = 0
     while True:
@@ -38,8 +39,11 @@ def _run_oracle_loop(oracle_llm, oracle_tools, messages):
         messages.append(response)
         if response.content:
             debug(f"oracle loop [{iteration}]: reasoning: {response.content}")
-        if not response.tool_calls:
-            debug(f"oracle loop [{iteration}]: no tool calls — final reply ({len(response.content)} chars)")
+        if not response.tool_calls or iteration >= MAX_TOOL_CALL_ITERATIONS:
+            if iteration >= MAX_TOOL_CALL_ITERATIONS:
+                debug(f"oracle loop: hit {MAX_TOOL_CALL_ITERATIONS}-iteration cap — returning")
+            else:
+                debug(f"oracle loop [{iteration}]: no tool calls — final reply ({len(response.content)} chars)")
             return response
         debug(f"oracle loop [{iteration}]: {len(response.tool_calls)} tool call(s) requested")
         for tc in response.tool_calls:
@@ -137,7 +141,7 @@ def handle_bribe(state: dict, target: str, amount: int, llm, mini_llm, io) -> di
     return {"player": player, "npc_moods": npc_moods, "npc_fear": npc_fear, "force_full_description": False}
 
 
-def _handle_bribe_in_loop(player_msg, npc, player, npc_moods, current_fear, current_mood, llm, mini_llm, history, io):
+def _handle_bribe_in_loop(player_msg, npc, player, npc_moods, current_fear, current_mood, llm, mini_llm, history, io) -> tuple[bool, int]:
     """Detect and process a bribe offer within the conversation loop. Returns (was_bribe, new_mood)."""
     bribe_match = re.search(r'\b(?:give|offer|bribe|pay)\b.*?(\d+)\s*gold', player_msg.lower())
     if not bribe_match:
@@ -159,7 +163,7 @@ def _handle_bribe_in_loop(player_msg, npc, player, npc_moods, current_fear, curr
 
 
 def _get_npc_reply(player_msg, npc, room, memory_context, history, mood_tone, fear_tone,
-                   current_mood, use_web_search, tavily_client, llm, io):
+                   current_mood, use_web_search, tavily_client, llm, io) -> tuple[str, bool]:
     """Get NPC reply, handling web-search refusal/tool loop or standard NPC response. Returns (clean_reply, end_conversation)."""
     if use_web_search:
         if current_mood <= -30:
@@ -339,81 +343,54 @@ def _handle_give_in_loop(player_msg: str, npc: dict, player: dict, npc_trades_do
     return True, f"[The player just tried to give you their {offered['name']}. Refuse it in character — you have no use for it.]"
 
 
-def npc_dialogue(state, SHOPS, npc_catalogue, monster_catalogue, item_catalogue, llm, mini_llm, parse_command_fn, io) -> dict:
-    from handlers.shop import handle_shop
-
-    room = state["current_room_data"]
-    player_input = state.get("player_input", "").strip()
-
-    command = parse_command_fn(player_input, state)
-    target = command.get("target", "").lower() if command.get("target") else ""
-
-    npc = find_npc(room, target) or (room["npcs"][0] if room["npcs"] else None)
-
-    if not npc:
-        debug(f"dialogue: no NPC matched target '{target}'")
-        io.send("There's no one here to talk to.")
-        return {"force_full_description": False}
-
-    debug(f"dialogue: talking to '{npc['name']}' | shop: {npc.get('shop_id')} | web_search: {npc.get('can_search_web', False)}")
-
-    if npc.get("shop_id"):
-        npc_moods = dict(state.get("npc_moods", {}))
-        npc_fear = dict(state.get("npc_fear", {}))
-        return handle_shop(state, npc, SHOPS, mini_llm, npc_moods, npc_fear, io)
-
-    npc = {**npc, "knowledge": _build_knowledge(npc, npc_catalogue, monster_catalogue, item_catalogue)}
-    npc_slug = make_slug(npc['name'])
-    _moods = state.get("npc_moods", {})
-    _fear = state.get("npc_fear", {})
-    emit_encounter_start(io, encounter_type='dialogue', target_name=npc['name'],
-                         target_slug=npc_slug, npc_mood=_moods.get(npc['name'], 0),
-                         npc_fear=_fear.get(npc['name'], 0))
+def _init_conversation(state: dict, npc: dict, room: dict, io) -> tuple:
+    """Emit encounter start, apply gossip impact, return initialized conversation state variables."""
+    npc_slug = make_slug(npc["name"])
+    npc_moods = dict(state.get("npc_moods", {}))
+    npc_fear  = dict(state.get("npc_fear", {}))
+    emit_encounter_start(io, encounter_type="dialogue", target_name=npc["name"],
+                         target_slug=npc_slug, npc_mood=npc_moods.get(npc["name"], 0),
+                         npc_fear=npc_fear.get(npc["name"], 0))
 
     io.send(f"\n{npc['name']}: \"{npc['description']}\"")
     io.send("(Type 'goodbye' or 'leave' to end the conversation)\n")
 
-    use_web_search = npc.get("can_search_web", False)
-    tavily_client = TavilyClient(api_key=os.getenv("TAVILY_API_KEY")) if use_web_search else None
-
-    history = []
-    npc_moods = dict(state.get("npc_moods", {}))
-    npc_fear = dict(state.get("npc_fear", {}))
-    npc_gifts_given = list(state.get("npc_gifts_given", []))
-    npc_trades_done = list(state.get("npc_trades_done", []))
     current_mood = npc_moods.get(npc["name"], 0)
     current_fear = npc_fear.get(npc["name"], 0)
 
     gossip_mood, gossip_fear = evaluate_gossip_impact(npc["name"])
     if gossip_mood or gossip_fear:
         current_mood = max(-100, min(100, current_mood + gossip_mood))
-        current_fear = max(0, min(100, current_fear + gossip_fear))
+        current_fear = max(0,    min(100, current_fear + gossip_fear))
         npc_moods[npc["name"]] = current_mood
-        npc_fear[npc["name"]] = current_fear
+        npc_fear[npc["name"]]  = current_fear
         debug(f"dialogue: gossip adjusted '{npc['name']}' mood → {current_mood}, fear → {current_fear}")
         emit_encounter_state(io, npc_mood=current_mood, npc_fear=current_fear)
 
     player, _ = get_mutable_player(state)
     debug(f"dialogue: mood for '{npc['name']}': {current_mood} | fear: {current_fear}")
+    return (player, npc_moods, npc_fear,
+            list(state.get("npc_gifts_given", [])),
+            list(state.get("npc_trades_done", [])),
+            current_mood, current_fear)
 
-    if npc.get("opens_conversation", True):
-        opening_memories = retrieve_memories(npc["name"], "(player approaches)")
-        memory_context = (
-            "What you already know about this player from past conversations:\n"
-            + "\n".join(f"- {m}" for m in opening_memories)
-        ) if opening_memories else ""
-        mood_tone = mood_tone_for_score(current_mood)
-        fear_tone = fear_tone_for_score(current_fear)
-        io.send(f"\n{npc['name']}: ")
-        opening, _ = _get_npc_reply(
-            "(The player approaches. Open the conversation with a greeting in character.)",
-            npc, room, memory_context, [], mood_tone, fear_tone,
-            current_mood, use_web_search, tavily_client, llm, io
-        )
-        io.send("\n")
-        history.append(f"{npc['name']}: {opening}")
 
+def _run_conversation_loop(npc, room, player, npc_moods, npc_fear, npc_gifts_given, npc_trades_done,
+                           current_mood: int, current_fear: int, use_web_search, tavily_client,
+                           history, state, llm, mini_llm, io) -> None:
+    """Run the main conversation turn loop until the player exits or the NPC ends it.
+
+    Mutates npc_moods, npc_fear, npc_gifts_given, npc_trades_done, and player in place.
+    """
+    turn = 0
     while True:
+        turn += 1
+        if turn > MAX_CONVERSATION_TURNS:
+            debug(f"dialogue: hit {MAX_CONVERSATION_TURNS}-turn cap for '{npc['name']}'")
+            io.send(f"({npc['name']} looks exhausted and turns away.)")
+            emit_encounter_end(io)
+            break
+
         player_msg = io.recv("You: ")
         history.append(f"Player: {player_msg}")
 
@@ -445,23 +422,23 @@ def npc_dialogue(state, SHOPS, npc_catalogue, monster_catalogue, item_catalogue,
         mood_delta = evaluate_mood_delta(player_msg)
         fear_delta = evaluate_fear_delta(player_msg)
         current_mood = max(-100, min(100, current_mood + mood_delta))
-        current_fear = max(0, min(100, current_fear + fear_delta))
+        current_fear = max(0,    min(100, current_fear + fear_delta))
         npc_moods[npc["name"]] = current_mood
-        npc_fear[npc["name"]] = current_fear
+        npc_fear[npc["name"]]  = current_fear
         debug(f"dialogue: mood delta for '{npc['name']}': {mood_delta:+d} → total: {current_mood}")
         debug(f"dialogue: fear delta for '{npc['name']}': {fear_delta:+d} → total: {current_fear}")
         emit_encounter_state(io, npc_mood=current_mood, npc_fear=current_fear)
 
         memories = retrieve_memories(npc["name"], player_msg)
         if memories:
-            memory_context = "What you already know about this player from past conversations:\n" + "\n".join(f"- {m}" for m in memories)
+            memory_context = ("What you already know about this player from past conversations:\n"
+                              + "\n".join(f"- {m}" for m in memories))
             debug(f"dialogue: injecting {len(memories)} memories for '{npc['name']}'")
         else:
             memory_context = ""
 
         mood_tone = mood_tone_for_score(current_mood)
         fear_tone = fear_tone_for_score(current_fear)
-
         io.send(f"\n{npc['name']}: ")
         clean_reply, end_conversation = _get_npc_reply(
             player_msg, npc, room, memory_context, history, mood_tone, fear_tone,
@@ -478,6 +455,54 @@ def npc_dialogue(state, SHOPS, npc_catalogue, monster_catalogue, item_catalogue,
             io.send(f"({npc['name']} turns away.)")
             emit_encounter_end(io)
             break
+
+
+def npc_dialogue(state, SHOPS, npc_catalogue, monster_catalogue, item_catalogue, llm, mini_llm, parse_command_fn, io) -> dict:
+    from handlers.shop import handle_shop
+
+    room = state["current_room_data"]
+    player_input = state.get("player_input", "").strip()
+    command = parse_command_fn(player_input, state)
+    target = command.get("target", "").lower() if command.get("target") else ""
+    npc = find_npc(room, target) or (room["npcs"][0] if room["npcs"] else None)
+
+    if not npc:
+        debug(f"dialogue: no NPC matched target '{target}'")
+        io.send("There's no one here to talk to.")
+        return {"force_full_description": False}
+
+    debug(f"dialogue: talking to '{npc['name']}' | shop: {npc.get('shop_id')} | web_search: {npc.get('can_search_web', False)}")
+
+    if npc.get("shop_id"):
+        return handle_shop(state, npc, SHOPS, mini_llm,
+                           dict(state.get("npc_moods", {})), dict(state.get("npc_fear", {})), io)
+
+    npc = {**npc, "knowledge": _build_knowledge(npc, npc_catalogue, monster_catalogue, item_catalogue)}
+    player, npc_moods, npc_fear, npc_gifts_given, npc_trades_done, current_mood, current_fear = \
+        _init_conversation(state, npc, room, io)
+
+    use_web_search = npc.get("can_search_web", False)
+    tavily_client = TavilyClient(api_key=os.getenv("TAVILY_API_KEY")) if use_web_search else None
+
+    history = []
+    if npc.get("opens_conversation", True):
+        opening_memories = retrieve_memories(npc["name"], "(player approaches)")
+        memory_context = (
+            "What you already know about this player from past conversations:\n"
+            + "\n".join(f"- {m}" for m in opening_memories)
+        ) if opening_memories else ""
+        io.send(f"\n{npc['name']}: ")
+        opening, _ = _get_npc_reply(
+            "(The player approaches. Open the conversation with a greeting in character.)",
+            npc, room, memory_context, [], mood_tone_for_score(current_mood),
+            fear_tone_for_score(current_fear), current_mood, use_web_search, tavily_client, llm, io
+        )
+        io.send("\n")
+        history.append(f"{npc['name']}: {opening}")
+
+    _run_conversation_loop(npc, room, player, npc_moods, npc_fear, npc_gifts_given, npc_trades_done,
+                           current_mood, current_fear, use_web_search, tavily_client,
+                           history, state, llm, mini_llm, io)
 
     return {"player": player, "npc_moods": npc_moods, "npc_fear": npc_fear,
             "npc_gifts_given": npc_gifts_given, "npc_trades_done": npc_trades_done,

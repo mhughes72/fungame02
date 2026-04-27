@@ -46,8 +46,8 @@ def run_game(ctx: WebSocketContext) -> None:
     except Exception as e:
         ctx.send(f"\n[Server error: {e}]")
     finally:
-        from main import _io_var
-        _io_var.reset(token)
+        from main import _io_context_var
+        _io_context_var.reset(token)
         _debug_io_var.reset(debug_token)
         ctx.close()
 

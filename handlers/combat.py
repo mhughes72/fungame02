@@ -13,7 +13,7 @@ from utils import (invoke_with_system, stream_with_system, total_armor_rating, d
 from prompts import COMBAT_PROMPT, FLEE_PROMPT
 
 
-def _find_monster(room, target, io):
+def _find_monster(room, target, io) -> dict | None:
     """Look up the target monster in the room. Returns a mutable copy or None."""
     monster = next((m for m in room["monsters"] if m["name"] == target), None)
     if not monster:
@@ -23,7 +23,7 @@ def _find_monster(room, target, io):
     return dict(monster)
 
 
-def _handle_flee(state, monster, target, room, room_id, room_override, room_states, player, mini_llm, io):
+def _handle_flee(state, monster, target, room, room_id, room_override, room_states, player, mini_llm, io) -> dict | None:
     """Process a flee attempt. Returns a final state dict on success or player death, None if flee fails harmlessly."""
     flee_chance = random.randint(1, 100)
     success = flee_chance > FLEE_SUCCESS_THRESHOLD
@@ -69,7 +69,7 @@ def _handle_flee(state, monster, target, room, room_id, room_override, room_stat
     return None
 
 
-def _execute_attack_round(player, monster, weapon_data, equipped_weapon, room, mini_llm, io):
+def _execute_attack_round(player, monster, weapon_data, equipped_weapon, room, mini_llm, io) -> bool:
     """Execute one full combat round (player attack + monster retaliation). Mutates health on both sides. Returns True if player is alive."""
     base_damage = weapon_data.get("damage", 1) if weapon_data else 1
     dice_roll = random.randint(1, 6)
@@ -119,7 +119,7 @@ def _execute_attack_round(player, monster, weapon_data, equipped_weapon, room, m
     return player["health"] > 0
 
 
-def _handle_victory(monster, target, room, room_override, room_states, room_id, player, inventory, io, mini_llm):
+def _handle_victory(monster, target, room, room_override, room_states, room_id, player, inventory, io, mini_llm) -> dict:
     """Process monster defeat: loot drops, room update, and player state emit."""
     drops = monster.get("drops", {})
     gold_drop = drops.get("gold", 0)

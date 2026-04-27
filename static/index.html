@@ -1503,80 +1503,83 @@
     };
   }
 
+  function _handleGameMessage(msg) {
+    let className = 'message';
+    if (inEncounter) {
+      const text = msg.text.toLowerCase();
+      if (text.includes('player dealt') || text.includes('damage to') || text.includes('bonus damage') || text.includes('weakness')) {
+        className = 'combat-player-damage';
+      } else if (text.includes('struck back') || text.includes('hit you') || text.includes('failed to flee')) {
+        className = 'combat-monster-damage';
+      } else if (text.includes('defeated') || text.includes('slain') || text.includes('escaped') || text.includes('turns away')) {
+        className = 'combat-system';
+      }
+    }
+    appendOutput(msg.text, className, msg.text + '\n');
+  }
+
+  function _handleShopData(msg) {
+    const prevGold = shopData ? shopData.player_gold : null;
+    shopData = msg;
+    if (prevGold === null) {
+      activateShopTab();
+    } else if (msg.player_gold !== prevGold) {
+      const goldEl = document.querySelector('.shop-gold-amount');
+      if (goldEl) floatGold(goldEl, msg.player_gold - prevGold);
+    }
+    lastShopGold = msg.player_gold;
+    goldSpan.textContent = msg.player_gold;
+    renderShopTab();
+    renderEncounterStats(encounterData);
+  }
+
+  function _handleJournalEntry(msg) {
+    journalEntries.unshift({...msg, isNew: true});
+    renderJournal();
+    bumpJournalBadge();
+  }
+
+  function _handleStateUpdate(msg) {
+    Object.assign(currentPlayerState, {
+      health: msg.health,
+      max_health: msg.max_health,
+      gold: msg.gold,
+      inventory: msg.inventory || currentPlayerState.inventory,
+      equipped_weapon: msg.equipped_weapon,
+      equipped_armor: msg.equipped_armor || {}
+    });
+    if (msg.journal && journalEntries.length === 0 && msg.journal.length > 0) {
+      journalEntries = [...msg.journal].reverse();
+      renderJournal();
+    }
+    if (msg.room_id) {
+      currentRoomId = msg.room_id;
+      visitedRooms.add(msg.room_id);
+      drawMap();
+      updateRoomImage(msg.room_id);
+      if (msg.room_name) {
+        document.getElementById('room-name-overlay').textContent = msg.room_name;
+      }
+    }
+    updateInventoryTab(msg);
+    updateHeaderStats(msg);
+    if (inEncounter) renderEncounterStats(encounterData);
+    drawRoomView(msg);
+  }
+
+  function _handleGameOver() {
+    isGameOver = true;
+    inputField.disabled = true;
+    sendBtn.disabled = true;
+    appendOutput('[The mansion falls silent...]\n', 'game-over', '\n[The mansion falls silent...]\n');
+  }
+
   /**
    * Handle incoming WebSocket messages
    */
   function handleMessage(msg) {
-    if (msg.type === 'message') {
-      let className = 'message';
-      const text = msg.text.toLowerCase();
-
-      // Color-code combat messages
-      if (inEncounter) {
-        if (text.includes('player dealt') || text.includes('damage to') || text.includes('bonus damage') || text.includes('weakness')) {
-          className = 'combat-player-damage';
-        } else if (text.includes('struck back') || text.includes('hit you') || text.includes('failed to flee')) {
-          className = 'combat-monster-damage';
-        } else if (text.includes('defeated') || text.includes('slain') || text.includes('escaped') || text.includes('turns away')) {
-          className = 'combat-system';
-        }
-      }
-
-      appendOutput(msg.text, className, msg.text + '\n');
-    } else if (msg.type === 'prompt') {
-      document.getElementById('loading').classList.remove('active');
-      appendOutput(msg.text, 'prompt', msg.text);
-    } else if (msg.type === 'encounter_start') {
-      showEncounter(msg);
-    } else if (msg.type === 'encounter_end') {
-      hideEncounter();
-    } else if (msg.type === 'encounter_state') {
-      updateEncounterState(msg);
-    } else if (msg.type === 'shop_data') {
-      const prevGold = shopData ? shopData.player_gold : null;
-      shopData = msg;
-      if (prevGold === null) {
-        activateShopTab();
-      } else if (msg.player_gold !== prevGold) {
-        const delta = msg.player_gold - prevGold;
-        const goldEl = document.querySelector('.shop-gold-amount');
-        if (goldEl) floatGold(goldEl, delta);
-      }
-      lastShopGold = msg.player_gold;
-      goldSpan.textContent = msg.player_gold;
-      renderShopTab();
-      renderEncounterStats(encounterData);
-    } else if (msg.type === 'journal_entry') {
-      journalEntries.unshift({...msg, isNew: true});
-      renderJournal();
-      bumpJournalBadge();
-    } else if (msg.type === 'state') {
-      Object.assign(currentPlayerState, {
-        health: msg.health,
-        max_health: msg.max_health,
-        gold: msg.gold,
-        inventory: msg.inventory || currentPlayerState.inventory,
-        equipped_weapon: msg.equipped_weapon,
-        equipped_armor: msg.equipped_armor || {}
-      });
-      if (msg.journal && journalEntries.length === 0 && msg.journal.length > 0) {
-        journalEntries = [...msg.journal].reverse();
-        renderJournal();
-      }
-      if (msg.room_id) {
-        currentRoomId = msg.room_id;
-        visitedRooms.add(msg.room_id);
-        drawMap();
-        updateRoomImage(msg.room_id);
-        if (msg.room_name) {
-          document.getElementById('room-name-overlay').textContent = msg.room_name;
-        }
-      }
-      updateInventoryTab(msg);
-      updateHeaderStats(msg);
-      if (inEncounter) renderEncounterStats(encounterData);
-      drawRoomView(msg);
-    } else if (msg.type === 'token') {
+    // Streaming types exit early, bypassing the trailing scroll/stats pass
+    if (msg.type === 'token') {
       if (!streamSpan) {
         streamSpan = document.createElement('span');
         streamSpan.className = 'message';
@@ -1588,26 +1591,25 @@
       streamSpan.appendChild(chunk);
       scrollToBottom();
       return;
-    } else if (msg.type === 'token_end') {
-      streamSpan = null;
-      scrollToBottom();
-      return;
-    } else if (msg.type === 'debug') {
-      appendDebug(msg.text);
-      return;
-    } else if (msg.type === 'room_features') {
-      roomFeaturesCache[msg.room_id] = msg.features;
-    } else if (msg.type === 'game_over') {
-      isGameOver = true;
-      inputField.disabled = true;
-      sendBtn.disabled = true;
-      appendOutput('[The mansion falls silent...]\n', 'game-over', '\n[The mansion falls silent...]\n');
     }
+    if (msg.type === 'token_end') { streamSpan = null; scrollToBottom(); return; }
+    if (msg.type === 'debug')     { appendDebug(msg.text); return; }
 
-    // Auto-scroll to bottom
+    const handlers = {
+      message:         _handleGameMessage,
+      prompt:          (m) => { document.getElementById('loading').classList.remove('active'); appendOutput(m.text, 'prompt', m.text); },
+      encounter_start: showEncounter,
+      encounter_end:   hideEncounter,
+      encounter_state: updateEncounterState,
+      shop_data:       _handleShopData,
+      journal_entry:   _handleJournalEntry,
+      state:           _handleStateUpdate,
+      room_features:   (m) => { roomFeaturesCache[m.room_id] = m.features; },
+      game_over:       _handleGameOver,
+    };
+    handlers[msg.type]?.(msg);
+
     scrollToBottom();
-
-    // Update health and gold from message text (simple regex parsing)
     updateStats(msg.text || '');
   }
 
@@ -2504,6 +2506,11 @@
   /**
    * Render the inventory sidebar tab from a state message
    */
+  function _renderInvSection(title, items, renderFn) {
+    return `<div class="inv-section-title">${title}</div>`
+      + (items.length ? items.map(renderFn).join('') : '<div class="inv-empty">  none</div>');
+  }
+
   function updateInventoryTab(state) {
     const tab = document.getElementById('sidebar-inventory');
     if (!tab) return;
@@ -2514,8 +2521,8 @@
     const equippedNames = new Set([equippedWeapon, ...Object.values(equippedArmor)].filter(Boolean));
 
     const weapons = inventory.filter(i => i.weapon_type);
-    const armor = inventory.filter(i => i.armor_slot);
-    const other = inventory.filter(i => !i.weapon_type && !i.armor_slot);
+    const armor   = inventory.filter(i => i.armor_slot);
+    const other   = inventory.filter(i => !i.weapon_type && !i.armor_slot);
 
     function itemLine(item) {
       const isEquipped = equippedNames.has(item.name);
@@ -2526,18 +2533,9 @@
       return `<div class="inv-item${isEquipped ? ' equipped' : ''}"${tooltip}>${isEquipped ? '▶ ' : '  '}${item.name} ${tag}</div>`;
     }
 
-    let html = '';
-
-    html += `<div class="inv-section-title">Weapons</div>`;
-    html += weapons.length ? weapons.map(itemLine).join('') : '<div class="inv-empty">  none</div>';
-
-    html += `<div class="inv-section-title">Armour</div>`;
-    html += armor.length ? armor.map(itemLine).join('') : '<div class="inv-empty">  none</div>';
-
-    html += `<div class="inv-section-title">Items</div>`;
-    html += other.length ? other.map(itemLine).join('') : '<div class="inv-empty">  none</div>';
-
-    tab.innerHTML = html;
+    tab.innerHTML = _renderInvSection('Weapons', weapons, itemLine)
+                  + _renderInvSection('Armour',  armor,   itemLine)
+                  + _renderInvSection('Items',   other,   itemLine);
   }
 
   /**

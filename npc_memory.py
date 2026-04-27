@@ -1,6 +1,7 @@
 import os
 import json
 import uuid
+from typing import Any
 from pinecone import Pinecone, ServerlessSpec
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -17,13 +18,13 @@ HYDE_NUM_DOCUMENTS = 1  # Number of hypothetical documents to generate for HyDE.
 _index = None
 _mini_llm = None
 
-def _get_mini_llm():
+def _get_mini_llm() -> ChatOpenAI:
     global _mini_llm
     if _mini_llm is None:
         _mini_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
     return _mini_llm
 
-def _get_index():
+def _get_index() -> Any:
     global _index
     if _index is not None:
         return _index
@@ -42,7 +43,7 @@ def _get_index():
 def _namespace(npc_name: str) -> str:
     return npc_name.lower().replace(" ", "_")
 
-def _embeddings():
+def _embeddings() -> OpenAIEmbeddings:
     return OpenAIEmbeddings(model=EMBEDDING_MODEL)
 
 def clear_all_memories() -> None:
@@ -87,7 +88,7 @@ def store_exchange(npc_name: str, player_msg: str, npc_reply: str, llm=None) -> 
         facts = json.loads(parse_llm_json(response.content))
         if not isinstance(facts, list) or not facts:
             return []
-    except Exception as e:
+    except (json.JSONDecodeError, ValueError) as e:
         debug(f"npc_memory: fact extraction failed — {e}")
         return []
 
@@ -111,7 +112,7 @@ def gossip_facts(source_npc_name: str, facts: list[str], target_npc_names: list[
         if not isinstance(gossip_worthy, list) or not gossip_worthy:
             debug(f"npc_memory: no gossip-worthy facts from '{source_npc_name}'")
             return
-    except Exception as e:
+    except (json.JSONDecodeError, ValueError) as e:
         debug(f"npc_memory: gossip filter failed — {e}")
         return
 
@@ -205,7 +206,7 @@ def evaluate_gossip_impact(npc_name: str) -> tuple[int, int]:
         fear_delta = max(-20, min(20, int(data.get("fear_delta", 0))))
         debug(f"npc_memory: gossip impact for '{npc_name}': mood {mood_delta:+d}, fear {fear_delta:+d}")
         return mood_delta, fear_delta
-    except Exception as e:
+    except (json.JSONDecodeError, ValueError, KeyError) as e:
         debug(f"npc_memory: gossip impact parse failed — {e}")
         return 0, 0
 

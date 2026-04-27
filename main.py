@@ -39,13 +39,13 @@ from handlers import (
 
 load_dotenv()
 
-_io_var: contextvars.ContextVar[IOContext] = contextvars.ContextVar("io", default=CLIContext())
+_io_context_var: contextvars.ContextVar[IOContext] = contextvars.ContextVar("io", default=CLIContext())
 
 def io_ctx() -> IOContext:
-    return _io_var.get()
+    return _io_context_var.get()
 
 def set_io(ctx: IOContext) -> contextvars.Token:
-    return _io_var.set(ctx)
+    return _io_context_var.set(ctx)
 
 # ── Type definitions ─────────────────────────────────────────────────────────
 
@@ -156,6 +156,12 @@ class AgentState(TypedDict):
 
 DATA_DIR = "data"
 
+ITEM_DEFAULTS: dict = {
+    "damage": 0, "weapon_type": None, "armor_slot": None,
+    "armor_rating": 0, "heal_amount": 0, "openable": False,
+    "gold": 0, "is_open": False, "revealed_by": None,
+}
+
 llm = ChatOpenAI(model="gpt-4o", temperature=0.5)
 mini_llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.5)
 
@@ -169,10 +175,6 @@ def load_game_data() -> tuple[dict, dict, dict, dict]:
     with open(os.path.join(DATA_DIR, "items.json"), "r") as f:
         items = json.load(f)
 
-    item_defaults = {"damage": 0, "weapon_type": None, "armor_slot": None,
-                     "armor_rating": 0, "heal_amount": 0, "openable": False,
-                     "gold": 0, "is_open": False, "revealed_by": None}
-
     for room_id, room in rooms.items():
         room["monsters"] = [copy.deepcopy(monsters[m]) for m in room.get("monsters", [])]
         room["npcs"] = [copy.deepcopy(npcs[n]) for n in room.get("npcs", [])]
@@ -180,7 +182,7 @@ def load_game_data() -> tuple[dict, dict, dict, dict]:
         for ref in room.get("items", []):
             item_id = ref["id"]
             catalogue_entry = copy.deepcopy(items.get(item_id, {}))
-            merged = {**item_defaults, **catalogue_entry, **ref}
+            merged = {**ITEM_DEFAULTS, **catalogue_entry, **ref}
             resolved_items.append(merged)
         room["items"] = resolved_items
 
@@ -188,14 +190,12 @@ def load_game_data() -> tuple[dict, dict, dict, dict]:
 
 
 def resolve_shop_stock(shops: dict, items: dict) -> None:
-    item_defaults = {"damage": 0, "weapon_type": None, "armor_slot": None,
-                     "armor_rating": 0, "heal_amount": 0}
     for shop in shops.values():
         resolved = []
         for ref in shop.get("stock", []):
             item_id = ref["id"]
             catalogue_entry = copy.deepcopy(items.get(item_id, {}))
-            merged = {**item_defaults, **catalogue_entry, **ref}
+            merged = {**ITEM_DEFAULTS, **catalogue_entry, **ref}
             resolved.append(merged)
         shop["stock"] = resolved
 
@@ -354,7 +354,7 @@ def _emit_room_features(room: dict, room_id: str) -> None:
         _save_features_cache(cache)
         debug(f"room_features: generated and cached for {room_id}")
         io_ctx().send(f"__roomfeatures__{json.dumps({'room_id': room_id, 'features': features})}")
-    except Exception as e:
+    except Exception as e:  # intentionally broad — wraps LLM call; features are non-critical
         debug(f"room_features error: {e}")
 
 
@@ -478,7 +478,7 @@ def parse_command(player_input: str, state: AgentState) -> dict:
         parsed = json.loads(parse_llm_json(response.content))
         debug(f"parse_command: {parsed}")
         return parsed
-    except Exception as e:
+    except (json.JSONDecodeError, ValueError) as e:
         debug(f"parse_command error: {e} | raw: {response.content}")
         return {"action": "unknown", "target": None}
 
