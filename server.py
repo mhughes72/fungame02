@@ -18,6 +18,7 @@ import asyncio
 import json as json_lib
 from concurrent.futures import ThreadPoolExecutor
 
+import openai
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -43,6 +44,8 @@ def run_game(ctx: WebSocketContext) -> None:
         game_app.invoke(make_initial_state())
     except DisconnectedError:
         pass
+    except openai.RateLimitError:
+        ctx.send("__credits_out__")
     except Exception as e:
         ctx.send(f"\n[Server error: {e}]")
     finally:
@@ -73,6 +76,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         "__token__":         ("token",            False),
         "__token_end__":     ("token_end",        False),
         "__debug__":         ("debug",            False),
+        "__credits_out__":   ("credits_out",       False),
     }
 
     async def forward_output() -> None:

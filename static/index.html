@@ -115,6 +115,43 @@
     .help-cmd { color: #7a9a7a; min-width: 140px; }
     .help-desc { color: #a89060; }
 
+    /* Credits-out modal */
+    #credits-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+    }
+    #credits-modal.active { display: flex; }
+    #credits-modal-content {
+      background: #1a1a1a;
+      border: 2px solid #8b0000;
+      padding: 32px;
+      max-width: 480px;
+      width: 100%;
+      box-shadow: 0 0 40px rgba(139, 0, 0, 0.6);
+      text-align: center;
+    }
+    #credits-modal-content h2 {
+      font-size: 22px;
+      color: #cc3333;
+      margin-bottom: 16px;
+      text-shadow: 0 0 12px rgba(200, 50, 50, 0.5);
+    }
+    #credits-modal-content p {
+      color: #a89060;
+      font-size: 13px;
+      line-height: 1.8;
+      margin-bottom: 12px;
+    }
+    #credits-modal-content .coin {
+      font-size: 40px;
+      margin-bottom: 12px;
+    }
+
     /* Cheat modal */
     #cheat-modal {
       display: none;
@@ -1393,6 +1430,25 @@
     </div>
   </div>
 
+  <div id="credits-modal">
+    <div id="credits-modal-content">
+      <div class="coin">🪙</div>
+      <h2>⚰ THE MANSION GOES DARK ⚰</h2>
+      <p>The candles flicker and die. The spirits retreat into silence.</p>
+      <p>
+        It appears the developer has run out of OpenAI credits.<br>
+        <em>Again.</em>
+      </p>
+      <p style="color: #7a5a3a; font-size: 11px;">
+        (Yes, he knew this would happen. No, he did not top up his account.<br>
+        He is, by all accounts, extremely cheap.)
+      </p>
+      <p style="margin-top: 16px; color: #8b6a3a; font-size: 11px;">
+        Refresh the page once the developer has located his wallet.
+      </p>
+    </div>
+  </div>
+
   <div id="about-modal">
     <div id="about-modal-content">
       <div id="about-modal-title">About This Game</div>
@@ -1606,6 +1662,7 @@
       state:           _handleStateUpdate,
       room_features:   (m) => { roomFeaturesCache[m.room_id] = m.features; },
       game_over:       _handleGameOver,
+      credits_out:     () => { document.getElementById('credits-modal').classList.add('active'); isGameOver = true; inputField.disabled = true; sendBtn.disabled = true; },
     };
     handlers[msg.type]?.(msg);
 
