@@ -152,6 +152,73 @@
       margin-bottom: 12px;
     }
 
+    /* Win overlay */
+    #win-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.92);
+      z-index: 3000;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+    #win-overlay.active { display: flex; }
+    #win-overlay-content {
+      background: #0d0d0d;
+      border: 2px solid #7a6030;
+      padding: 40px 48px;
+      max-width: 560px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 0 60px rgba(180, 140, 60, 0.25), 0 0 120px rgba(100, 80, 30, 0.15);
+    }
+    #win-overlay-content .win-glyph {
+      font-size: 36px;
+      letter-spacing: 12px;
+      color: #a89060;
+      margin-bottom: 20px;
+      opacity: 0.8;
+    }
+    #win-overlay-content h2 {
+      font-size: 20px;
+      color: #c8a050;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      margin-bottom: 24px;
+      text-shadow: 0 0 20px rgba(180, 140, 60, 0.4);
+    }
+    #win-overlay-content p {
+      color: #8a7a5a;
+      font-size: 13px;
+      line-height: 1.9;
+      margin-bottom: 12px;
+    }
+    #win-overlay-content .win-stats {
+      margin-top: 24px;
+      border-top: 1px solid #2a2a1a;
+      padding-top: 16px;
+      color: #6a5a3a;
+      font-size: 11px;
+      letter-spacing: 1px;
+    }
+    #win-overlay-content .play-again-btn {
+      margin-top: 24px;
+      background: none;
+      border: 1px solid #5a4a2a;
+      color: #a89060;
+      padding: 10px 28px;
+      font-family: inherit;
+      font-size: 12px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+    #win-overlay-content .play-again-btn:hover {
+      border-color: #a89060;
+      color: #c8a050;
+    }
+
     /* Cheat modal */
     #cheat-modal {
       display: none;
@@ -1430,6 +1497,16 @@
     </div>
   </div>
 
+  <div id="win-overlay">
+    <div id="win-overlay-content">
+      <div class="win-glyph">✦ ✦ ✦</div>
+      <h2>You Are Free</h2>
+      <p id="win-narrative">The seal breaks. The door opens. You walk out.</p>
+      <div class="win-stats" id="win-stats"></div>
+      <button class="play-again-btn" onclick="location.reload()">Begin Again</button>
+    </div>
+  </div>
+
   <div id="credits-modal">
     <div id="credits-modal-content">
       <div class="coin">🪙</div>
@@ -1630,6 +1707,21 @@
     appendOutput('[The mansion falls silent...]\n', 'game-over', '\n[The mansion falls silent...]\n');
   }
 
+  function _handleGameWon() {
+    isGameOver = true;
+    inputField.disabled = true;
+    sendBtn.disabled = true;
+
+    const overlay = document.getElementById('win-overlay');
+    const statsEl = document.getElementById('win-stats');
+
+    const health = document.getElementById('health')?.textContent || '?';
+    const gold = document.getElementById('gold')?.textContent || '?';
+    statsEl.textContent = `Health: ${health}  ·  Gold: ${gold}`;
+
+    overlay.classList.add('active');
+  }
+
   /**
    * Handle incoming WebSocket messages
    */
@@ -1662,6 +1754,7 @@
       state:           _handleStateUpdate,
       room_features:   (m) => { roomFeaturesCache[m.room_id] = m.features; },
       game_over:       _handleGameOver,
+      game_won:        _handleGameWon,
       credits_out:     () => { document.getElementById('credits-modal').classList.add('active'); isGameOver = true; inputField.disabled = true; sendBtn.disabled = true; },
     };
     handlers[msg.type]?.(msg);

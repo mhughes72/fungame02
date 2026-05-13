@@ -492,6 +492,79 @@ Add a `trades` list to an NPC in `data/npcs.json`. Each trade fires once:
 1. Add a definition to `data/monsters.json` with a unique key. Include `description` (appearance) and `behavior` (how it fights). Set `aggressive: true` to make it auto-attack on room entry.
 2. Reference the key in the room's `monsters` list in `data/rooms.json`.
 
+## Win Condition — The Ritual of Unmaking
+
+The game has a definite win condition: perform the **Ritual of Unmaking** at the sealed front door in the **Grand Foyer** (room_5). This requires three ritual components collected from across the mansion:
+
+| Item | Location | How |
+|------|----------|-----|
+| **Strange Amulet** | Secret Room (room_7) | On the floor — guarded by the wraith |
+| **Unmaking Flame** | Study (room_1) | Dropped by the ghost on death |
+| **Blood Pact** | Lord Harwick's Vault (room_12) | Dropped by Lord Harwick Vane on death |
+
+Once all three are in your inventory, go to the Grand Foyer and type `perform ritual` (or similar). Professor Aldric knows the full lore and can explain each component if asked.
+
+**Recommended progression:** gear up in the Library and Secret Room → fight the ghost → defeat the vampire to reach the basement → descend to Lord Harwick's Vault.
+
+---
+
+## Simulation Harness
+
+`simulate.py` is a standalone Monte Carlo simulation that plays the game mechanically (no LLM calls, no server) and produces a JSON balance report.
+
+```bash
+# Default — 20 runs × 4 strategies
+python simulate.py
+
+# Custom
+python simulate.py --runs 30 --strategies balanced cautious --output report.json
+
+# Skip per-turn event logs (smaller output)
+python simulate.py --runs 50 --no-events
+```
+
+**Strategies:**
+
+| Strategy | Heal at | Flee if HP% < | Fight if win_prob ≥ |
+|----------|---------|--------------|----------------------|
+| `balanced` | 40% | 25% | 25% |
+| `cautious` | 60% | 45% | 45% |
+| `aggressive` | 20% | — | 0% (always fight) |
+| `random` | 30% | 20% | random |
+
+The bot uses BFS pathfinding to navigate, picks up useful items, equips the best weapon for each specific monster (weakness-aware), collects NPC gifts, and opens containers. Fled combats persist the monster's damaged health so subsequent fights continue where they left off.
+
+**Report fields (per strategy):** win/death/stuck/timeout rates, avg turns, avg final HP and gold, ritual component acquisition rates, per-monster fight/win/death/flee rates and avg damage dealt/taken, room visit rates, balance issues with severity flags (critical / high / medium).
+
+### Balance Findings (session 2026-05-12, 30 runs per strategy)
+
+| Metric | balanced | cautious | aggressive | random |
+|--------|----------|----------|------------|--------|
+| Win rate | 0% | 0% | 0% | 0% |
+| Death rate | 50% | 37% | 100% | 93% |
+| Avg turns (death) | 48.7 | 49.5 | 6.0 | 37.7 |
+| `strange amulet` found | 100% | 100% | 0% | 77% |
+| `unmaking flame` found | 90% | 70% | 0% | 60% |
+| `blood pact` found | 0% | 0% | 0% | 0% |
+
+**Root causes:**
+
+- **Ghost (300 HP)** is an extreme resource drain. Balanced bots take an average of 7.2 rounds and burn 2–3 health potions across flee-and-return fights. Players arrive at the vampire with near-zero HP.
+- **Blood Pact is never obtained (0% across all strategies).** Players exhaust all health potions on the ghost and vampire, then arrive at Lord Harwick Vane (120 HP, 20 dmg, aggressive) with ~2 HP.
+- **Aggressive strategy dies instantly** — charges the 300 HP ghost unarmed on turn 6 before reaching any gear.
+- **Lord Harwick Vane has 40–67% death rate** among players who reach him, and 0% win rate.
+
+**Recommended balance fixes:**
+
+| Change | Reasoning |
+|--------|-----------|
+| Ghost HP: 300 → 120 | Currently consumes all potions; should be mid-tier threat, not a war of attrition |
+| Add 1–2 potions in room_8 or room_10 | Players arrive at the final boss with 0 resources; needs a resupply point |
+| Lord Harwick Vane HP: 120 → 70–80 | Nobody reaches him alive under current potion economy |
+| Consider a fire-type weapon in early rooms | Vampire's fire/blade weakness is inaccessible — no fire weapon exists; bot must fight inefficiently |
+
+---
+
 ## Notes
 
 - Game state is not persisted between sessions — each run starts fresh

@@ -79,6 +79,7 @@ Rules:
 - If the player types "room", "where am i", "current room", or similar, set action to "room" and target to null.
 - If nothing matches, set action to "unknown" and target to null.
 - If the player types "win", set action to "win" and target to null.
+- If the player wants to perform a ritual, break the seal, use ritual items together, open the front door, or escape the mansion, set action to "ritual" and target to null.
 - If the player wants to unlock a door or exit (unlock, open door), set action to "unlock" and target to the direction (e.g. "north", "down").
 - If the player types "help", "commands", or "what can I do", set action to "help" and target to null.
 - If the player types "clearmemory", set action to "clearmemory" and target to null.
@@ -160,16 +161,19 @@ If ending, add exactly: [END CONVERSATION]
 
 WIN_PROMPT = ChatPromptTemplate.from_template("""
 You are the narrator of a dark gothic text adventure game.
-The player has won the game.
+The player has just performed the Ritual of Unmaking at the sealed front door of a haunted mansion and escaped.
+
+The ritual: the Strange Amulet — the original sealing key — shattered. The Blood Pact — Lord Harwick Vane's contract with the Hollow — was fed into the Unmaking Flame and erased entirely. The seal on the front door dissolved, and the player stepped out into open air for the first time.
 
 Player stats:
 - Gold collected: {gold}
 - Health remaining: {health}/{max_health}
 - Items carried: {inventory}
-- Monsters defeated: {monsters_defeated}
 
-Write a dramatic, atmospheric victory narration of 3-4 sentences.
-Make it feel earned and gothic. End with a single triumphant closing line.
+Write a dramatic, atmospheric victory narration of 4-5 sentences.
+Describe the ritual unfolding — each component used in sequence, the seal breaking, the mansion shuddering.
+Then: the door opens. Cold night air. Stars. Freedom.
+Make it feel earned and gothic. End with a single line that feels like an ending.
 """)
 
 SHOP_SYSTEM_PROMPT = ("""You are {npc_name} in a gothic text adventure game.

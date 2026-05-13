@@ -214,6 +214,14 @@
     "armor_slot": "chest",
     "armor_rating": 5
   },
+  "blood_pact": {
+    "name": "blood pact",
+    "description": "A sheaf of parchment bound with black ribbon, signed in a cramped hand and sealed with something darker than ink. The words crawl across the page when read directly, as though they are still being written. Lord Harwick Vane's name appears at the bottom, beneath a signature that is not human."
+  },
+  "unmaking_flame": {
+    "name": "unmaking flame",
+    "description": "A sealed glass vial containing a tongue of cold blue fire that does not consume the glass. It smells of ozone and old grief. Whatever burns in this flame is unmade entirely — not destroyed, but erased, as though it never was."
+  },
   "sturdy_boots": {
     "name": "sturdy boots",
     "description": "Heavy-soled boots with reinforced toe caps and ankle guards. They add a deliberate weight to each step, which feels appropriate in a place like this.",

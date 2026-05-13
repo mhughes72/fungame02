@@ -9,7 +9,7 @@
     "damage": 8,
     "damage_variance": 4,
     "weaknesses": ["magic"],
-    "drops": {"gold": 10, "item": null}
+    "drops": {"gold": 10, "item": "unmaking_flame"}
   },
   "giant_rat": {
     "name": "giant rat",
@@ -83,6 +83,19 @@
     "damage_variance": 6,
     "weaknesses": ["silver"],
     "drops": {"gold": 30, "item": null}
+  },
+  "lord_harwick_vane": {
+    "name": "Lord Harwick Vane",
+    "description": "A tall figure in the rotting remains of a Victorian gentleman's suit, his face a grey mask of collapsed skin drawn tight over the skull beneath. His eyes are two points of amber light. He moves with the deliberate precision of someone who has rehearsed this moment for a very long time.",
+    "behavior": "Speaks before striking, offering terms that are not negotiable. Fights with cold efficiency — no wasted motion, no theatrics. Gets faster as he is damaged, not slower. Believes, absolutely, that you cannot win.",
+    "health": 120,
+    "max_health": 120,
+    "defense": 8,
+    "damage": 20,
+    "damage_variance": 6,
+    "weaknesses": ["magic", "fire"],
+    "drops": {"gold": 60, "item": "blood_pact"},
+    "aggressive": true
   },
   "ghoul": {
     "name": "ghoul",

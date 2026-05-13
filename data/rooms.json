@@ -128,8 +128,8 @@
   },
   "room_11": {
     "name": "Basement",
-    "description": "A damp basement with chains on the walls and a cold draft.",
-    "exits": {"up": "room_10"},
+    "description": "A damp basement with chains on the walls and a cold draft. At the far end, a low stone archway leads deeper into the dark.",
+    "exits": {"up": "room_10", "north": "room_12"},
     "monsters": ["ghoul"],
     "items": [
       {"id": "broken_chain",   "hidden": false, "revealed_by": null},
@@ -138,6 +138,14 @@
       {"id": "rusty_sword",    "hidden": false, "revealed_by": null},
       {"id": "chain_gloves",   "hidden": false, "revealed_by": null}
     ],
+    "npcs": []
+  },
+  "room_12": {
+    "name": "Lord Harwick's Vault",
+    "description": "A vaulted stone chamber carved from the bedrock beneath the mansion. The walls are covered floor to ceiling in symbols identical to those in the secret room above — but here they seem to breathe. A stone altar stands at the centre, its surface etched with a single word in a language that predates the mansion. Upon it rests something cold and blue and utterly wrong. In the far corner, a stone sarcophagus stands open and empty. Whatever it held is already standing in front of you.",
+    "exits": {"south": "room_11"},
+    "monsters": ["lord_harwick_vane"],
+    "items": [],
     "npcs": []
   }
 }

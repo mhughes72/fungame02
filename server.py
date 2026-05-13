@@ -77,6 +77,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         "__token_end__":     ("token_end",        False),
         "__debug__":         ("debug",            False),
         "__credits_out__":   ("credits_out",       False),
+        "__game_won__":      ("game_won",           False),
     }
 
     async def forward_output() -> None:

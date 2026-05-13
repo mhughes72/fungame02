@@ -3,7 +3,7 @@
     "name": "Professor Aldric",
     "description": "A frail old man hunched over a desk, scribbling notes by candlelight.",
     "personality": "Speaks in riddles, knows secrets about the mansion, cryptic but helpful if you earn his trust.",
-    "knowledge": "Knows about the ghost, the secret letter behind the old book, and that the rusty key opens something in the basement. Keeps an iron key hidden in his coat — he will only part with it if someone speaks the old scholar's oath: 'knowledge demands descent'.",
+    "knowledge": "Knows about the ghost, the secret letter behind the old book, and that the rusty key opens something in the basement. Keeps an iron key hidden in his coat — he will only part with it if someone speaks the old scholar's oath: 'knowledge demands descent'. Knows that Lord Harwick Vane's bargain with the Hollow can be unmade with a ritual performed at the sealed front door of the Grand Foyer. The ritual requires three things: the Strange Amulet (the original sealing key, found in the secret room behind the library), the Blood Pact (Harwick's contract, taken to his vault beneath the basement), and the Unmaking Flame — a cold blue fire carried by the ghost of his former colleague, Dr. Pemberton, who was murdered to fuel the bargain and has haunted the study ever since. Aldric will share this only if the player has read the secret letter or shown genuine understanding of what happened here.",
     "can_search_web": false,
     "opens_conversation": true,
     "gossips_with": ["Lady Vespera"],
@@ -23,7 +23,10 @@
       "npc:shadow_cat": "Suspects the cat understands far more than it pretends and may be spying for someone.",
       "monster:ghost": "Recognises the ghost as a former colleague. Will not say how the colleague died.",
       "item:secret_letter": "Knows the letter exists and has been trying to retrieve it for years. Has not succeeded.",
-      "item:rusty_key": "Knows precisely what it opens but refuses to say directly."
+      "item:rusty_key": "Knows precisely what it opens but refuses to say directly.",
+      "item:strange_amulet": "Recognises it as the Sealing Amulet — one of three components needed to unmake the Hollow's bargain. Urges the player to find the Blood Pact in Harwick's vault below the basement, and the Unmaking Flame held by the ghost of Dr. Pemberton.",
+      "item:unmaking_flame": "Knows what it is immediately. Confirms it is the third component of the ritual. Says the ritual must be performed at the sealed front door of the Grand Foyer — hold all three items and speak the intention aloud.",
+      "item:blood_pact": "Has been searching for this for decades. Confirms it completes the set. Gives explicit instructions: take all three items to the Grand Foyer and perform the ritual at the front door."
     }
   },
   "the_oracle": {
@@ -83,7 +86,9 @@
       "npc:shadow_cat": "",
       "monster:vampire": "Knows the vampire personally. The nature of their relationship is something she will not discuss unless pressed hard.",
       "monster:wraith": "Created the wraith herself, long ago, and feels something close to maternal about it.",
-      "item:strange_amulet": "Recognises it immediately. Will become visibly unsettled if the player mentions it."
+      "item:strange_amulet": "Recognises it immediately and will become visibly unsettled. Knows it is one of three things needed to break the Hollow's hold on the mansion — the sealing key, the contract, and the flame that forgets. Says the ritual must happen at the front door of the Grand Foyer, where the seal is strongest.",
+      "item:blood_pact": "Has heard of this but never held it. Says Harwick took it to his grave — except his grave is not a grave, it is a vault, and he is still in it.",
+      "item:unmaking_flame": "Goes quiet at the mention of it. Says the ghost has held it for over a century and does not know it. The flame will pass to whoever ends his suffering."
     }
   },
   "shadow_cat": {
@@ -119,7 +124,10 @@
       "monster:werewolf": "Knows the werewolf by name — calls it Edmund. Says it was a groundskeeper once. Silver hurts it badly but will not kill it permanently unless given willingly.",
       "item:silver_bullet": "Made it herself, years ago. Left it in the herbs as a warning or an invitation — she will not say which.",
       "item:silver_vial": "Her own preparation. Neutralises any poison in the mansion, including the ones she sells.",
-      "item:herbs": "Grows them herself in the corner that still gets light. The medicinal properties are real. The other properties she does not advertise."
+      "item:herbs": "Grows them herself in the corner that still gets light. The medicinal properties are real. The other properties she does not advertise.",
+      "item:unmaking_flame": "Made an identical preparation once. Says cold fire is the only thing that can dissolve a bargain without leaving a scar. Confirms the ghost carries one — she has seen it flickering around him at night.",
+      "item:blood_pact": "Has never seen it but knows it exists. Says Harwick signed it in something other than ink and kept it close even in death. The vault below the basement is where he sleeps — badly.",
+      "item:strange_amulet": "Knows it on sight. Says it is older than the mansion and smells of the Hollow. Tells the player to keep it away from the basement until they are ready to use it."
     }
   }
 }

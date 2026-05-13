@@ -433,6 +433,30 @@ def check_aggressive(state: AgentState) -> dict:
 
     return {"route_to": None}
 
+RITUAL_ITEMS = {"strange amulet", "blood pact", "unmaking flame"}
+
+def handle_ritual(state: AgentState) -> dict:
+    if state["current_room_id"] != "room_5":
+        io_ctx().send(
+            "The ritual must be performed at the sealed front door. Make your way to the Grand Foyer."
+        )
+        return {"force_full_description": False}
+
+    player, inventory = get_mutable_player(state)
+    held = {i["name"] for i in inventory}
+    missing = RITUAL_ITEMS - held
+
+    if missing:
+        missing_list = ", ".join(f"the {name}" for name in sorted(missing))
+        io_ctx().send(
+            f"The ritual is incomplete. You are still missing: {missing_list}.\n"
+            "You need the Strange Amulet, the Blood Pact, and the Unmaking Flame."
+        )
+        return {"force_full_description": False}
+
+    return trigger_win(state)
+
+
 def trigger_win(state: AgentState) -> dict:
     player, inventory = get_mutable_player(state)
 
@@ -441,13 +465,13 @@ def trigger_win(state: AgentState) -> dict:
         "health": player.get("health", 100),
         "max_health": player.get("max_health", 100),
         "inventory": ", ".join(i["name"] for i in inventory) or "nothing",
-        "monsters_defeated": "unknown",
     })
 
     response = invoke_with_system(llm, prompt)
     io_ctx().send("\n" + "═" * 50)
     io_ctx().send(response.content)
     io_ctx().send("═" * 50 + "\n")
+    io_ctx().send("__game_won__")
 
     return {"game_won": True, "game_over": True}
 
@@ -525,6 +549,7 @@ def resolve_action(state: AgentState) -> dict:
         "unequip":   lambda: handle_unequip(state, target, io_ctx()),
         "use": lambda: handle_use(state, target, io_ctx()),
         "win": lambda: trigger_win(state),
+        "ritual": lambda: handle_ritual(state),
         "unlock": lambda: handle_unlock(state, target, io_ctx()),
         "help": lambda: handle_help(io_ctx()),
         "bribe":     lambda: handle_bribe(state, target or "", command.get("amount", 10), llm, mini_llm, io_ctx()),
