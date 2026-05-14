@@ -82,7 +82,7 @@
     "name": "fire poker",
     "description": "A long iron rod with a hook at one end, designed for managing fires. Heavy enough to make a person reconsider their choices.",
     "damage": 6,
-    "weapon_type": "blunt"
+    "weapon_type": "fire"
   },
   "iron_helmet": {
     "name": "iron helmet",

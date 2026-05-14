@@ -100,7 +100,8 @@
     "items": [
       {"id": "golden_goblet", "hidden": false, "revealed_by": null},
       {"id": "invitation",    "hidden": true,  "revealed_by": "golden goblet"},
-      {"id": "dusty_lockbox", "hidden": false, "revealed_by": null, "is_open": false}
+      {"id": "dusty_lockbox",  "hidden": false, "revealed_by": null, "is_open": false},
+      {"id": "health_potion",  "hidden": true,  "revealed_by": "dusty lockbox"}
     ],
     "npcs": ["lady_vespera"]
   },
@@ -123,7 +124,9 @@
       "down": {"required_key": "iron key", "locked": true}
     },
     "monsters": [],
-    "items": [],
+    "items": [
+      {"id": "health_potion", "hidden": false, "revealed_by": null}
+    ],
     "npcs": []
   },
   "room_11": {
@@ -136,7 +139,8 @@
       {"id": "locket",         "hidden": true,  "revealed_by": "broken chain"},
       {"id": "rotting_satchel","hidden": false, "revealed_by": null, "is_open": false},
       {"id": "rusty_sword",    "hidden": false, "revealed_by": null},
-      {"id": "chain_gloves",   "hidden": false, "revealed_by": null}
+      {"id": "chain_gloves",   "hidden": false, "revealed_by": null},
+      {"id": "health_potion",  "hidden": false, "revealed_by": null}
     ],
     "npcs": []
   },

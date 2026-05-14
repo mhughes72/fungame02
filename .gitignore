@@ -20,6 +20,9 @@ langchain_cache/
 # Generated files
 # graph.png
 data/room_features_cache.json
+report.json
+fun_report.json
+sim_*.json
 
 # VS Code
 .vscode/

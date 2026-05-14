@@ -506,6 +506,60 @@ Once all three are in your inventory, go to the Grand Foyer and type `perform ri
 
 **Recommended progression:** gear up in the Library and Secret Room → fight the ghost → defeat the vampire to reach the basement → descend to Lord Harwick's Vault.
 
+## How to Win
+
+A complete walkthrough from start to ritual. No backtracking, no luck required.
+
+### 1. Study (room_1) — starting room
+- Take the **rusty key** and **health potion**
+- Leave the ghost alone for now — you need better weapons first
+
+### 2. Hallway (room_2) — go north
+- Take nothing; don't go north yet (locked)
+
+### 3. Library (room_4) — go west from Hallway
+- Take and equip the **fire poker** (fire-type weapon — effective vs. vampire and Lord Harwick)
+- Take and equip the **iron helmet**
+
+### 4. Secret Room (room_7) — go north from Library
+- Fight the **wraith** — use any weapon (wraith is weak to magic, but fire poker works fine at this stage)
+- Take the **strange amulet** ✓ *(ritual item 1 of 3)*
+- Take and equip the **magic staff** (15 dmg, magic-type — best weapon in the game)
+- Take the **leather boots** if you want the armour
+
+### 5. Back to Study (room_1) — fight the ghost
+- Equip the **magic staff** (ghost is weak to magic — kills it in ~5 rounds)
+- Use health potions if HP drops below 40
+- Collect the **unmaking flame** from the ghost's drop ✓ *(ritual item 2 of 3)*
+
+### 6. Hallway → Grand Foyer (room_5)
+- From Hallway, `unlock north` using the **rusty key**
+- Go north into the Grand Foyer *(don't perform ritual yet — missing blood pact)*
+
+### 7. Dining Hall (room_8) — go north from Grand Foyer
+- **Vampire is aggressive** — fight immediately on entry
+- Use the **fire poker** (vampire is weak to fire — deals bonus damage)
+- Collect the **iron key** from vampire's drop
+- `open dusty lockbox` to find a hidden **health potion** inside
+
+### 8. Basement Stairs (room_10) — go west from Dining Hall
+- Take the **health potion** on the floor
+- `unlock down` using the **iron key**
+
+### 9. Basement (room_11) — go down
+- Fight the **ghoul** (weak to blade/magic — magic staff kills it in 2 rounds)
+- Take the **health potion**, **chain gloves**, and **rusty sword** if you need them
+
+### 10. Lord Harwick's Vault (room_12) — go north
+- **Lord Harwick is aggressive** — fight on entry
+- Equip **magic staff** (Harwick is weak to magic and fire)
+- Use potions freely — this is the last fight
+- Collect the **blood pact** from Harwick's drop ✓ *(ritual item 3 of 3)*
+
+### 11. Grand Foyer (room_5) — perform the ritual
+- Navigate back: room_11 → room_10 → room_8 → room_5
+- Type `perform ritual`
+
 ---
 
 ## Simulation Harness
@@ -536,32 +590,77 @@ The bot uses BFS pathfinding to navigate, picks up useful items, equips the best
 
 **Report fields (per strategy):** win/death/stuck/timeout rates, avg turns, avg final HP and gold, ritual component acquisition rates, per-monster fight/win/death/flee rates and avg damage dealt/taken, room visit rates, balance issues with severity flags (critical / high / medium).
 
-### Balance Findings (session 2026-05-12, 30 runs per strategy)
+### Balance Findings (2026-05-13, current baseline)
 
 | Metric | balanced | cautious | aggressive | random |
 |--------|----------|----------|------------|--------|
-| Win rate | 0% | 0% | 0% | 0% |
-| Death rate | 50% | 37% | 100% | 93% |
-| Avg turns (death) | 48.7 | 49.5 | 6.0 | 37.7 |
+| Win rate | 83% | 90% | 0% | 37% |
+| Death rate | 17% | 7% | 100% | 63% |
+| Avg turns (win) | 52 | 56 | — | 55 |
 | `strange amulet` found | 100% | 100% | 0% | 77% |
-| `unmaking flame` found | 90% | 70% | 0% | 60% |
-| `blood pact` found | 0% | 0% | 0% | 0% |
+| `unmaking flame` found | 100% | 100% | 0% | 77% |
+| `blood pact` found | 83% | 90% | 0% | 37% |
 
-**Root causes:**
+**Notes:**
 
-- **Ghost (300 HP)** is an extreme resource drain. Balanced bots take an average of 7.2 rounds and burn 2–3 health potions across flee-and-return fights. Players arrive at the vampire with near-zero HP.
-- **Blood Pact is never obtained (0% across all strategies).** Players exhaust all health potions on the ghost and vampire, then arrive at Lord Harwick Vane (120 HP, 20 dmg, aggressive) with ~2 HP.
-- **Aggressive strategy dies instantly** — charges the 300 HP ghost unarmed on turn 6 before reaching any gear.
-- **Lord Harwick Vane has 40–67% death rate** among players who reach him, and 0% win rate.
+- Vampire is the main killer for balanced/cautious — working as intended mid-game threat
+- Aggressive always dies to the ghost (6 turns) — this is a strategy design issue, not a balance issue; the ghost is in the starting room and no magic weapon is nearby
+- Random gets stuck on the ghost (no map awareness) and Harwick (insufficient potions) — expected for undirected play
 
-**Recommended balance fixes:**
+**Balance changes applied (2026-05-13):**
 
 | Change | Reasoning |
 |--------|-----------|
-| Ghost HP: 300 → 120 | Currently consumes all potions; should be mid-tier threat, not a war of attrition |
-| Add 1–2 potions in room_8 or room_10 | Players arrive at the final boss with 0 resources; needs a resupply point |
-| Lord Harwick Vane HP: 120 → 70–80 | Nobody reaches him alive under current potion economy |
-| Consider a fire-type weapon in early rooms | Vampire's fire/blade weakness is inaccessible — no fire weapon exists; bot must fight inefficiently |
+| Ghost HP: 300 → 120 | Was burning all potions before any progress |
+| Harwick HP: 120 → 75, dmg: 20 → 16 | High HP + damage caused cautious bots to flee-loop and get permanently stuck |
+| `fire_poker` weapon type: blunt → fire | Gives an early fire weapon in room_4; effective vs. vampire and Harwick |
+| Added potions in room_8 (hidden), room_10, room_11 | Ensures players have reserves for the final fight |
+
+---
+
+## Fun Test
+
+`fun_test.py` is an LLM-as-judge playability scorer. It drives the game with a GPT-4o-mini "curious player" bot that wanders organically, talks to NPCs in passing, and examines things it finds interesting — then asks o3-mini to score six playability dimensions on the resulting transcript.
+
+Uses a different model family as judge (o3-mini scores GPT-4o output) to reduce self-rating bias.
+
+```bash
+# Default — 60-turn playthrough, print report to terminal
+python fun_test.py
+
+# Longer run, save full JSON report
+python fun_test.py --turns 80 --output fun_report.json
+```
+
+The output JSON contains scores, per-dimension reasoning, and the full game transcript.
+
+**Scored dimensions:**
+
+| Dimension | What it measures |
+|-----------|-----------------|
+| `atmosphere` | Gothic tone — does the writing feel immersive and consistent? |
+| `variety` | Do room descriptions, combat lines, and NPC replies feel distinct, or do they recycle phrases? |
+| `npc_voice` | Do NPCs feel like different characters, or do they all sound like the same narrator? |
+| `pacing` | Does the game move at a satisfying rhythm, or does it drag/rush? |
+| `discovery` | Do hidden items and secrets feel rewarding when found? |
+| `world_coherence` | Does the world react to what you've done? Do NPCs remember things? |
+
+**Sample output (2026-05-13, 60 turns, o3-mini judge):**
+
+| Dimension | Score |
+|-----------|-------|
+| atmosphere | 9/10 |
+| variety | 6/10 |
+| npc_voice | 7/10 |
+| pacing | 6/10 |
+| discovery | 8/10 |
+| world_coherence | 7/10 |
+| **Overall** | **7/10** |
+
+> *Top issue: Reducing repetitive descriptions and making room interactions feel more varied would enhance engagement and pacing.*
+> *Standout: The game excels in creating a richly atmospheric gothic setting.*
+
+**Swapping to Claude as judge:** once an `ANTHROPIC_API_KEY` is available, change `JUDGE_MODEL` in `fun_test.py` — the file contains a comment with the exact 4-line swap.
 
 ---
 
