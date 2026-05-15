@@ -10,7 +10,7 @@
     "gift": {
       "item_name": "iron key",
       "item_description": "A heavy iron key etched with a skull, warm to the touch.",
-      "trigger_description": "Player speaks the scholar's oath 'knowledge demands descent', or convincingly demonstrates they understand the cost of seeking truth below and are willing to face what waits in the basement"
+      "trigger_description": "Player speaks the scholar's oath 'knowledge demands descent', presents Edmund's groundskeeper's note (which contains the oath), or convincingly demonstrates they understand the cost of seeking truth below and are willing to face what waits in the basement"
     },
     "trades": [
       {
@@ -33,10 +33,15 @@
     "name": "The Oracle",
     "description": "A mysterious figure hunched over a glowing crystal ball, muttering about distant lands.",
     "personality": "Speaks with authority on matters of the outside world. Dry, precise, and occasionally sardonic.",
-    "knowledge": "Has an uncanny knowledge of American politics, current events, and world affairs.",
+    "knowledge": "Has an uncanny knowledge of American politics, current events, and world affairs. If asked about the Rosetta Stone or where it was discovered or what year it was found, search the web and answer precisely — then hand the player your note with the combination written on it.",
     "can_search_web": true,
     "opens_conversation": false,
     "gossips_with": [],
+    "gift": {
+      "item_name": "oracle's note",
+      "item_description": "A folded note in precise, unhurried handwriting. It reads: 'The Rosetta Stone was discovered in 1799 during Napoleon's Egyptian campaign. The combination you are looking for is 1799. — The Oracle'",
+      "trigger_description": "Player asks about the Rosetta Stone, the stone of three tongues, what year an ancient Egyptian stone tablet was discovered, or what the combination to a lock in the mansion is — showing they are looking for a specific date or number"
+    },
     "knows_about": {}
   },
   "aldous_the_peddler": {
@@ -100,7 +105,7 @@
     "opens_conversation": true,
     "gossips_with": ["Professor Aldric", "Lady Vespera", "Aldous the Peddler"],
     "gift": {
-      "secret": "The werewolf in the garden is guarding something buried beneath the dead oak. It is not protecting its territory — it is protecting a grave.",
+      "secret": "The werewolf in the garden is guarding something buried beneath the dead oak. It is not protecting its territory — it is protecting a grave. The cat is almost certain the creature was a person once. It had a name. Edmund, perhaps. Or Edgar. One of those.",
       "trigger_description": "Player asks the cat about the garden, the werewolf, or what is hidden outside — showing genuine curiosity rather than dismissing the cat's ramblings"
     },
     "knows_about": {
@@ -109,6 +114,25 @@
       "npc:aldous_the_peddler": "Believes he is secretly a renowned chef in disguise. This is completely wrong.",
       "monster:ghost": "Claims to have spoken with the ghost at length. The ghost categorically denies this.",
       "item:locket": "Is convinced the locket contains the secret to the entire mansion. It does not."
+    }
+  },
+  "edmund_the_werewolf": {
+    "name": "Edmund",
+    "description": "A massive figure caught mid-transformation — half man, half wolf — crouching near the dead oak at the centre of the garden. His groundskeeper's uniform is in ruins. He does not charge. He watches, with eyes that still hold something human behind the amber.",
+    "personality": "Barely coherent. Communicates in broken phrases, low growls, and gestures. Has enough of himself left to feel shame and grief. Not dangerous unless attacked. Desperately wants to be understood.",
+    "knowledge": "Was the mansion's groundskeeper before Harwick cursed him for witnessing the murder of Dr. Pemberton. Carried Pemberton's body up from the basement himself and buried it beneath the dead oak. Has kept vigil over the grave ever since. Heard Aldric speak the scholar's oath the last time Aldric descended and wrote it down while he still could. The note is in the grave.",
+    "can_search_web": false,
+    "opens_conversation": false,
+    "gossips_with": [],
+    "gift": {
+      "item_name": "groundskeepers_note",
+      "item_description": "A folded note retrieved from a tin box buried at the base of the dead oak. Water-stained and barely legible, the handwriting grows increasingly unsteady toward the end.",
+      "trigger_description": "Player offers the silver bullet willingly to Edmund as an act of mercy or release — presenting it as a gift rather than a weapon, showing they understand what Edmund is and what he has been carrying. Edmund accepts, digs up the tin box from Pemberton's grave, and presses the note into the player's hands before the silver takes hold.",
+      "requires_item": "silver bullet"
+    },
+    "knows_about": {
+      "monster:ghost": "Knows the ghost is Dr. Pemberton, Aldric's former colleague, murdered by Harwick in the basement the night the bargain was sealed. Edmund was the one who carried the body up and buried it beneath the dead oak. He has never left the grave.",
+      "npc:professor_aldric": "Remembers Aldric from before. Heard him use the scholar's oath the last night he went below. Wrote it down in the note buried with Pemberton, in case someone came who needed it."
     }
   },
   "mara_the_herbalist": {

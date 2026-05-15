@@ -508,57 +508,93 @@ Once all three are in your inventory, go to the Grand Foyer and type `perform ri
 
 ## How to Win
 
-A complete walkthrough from start to ritual. No backtracking, no luck required.
+A complete walkthrough from start to ritual. The game rewards talking to NPCs — much of the critical information lives in conversation, not on the floor.
 
-### 1. Study (room_1) — starting room
-- Take the **rusty key** and **health potion**
-- Leave the ghost alone for now — you need better weapons first
+### The Three Ritual Components
 
-### 2. Hallway (room_2) — go north
-- Take nothing; don't go north yet (locked)
+| Item | Found | How |
+|------|-------|-----|
+| **Strange Amulet** | Secret Room (room_7) | Floor item — take it after clearing the wraith |
+| **Unmaking Flame** | Study (room_1) | Dropped by the ghost on death |
+| **Blood Pact** | Lord Harwick's Vault (room_12) | Dropped by Lord Harwick Vane on death |
 
-### 3. Library (room_4) — go west from Hallway
-- Take and equip the **fire poker** (fire-type weapon — effective vs. vampire and Lord Harwick)
-- Take and equip the **iron helmet**
+Once all three are in your inventory, go to the **Grand Foyer (room_5)** and type `ritual`.
 
-### 4. Secret Room (room_7) — go north from Library
-- Fight the **wraith** — use any weapon (wraith is weak to magic, but fire poker works fine at this stage)
-- Take the **strange amulet** ✓ *(ritual item 1 of 3)*
-- Take and equip the **magic staff** (15 dmg, magic-type — best weapon in the game)
-- Take the **leather boots** if you want the armour
+---
 
-### 5. Back to Study (room_1) — fight the ghost
-- Equip the **magic staff** (ghost is weak to magic — kills it in ~5 rounds)
-- Use health potions if HP drops below 40
-- Collect the **unmaking flame** from the ghost's drop ✓ *(ritual item 2 of 3)*
+### Phase 1 — Study (room_1, starting room)
 
-### 6. Hallway → Grand Foyer (room_5)
-- From Hallway, `unlock north` using the **rusty key**
-- Go north into the Grand Foyer *(don't perform ritual yet — missing blood pact)*
+- Take the **rusty key**, **tattered cloak**, and **health potion**
+- Examine the **old book** → the **secret letter** falls out
+- **Give the secret letter to Professor Aldric** — he reads it and explains the full lore: Harwick's bargain, the three components, the ritual location
+- Get the **iron key** from Aldric by speaking the scholar's oath: *"knowledge demands descent"*
+  - Don't know the oath? Find the **groundskeeper's note** first (see Garden below) — it contains the exact phrase
+  - Alternatively: convince Aldric in your own words that you understand what lies below and are willing to face it
+- **Talk to the Oracle** — ask where the Rosetta Stone is kept, or what year it was discovered → Oracle searches the web and hands you the **oracle's note** (you'll need this in the Dining Hall)
+- Open the **wooden chest** for 15 gold
+- Leave the **ghost** alone for now — you need a magic weapon first
 
-### 7. Dining Hall (room_8) — go north from Grand Foyer
-- **Vampire is aggressive** — fight immediately on entry
-- Use the **fire poker** (vampire is weak to fire — deals bonus damage)
-- Collect the **iron key** from vampire's drop
-- `open dusty lockbox` to find a hidden **health potion** inside
+### Phase 2 — Garden (room_9, optional but helpful)
 
-### 8. Basement Stairs (room_10) — go west from Dining Hall
-- Take the **health potion** on the floor
-- `unlock down` using the **iron key**
+*Access: room_1 → room_2 → room_8 → room_9. Requires defeating the vampire first — do this loop after Phase 3 if needed.*
 
-### 9. Basement (room_11) — go down
-- Fight the **ghoul** (weak to blade/magic — magic staff kills it in 2 rounds)
-- Take the **health potion**, **chain gloves**, and **rusty sword** if you need them
+- **Edmund** (the werewolf) crouches near the dead oak. He was the mansion's groundskeeper before Harwick cursed him for witnessing Dr. Pemberton's murder
+- If you **offer him the silver bullet** (found hidden in the herbs — examine the herbs to reveal it) as an act of mercy rather than a weapon, Edmund digs up a tin box from Pemberton's grave and gives you the **groundskeeper's note**
+- The note contains the scholar's oath and is accepted by Aldric as proof — use it to get the iron key if you missed the oath
+- Talk to **Mara the Herbalist** for cheap health potions (15g each) and lore confirming the ritual components
 
-### 10. Lord Harwick's Vault (room_12) — go north
-- **Lord Harwick is aggressive** — fight on entry
-- Equip **magic staff** (Harwick is weak to magic and fire)
-- Use potions freely — this is the last fight
-- Collect the **blood pact** from Harwick's drop ✓ *(ritual item 3 of 3)*
+### Phase 3 — Library → Secret Room (rooms 4 and 7)
 
-### 11. Grand Foyer (room_5) — perform the ritual
-- Navigate back: room_11 → room_10 → room_8 → room_5
-- Type `perform ritual`
+You need a magic weapon before fighting the ghost or wraith. The magic staff is in the Secret Room — reach it first.
+
+- room_1 → room_2 → room_4 (Library)
+  - Fight the **shadow** (weak to magic and fire — fire poker from this same room helps)
+  - Take and equip the **fire poker** (6 dmg, fire-type)
+  - Take the **iron helmet** (armor 4)
+  - Examine the **ancient tome** → **hidden note** falls out (contains a clue about the Oracle puzzle)
+- room_4 → room_7 (Secret Room)
+  - Fight the **wraith** (weak to magic only — fire poker deals no bonus damage here; fight is slow without magic)
+  - Take the **strange amulet** ✓ *(ritual item 1 of 3)*
+  - Take and equip the **magic staff** (15 dmg, magic-type — best weapon in the game)
+  - Examine the **strange amulet** → the **ritual dagger** (12 dmg, blade) is revealed
+
+> **Bottleneck:** The wraith is only weak to magic, but the magic staff is behind it. If you have 80 gold, buy the **magic wand** from Aldous first. Otherwise fight through with fire poker — the wraith has 40 HP and the fight is winnable, just slow.
+
+### Phase 4 — Fight the Ghost (room_1)
+
+- Back in the Study, equip the **magic staff**
+- Fight the **ghost** (120 HP, weak to magic, defense 3) — magic staff deals ~17–23 damage per round; expect ~6 rounds and ~50 HP damage
+- Use a health potion if HP drops below 40
+- Collect the **unmaking flame** ✓ *(ritual item 2 of 3)*
+
+### Phase 5 — Dining Hall and the Oracle puzzle (rooms 5 and 8)
+
+- room_2 → room_5 (Grand Foyer): `unlock north` with the **rusty key**
+  - Don't perform the ritual yet — you're missing the blood pact
+- room_5 → room_8 (Dining Hall)
+  - **Vampire is aggressive** — fights on entry (60 HP, weak to blade and fire, defense 8)
+  - Use the **ritual dagger** (blade, weakness match) for best damage
+  - Talk to **Lady Vespera** — acknowledge what she is without flinching and she gives you a **silver vial** (antidote); she also confirms the ritual components and location
+  - Open the **dusty lockbox** — it requires the **oracle's note** in your inventory; inside: 50 gold and a health potion
+
+### Phase 6 — Basement descent (rooms 10, 11, 12)
+
+- room_8 → room_10 (Basement Stairs): `unlock down` with the **iron key** (from Aldric)
+  - Take the **health potion** on the floor
+- room_10 → room_11 (Basement)
+  - Fight the **ghoul** (35 HP, weak to blade/magic — magic staff or ritual dagger finishes it quickly)
+  - Take the **health potion** and **chain gloves**
+- room_11 → room_12 (Lord Harwick's Vault)
+  - **Lord Harwick Vane is aggressive** — fights on entry (75 HP, weak to magic and fire, defense 8)
+  - Equip **magic staff** (weakness match deals ~12–18 damage per round)
+  - Use potions freely — this is the last fight; no reason to conserve
+  - Collect the **blood pact** ✓ *(ritual item 3 of 3)*
+
+### Phase 7 — The Ritual (room_5)
+
+- Navigate back: room_12 → room_11 → room_10 → room_8 → room_5
+- All three items in inventory: **strange amulet**, **unmaking flame**, **blood pact**
+- Type `ritual` in the Grand Foyer
 
 ---
 
@@ -590,22 +626,23 @@ The bot uses BFS pathfinding to navigate, picks up useful items, equips the best
 
 **Report fields (per strategy):** win/death/stuck/timeout rates, avg turns, avg final HP and gold, ritual component acquisition rates, per-monster fight/win/death/flee rates and avg damage dealt/taken, room visit rates, balance issues with severity flags (critical / high / medium).
 
-### Balance Findings (2026-05-13, current baseline)
+### Balance Findings (2026-05-14, current baseline)
 
 | Metric | balanced | cautious | aggressive | random |
 |--------|----------|----------|------------|--------|
-| Win rate | 83% | 90% | 0% | 37% |
-| Death rate | 17% | 7% | 100% | 63% |
-| Avg turns (win) | 52 | 56 | — | 55 |
-| `strange amulet` found | 100% | 100% | 0% | 77% |
-| `unmaking flame` found | 100% | 100% | 0% | 77% |
-| `blood pact` found | 83% | 90% | 0% | 37% |
+| Win rate | 85% | 95% | 0% | 15% |
+| Death rate | 15% | 5% | 100% | 85% |
+| Avg turns (win) | 52 | 59 | — | 74 |
+| `strange amulet` found | 100% | 100% | 0% | 55% |
+| `unmaking flame` found | 90% | 100% | 0% | 55% |
+| `blood pact` found | 85% | 95% | 0% | 15% |
 
 **Notes:**
 
-- Vampire is the main killer for balanced/cautious — working as intended mid-game threat
-- Aggressive always dies to the ghost (6 turns) — this is a strategy design issue, not a balance issue; the ghost is in the starting room and no magic weapon is nearby
-- Random gets stuck on the ghost (no map awareness) and Harwick (insufficient potions) — expected for undirected play
+- Balanced/cautious improved vs. prior baseline; death cause shifted from vampire → Lord Harwick for balanced — the vampire is no longer the main killer, the final boss is
+- Aggressive always dies to the ghost (6 turns) — strategy design issue, not a balance issue; no magic weapon is available in the starting room
+- Random dropped from 37% → 15% because the `dusty_lockbox` now requires the oracle's note (NPC gift), and the random strategy never interacts with NPCs. Previously random bots got a free health potion from the lockbox; now they can't, tightening the health economy before the deep dungeon. This is the mechanic working correctly
+- Simulator updated to model new mechanics: `requires_item` prerequisite for NPC gifts (Edmund consumes silver bullet), `required_item` gate on containers (dusty lockbox)
 
 **Balance changes applied (2026-05-13):**
 

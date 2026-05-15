@@ -158,7 +158,7 @@ def handle_open(state, target, io) -> dict:
     room = state["current_room_data"]
     room_id = state["current_room_id"]
     room_states, room_override = get_mutable_room(state, room_id)
-    player, _ = get_mutable_player(state)
+    player, inventory = get_mutable_player(state)
 
     item = find_item(room, target)
 
@@ -173,6 +173,13 @@ def handle_open(state, target, io) -> dict:
     if item.get("is_open"):
         io.send(f"The {target} is already open.")
         return {"force_full_description": False}
+
+    required_item = item.get("required_item")
+    if required_item:
+        if not any(i["name"] == required_item for i in inventory):
+            debug(f"open '{target}': missing required item '{required_item}'")
+            io.send(f"The lock holds firm. You're missing something.")
+            return {"force_full_description": False}
 
     gold_found = item.get("gold", 0)
 

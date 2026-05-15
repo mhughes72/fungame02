@@ -460,7 +460,29 @@ def handle_ritual(state: AgentState) -> dict:
 def trigger_win(state: AgentState) -> dict:
     player, inventory = get_mutable_player(state)
 
+    gifts        = state.get("npc_gifts_given", [])
+    trades       = state.get("npc_trades_done", [])
+    rooms        = state.get("rooms_visited", set())
+
+    beats = []
+    if any("secret letter" in t for t in trades):
+        beats.append("The player read Harwick's secret letter and learned the full history of the bargain — his family's blood, the Hollow's promise, and what it cost.")
+    if "Professor Aldric" in gifts:
+        beats.append("Professor Aldric trusted the player with the iron key and the scholar's oath, knowing what waited below.")
+    if "Edmund" in gifts:
+        beats.append("The player showed mercy to Edmund Marsh — the groundskeeper cursed into wolf form for witnessing Pemberton's murder — offering the silver bullet as release rather than a weapon. Edmund is at rest beside Pemberton's grave.")
+    if "Lady Vespera" in gifts:
+        beats.append("Lady Vespera, who has watched this mansion for centuries and created the wraith herself, helped the player understand what was needed. She has been waiting for this night.")
+    if "The Oracle" in gifts:
+        beats.append("The player consulted the Oracle — an anachronistic figure with knowledge of the outside world — to unlock one of the mansion's hidden secrets.")
+    if "Shadow" in gifts:
+        beats.append("Even Shadow the cat, who claims ancient wisdom and is usually wrong, pointed the player toward the garden and Edmund's vigil.")
+    beats.append(f"The player explored {len(rooms)} of 12 rooms.")
+
+    story_context = "\n".join(f"- {b}" for b in beats)
+
     prompt = WIN_PROMPT.invoke({
+        "story_context": story_context,
         "gold": player.get("gold", 0),
         "health": player.get("health", 100),
         "max_health": player.get("max_health", 100),

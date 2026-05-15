@@ -76,7 +76,7 @@
   },
   "hidden_note": {
     "name": "hidden note",
-    "description": "A small note tucked inside the ancient tome, written in a cramped hand. The ink is fresh enough to smudge."
+    "description": "A small note tucked inside the ancient tome, written in a cramped hand. The ink is fresh enough to smudge. It reads: 'The lock in the dining hall answers to the year the stone of three tongues was unearthed from Egyptian sand. Ask the Oracle if the date escapes you.'"
   },
   "fire_poker": {
     "name": "fire poker",
@@ -106,9 +106,14 @@
   },
   "dusty_lockbox": {
     "name": "dusty lockbox",
-    "description": "A metal box sealed with a combination lock, the numbers worn smooth with use. Someone opened this regularly, once.",
+    "description": "A metal box sealed with a four-digit combination lock, the numbers worn smooth with use. Someone opened this regularly, once.",
     "openable": true,
+    "required_item": "oracle's note",
     "gold": 50
+  },
+  "oracles_note": {
+    "name": "oracle's note",
+    "description": "A folded note in precise, unhurried handwriting. It reads: 'The Rosetta Stone was discovered in 1799 during Napoleon's Egyptian campaign. The combination you are looking for is 1799. — The Oracle'"
   },
   "glass_jar": {
     "name": "glass jar",
@@ -213,6 +218,10 @@
     "description": "A fitted cuirass of boiled leather, lacquered dark. It will not stop a determined blade, but it will slow one down considerably.",
     "armor_slot": "chest",
     "armor_rating": 5
+  },
+  "groundskeepers_note": {
+    "name": "groundskeeper's note",
+    "description": "A folded note, water-stained and barely legible, the handwriting growing increasingly unsteady toward the end. It reads: 'For whoever comes after. The way below requires the oath. I heard Aldric say it the last night he descended. Say it to him and he will understand. Knowledge demands descent. God help you. — E. Marsh, Groundskeeper, Harwick Manor'"
   },
   "blood_pact": {
     "name": "blood pact",

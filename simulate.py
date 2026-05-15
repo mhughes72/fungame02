@@ -382,6 +382,13 @@ class SimBot:
             item_name = gift["item_name"]
             if self.has_item(item_name):
                 continue
+            # Some gifts require consuming a specific item (e.g. Edmund requires silver bullet)
+            requires = gift.get("requires_item")
+            if requires:
+                if requires not in self.inventory_names():
+                    continue
+                self.player["inventory"] = [i for i in self.player["inventory"] if i["name"] != requires]
+                self.log(f"Gave {requires} to {npc['name']}", "gift")
             # Find item data from catalogue (match by name)
             item_id   = next((k for k, v in self.item_cat.items() if v.get("name") == item_name), None)
             item_data = self.item_from_cat(item_id) if item_id else {**ITEM_DEFAULTS, "name": item_name}
@@ -420,6 +427,10 @@ class SimBot:
     def _open_containers(self, room):
         for item in list(room["items"]):
             if item.get("openable") and not item.get("is_open"):
+                # Respect required_item gate (e.g. dusty lockbox needs oracle's note)
+                required = item.get("required_item")
+                if required and required not in self.inventory_names():
+                    continue
                 gold = item.get("gold", 0)
                 if gold > 0:
                     self.player["gold"] += gold

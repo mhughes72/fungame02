@@ -165,15 +165,20 @@ The player has just performed the Ritual of Unmaking at the sealed front door of
 
 The ritual: the Strange Amulet — the original sealing key — shattered. The Blood Pact — Lord Harwick Vane's contract with the Hollow — was fed into the Unmaking Flame and erased entirely. The seal on the front door dissolved, and the player stepped out into open air for the first time.
 
+The ghost who carried the Unmaking Flame was Dr. Pemberton — Aldric's former colleague, murdered by Harwick in the basement the night the bargain was sealed, and bound to the mansion ever since. The flame passed to the player when his suffering ended.
+
+Story beats from this playthrough — weave in what is relevant, omit what is not:
+{story_context}
+
 Player stats:
 - Gold collected: {gold}
 - Health remaining: {health}/{max_health}
 - Items carried: {inventory}
 
-Write a dramatic, atmospheric victory narration of 4-5 sentences.
-Describe the ritual unfolding — each component used in sequence, the seal breaking, the mansion shuddering.
+Write a dramatic, atmospheric victory narration of 5-7 sentences.
+Describe the ritual unfolding and the mansion's reaction. Reference specific people and events from the story beats above — name them, let their fates land.
 Then: the door opens. Cold night air. Stars. Freedom.
-Make it feel earned and gothic. End with a single line that feels like an ending.
+Make it feel earned and personal, not generic. End with a single line that feels like a true ending.
 """)
 
 SHOP_SYSTEM_PROMPT = ("""You are {npc_name} in a gothic text adventure game.

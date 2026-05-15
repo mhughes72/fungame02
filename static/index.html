@@ -282,6 +282,103 @@
       color: #a89060;
     }
 
+    /* How-to-win modal */
+    #win-guide-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    #win-guide-modal.active { display: flex; }
+    #win-guide-modal-content {
+      background: #1a1a1a;
+      border: 2px solid #3d3d3d;
+      padding: 24px;
+      max-width: 540px;
+      width: 100%;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+    }
+    #win-guide-title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #d4a574;
+      margin-bottom: 14px;
+      text-shadow: 0 0 10px rgba(196,137,74,0.3);
+    }
+    .ritual-summary {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+    .ritual-badge {
+      flex: 1;
+      text-align: center;
+      padding: 8px 4px;
+      border: 1px solid #3a3a3a;
+      border-radius: 2px;
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: #4a4a3a;
+      background: #111;
+      transition: all 0.3s;
+    }
+    .ritual-badge.found {
+      border-color: #6b8b3a;
+      color: #a8c870;
+      background: #1a2410;
+      text-shadow: 0 0 6px rgba(140,180,60,0.3);
+    }
+    .ritual-badge .badge-icon { font-size: 14px; display: block; margin-bottom: 3px; }
+    .win-guide-phase {
+      color: #a89060;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin: 14px 0 6px 0;
+      border-bottom: 1px solid #2a2a2a;
+      padding-bottom: 4px;
+    }
+    .win-step {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      font-size: 12px;
+      line-height: 1.8;
+      color: #7a6a50;
+    }
+    .win-step.trackable { color: #a89060; }
+    .win-step.done { color: #7aaa50; }
+    .win-step-icon {
+      flex-shrink: 0;
+      width: 14px;
+      text-align: center;
+      font-size: 11px;
+    }
+    .win-step.done .win-step-icon { color: #7aaa50; }
+    .win-step.trackable .win-step-icon { color: #5a4a30; }
+    .win-step .ritual-tag {
+      margin-left: 4px;
+      font-size: 9px;
+      letter-spacing: 1px;
+      color: #6b8b3a;
+      text-transform: uppercase;
+    }
+    .win-optional-header {
+      color: #6a5a40;
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin: 14px 0 6px 0;
+      border-bottom: 1px solid #222;
+      padding-bottom: 4px;
+    }
+
     /* Modal overlay */
     #about-modal {
       display: none;
@@ -1357,6 +1454,7 @@
   <div class="header-left">⚰ AI DRIVEN HAUNTED MANSION ⚰</div>
   <div class="header-right">
     <button id="help-btn" style="margin-right: 8px;">HELP</button>
+    <button id="win-guide-btn" style="margin-right: 8px;">HOW TO WIN</button>
     <button id="cheat-btn" style="margin-right: 8px;">CHEAT</button>
     <button id="about-btn" style="margin-right: 20px;">ABOUT</button>
     <div>
@@ -1473,6 +1571,19 @@
         <div class="help-row"><span class="help-cmd">quit</span><span class="help-desc">end the game</span></div>
       </div>
       <button onclick="document.getElementById('help-modal').classList.remove('active')" style="margin-top:8px;width:100%">Close</button>
+    </div>
+  </div>
+
+  <div id="win-guide-modal">
+    <div id="win-guide-modal-content">
+      <div id="win-guide-title">⚗ Ritual of Unmaking — How to Win</div>
+      <div class="ritual-summary">
+        <div class="ritual-badge" id="badge-amulet"><span class="badge-icon">◆</span>Strange Amulet</div>
+        <div class="ritual-badge" id="badge-flame"><span class="badge-icon">◆</span>Unmaking Flame</div>
+        <div class="ritual-badge" id="badge-pact"><span class="badge-icon">◆</span>Blood Pact</div>
+      </div>
+      <div id="win-guide-steps"></div>
+      <button id="win-guide-close" style="margin-top:16px;width:100%">Close</button>
     </div>
   </div>
 
@@ -2781,6 +2892,81 @@
 
     document.getElementById('cheat-ai-features').innerHTML = html;
   }
+
+  // How-to-win modal
+  function buildWinGuide() {
+    const inv = new Set((currentPlayerState.inventory || []).map(i => i.name));
+
+    // Ritual badges
+    ['amulet','flame','pact'].forEach((id, i) => {
+      const names = ['strange amulet','unmaking flame','blood pact'];
+      document.getElementById('badge-' + id).classList.toggle('found', inv.has(names[i]));
+    });
+
+    const phase = t => `<div class="win-guide-phase">${t}</div>`;
+
+    // step(text, trackedItem, ritualTag)
+    // trackedItem: item name to check in inventory — shows ✓/○
+    // no trackedItem: guide-only bullet
+    const step = (text, trackedItem, ritualTag) => {
+      const tracked = !!trackedItem;
+      const done    = tracked && inv.has(trackedItem);
+      const cls     = done ? 'win-step done' : tracked ? 'win-step trackable' : 'win-step';
+      const icon    = done ? '✓' : tracked ? '○' : '·';
+      const tag     = ritualTag ? `<span class="ritual-tag">★ RITUAL ${ritualTag}</span>` : '';
+      return `<div class="${cls}"><span class="win-step-icon">${icon}</span><span>${text}${tag}</span></div>`;
+    };
+
+    let html = '';
+
+    html += phase('Phase 1 — The Study');
+    html += step('Take the rusty key', 'rusty key');
+    html += step('Examine the old book → secret letter → give to Aldric');
+    html += step('Get the iron key from Aldric (speak the scholar\'s oath)', 'iron key');
+    html += step('Consult the Oracle — ask about the Rosetta Stone', "oracle's note");
+
+    html += phase('Phase 2 — Library &amp; Secret Room');
+    html += step('Go west to Library — fight the shadow, take the fire poker');
+    html += step('Examine the ancient tome → hidden note (Oracle clue)');
+    html += step('Go north to Secret Room — fight the wraith');
+    html += step('Equip the magic staff', 'magic staff');
+    html += step('Take the Strange Amulet', 'strange amulet', '1');
+
+    html += phase('Phase 3 — Defeat the Ghost');
+    html += step('Return to Study — equip magic staff — fight the ghost');
+    html += step('Collect the Unmaking Flame', 'unmaking flame', '2');
+
+    html += phase('Phase 4 — Dining Hall &amp; Basement');
+    html += step('Unlock Grand Foyer (rusty key, north from Hallway)');
+    html += step('Fight the vampire in the Dining Hall');
+    html += step('Open the dusty lockbox with oracle\'s note → 50 gold + potion', "oracle's note");
+    html += step('Unlock Basement Stairs (iron key, west from Dining Hall)');
+    html += step('Fight the ghoul in the Basement');
+
+    html += phase('Phase 5 — Lord Harwick\'s Vault');
+    html += step('Go north into the Vault — defeat Lord Harwick Vane');
+    html += step('Collect the Blood Pact', 'blood pact', '3');
+
+    html += phase('Phase 6 — The Ritual');
+    const allRitual = inv.has('strange amulet') && inv.has('unmaking flame') && inv.has('blood pact');
+    html += step('Return to Grand Foyer with all three ritual items');
+    html += step(allRitual ? 'Type "ritual" — <strong>you\'re ready!</strong>' : 'Type "ritual"');
+
+    html += '<div class="win-optional-header">Optional</div>';
+    html += step('Offer the silver bullet to Edmund in the Garden (mercy path)', "groundskeeper's note");
+    html += step('Talk to Lady Vespera — acknowledge what she is');
+    html += step('Shadow Cat — ask about the garden');
+
+    document.getElementById('win-guide-steps').innerHTML = html;
+  }
+
+  const winGuideModal = document.getElementById('win-guide-modal');
+  document.getElementById('win-guide-btn').addEventListener('click', () => {
+    buildWinGuide();
+    winGuideModal.classList.add('active');
+  });
+  document.getElementById('win-guide-close').addEventListener('click', () => winGuideModal.classList.remove('active'));
+  winGuideModal.addEventListener('click', e => { if (e.target === winGuideModal) winGuideModal.classList.remove('active'); });
 
   document.getElementById('help-btn').addEventListener('click', () => {
     document.getElementById('help-modal').classList.add('active');

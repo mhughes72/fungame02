@@ -114,7 +114,7 @@
       {"id": "herbs",        "hidden": false, "revealed_by": null},
       {"id": "silver_bullet","hidden": true,  "revealed_by": "herbs"}
     ],
-    "npcs": ["mara_the_herbalist"]
+    "npcs": ["mara_the_herbalist", "edmund_the_werewolf"]
   },
   "room_10": {
     "name": "Basement Stairs",
