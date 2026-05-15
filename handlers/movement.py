@@ -4,26 +4,44 @@
 # and returns the new room ID if so.
 
 def handle_go(state, target, io) -> dict:
-    from utils import debug
+    from utils import debug, get_mutable_player, get_mutable_room
     room = state["current_room_data"]
+    room_id = state["current_room_id"]
     locked_exits = room.get("locked_exits", {})
 
     if target in room["exits"]:
         if target in locked_exits and locked_exits[target].get("locked"):
             required_key = locked_exits[target].get("required_key")
+            _, inventory = get_mutable_player(state)
+            player_keys = [i["name"] for i in inventory]
+            if required_key and required_key in player_keys:
+                # Auto-unlock and proceed
+                room_states, room_override = get_mutable_room(state, room_id)
+                new_locks = dict(locked_exits)
+                new_locks[target] = {**locked_exits[target], "locked": False}
+                room_override["locked_exits"] = new_locks
+                room_states[room_id] = room_override
+                dest = room["exits"][target]
+                debug(f"go {target}: auto-unlock with '{required_key}' | {room_id} → {dest}")
+                io.send(f"You use the {required_key} to unlock the door and head {target}.")
+                return {
+                    "current_room_id": dest,
+                    "room_states": room_states,
+                    "force_full_description": False
+                }
             debug(f"go {target}: blocked — requires '{required_key}'")
             io.send(f"The door to the {target} is locked.")
             return {"force_full_description": False}
 
         dest = room["exits"][target]
-        debug(f"go {target}: {state['current_room_id']} → {dest}")
+        debug(f"go {target}: {room_id} → {dest}")
         io.send(f"You head {target}.")
         return {
             "current_room_id": dest,
             "force_full_description": False
         }
 
-    debug(f"go {target}: no exit in {state['current_room_id']}")
+    debug(f"go {target}: no exit in {room_id}")
     io.send(f"You can't go {target} from here.")
     return {"force_full_description": False}
 

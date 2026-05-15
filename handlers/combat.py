@@ -119,7 +119,7 @@ def _execute_attack_round(player, monster, weapon_data, equipped_weapon, room, m
     return player["health"] > 0
 
 
-def _handle_victory(monster, target, room, room_override, room_states, room_id, player, inventory, io, mini_llm) -> dict:
+def _handle_victory(monster, target, room, room_override, room_states, room_id, player, inventory, io, mini_llm, item_catalogue=None) -> dict:
     """Process monster defeat: loot drops, room update, and player state emit."""
     drops = monster.get("drops", {})
     gold_drop = drops.get("gold", 0)
@@ -129,18 +129,22 @@ def _handle_victory(monster, target, room, room_override, room_states, room_id, 
     if gold_drop > 0:
         player["gold"] = player.get("gold", 0) + gold_drop
         io.send(f"You find {gold_drop} gold coins.")
-
     if item_drop:
-        drop_item_data = next(
-            (i for i in room["items"] if i["name"] == item_drop),
-            {"name": item_drop, "hidden": False, "revealed_by": None,
-             "openable": False, "is_open": False, "gold": 0,
-             "damage": 0, "weapon_type": None, "armor_slot": None,
-             "armor_rating": 0, "heal_amount": 0}
-        )
+        catalogue_entry = (item_catalogue or {}).get(item_drop, {})
+        display_name = catalogue_entry.get("name") or item_drop.replace("_", " ")
+        debug(f"drop resolve: id={item_drop!r} display={display_name!r}")
+        drop_item_data = {
+            "name": display_name, "hidden": False, "revealed_by": None,
+            "openable": False, "is_open": False, "gold": 0,
+            "damage": catalogue_entry.get("damage", 0),
+            "weapon_type": catalogue_entry.get("weapon_type"),
+            "armor_slot": catalogue_entry.get("armor_slot"),
+            "armor_rating": catalogue_entry.get("armor_rating", 0),
+            "heal_amount": catalogue_entry.get("heal_amount", 0),
+        }
         inventory.append(drop_item_data)
         player["inventory"] = inventory
-        io.send(f"You find: {item_drop}")
+        io.send(f"You find: {display_name}")
 
     new_monsters = [m for m in room["monsters"] if m["name"] != target]
     room_override["monsters"] = new_monsters
@@ -169,7 +173,7 @@ def _handle_victory(monster, target, room, room_override, room_states, room_id, 
     }
 
 
-def combat_node(state, ROOMS, mini_llm, io) -> dict:
+def combat_node(state, ROOMS, mini_llm, io, item_catalogue=None) -> dict:
     target = state.get("combat_target")
     room = state["current_room_data"]
     room_id = state["current_room_id"]
@@ -221,4 +225,4 @@ def combat_node(state, ROOMS, mini_llm, io) -> dict:
 
     io.send(f"\n[{monster['name'].upper()} DEFEATED]")
     emit_encounter_end(io)
-    return _handle_victory(monster, target, room, room_override, room_states, room_id, player, inventory, io, mini_llm)
+    return _handle_victory(monster, target, room, room_override, room_states, room_id, player, inventory, io, mini_llm, item_catalogue)

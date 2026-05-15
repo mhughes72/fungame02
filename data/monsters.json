@@ -9,7 +9,7 @@
     "damage": 8,
     "damage_variance": 4,
     "weaknesses": ["magic"],
-    "drops": {"gold": 10, "item": "unmaking_flame"}
+    "drops": {"gold": 10, "item": "unmaking flame"}
   },
   "giant_rat": {
     "name": "giant rat",
@@ -69,8 +69,7 @@
     "damage": 18,
     "damage_variance": 4,
     "weaknesses": ["blade", "fire"],
-    "drops": {"gold": 40, "item": "iron key"},
-    "aggressive": true
+    "drops": {"gold": 40, "item": "iron key"}
   },
   "werewolf": {
     "name": "werewolf",
@@ -94,7 +93,7 @@
     "damage": 16,
     "damage_variance": 6,
     "weaknesses": ["magic", "fire"],
-    "drops": {"gold": 60, "item": "blood_pact"},
+    "drops": {"gold": 60, "item": "blood pact"},
     "aggressive": true
   },
   "ghoul": {
