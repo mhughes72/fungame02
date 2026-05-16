@@ -184,20 +184,31 @@ def handle_open(state, target, io) -> dict:
     gold_found = item.get("gold", 0)
 
     new_items = []
+    revealed_names = []
     for i in room["items"]:
         if i["name"] == target:
             new_items.append({**i, "is_open": True, "gold": 0})
+        elif i.get("hidden") and i.get("revealed_by") == target:
+            new_items.append({**i, "hidden": False})
+            revealed_names.append(i["name"])
         else:
             new_items.append(i)
 
     room_override["items"] = new_items
     room_states[room_id] = room_override
 
+    contents = []
     if gold_found > 0:
         player["gold"] = player.get("gold", 0) + gold_found
-        debug(f"open '{target}': found {gold_found}g | total gold: {player['gold']}")
-        io.send(f"You open the {target} and find {gold_found} gold coins inside!")
-        io.send(f"You now have {player['gold']} gold.")
+        contents.append(f"{gold_found} gold coins")
+    if revealed_names:
+        contents.extend(revealed_names)
+
+    if contents:
+        debug(f"open '{target}': found {contents}")
+        io.send(f"You open the {target} and find: {', '.join(contents)}.")
+        if gold_found > 0:
+            io.send(f"You now have {player['gold']} gold.")
         emit_player_state(player, room_id, io, room_data=state.get("current_room_data"))
         return {
             "room_states": room_states,
@@ -207,7 +218,7 @@ def handle_open(state, target, io) -> dict:
         }
 
     debug(f"open '{target}': empty")
-    io.send(f"You open the {target} but find nothing of value inside.")
+    io.send(f"You open the {target} but find nothing inside.")
     return {
         "room_states": room_states,
         "force_full_description": False,

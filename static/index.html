@@ -2921,36 +2921,42 @@
 
     html += phase('Phase 1 — The Study');
     html += step('Take the rusty key', 'rusty key');
+    html += step('Take the health potion', 'health potion');
     html += step('Examine the old book → secret letter → give to Aldric');
-    html += step('Get the iron key from Aldric (speak the scholar\'s oath)', 'iron key');
-    html += step('Consult the Oracle — ask about the Rosetta Stone', "oracle's note");
+    html += step('Speak the scholar\'s oath to Aldric → iron key', 'iron key');
+    html += step('Ask the Oracle about the Rosetta Stone → oracle\'s note', "oracle's note");
 
     html += phase('Phase 2 — Library &amp; Secret Room');
-    html += step('Go west to Library — fight the shadow, take the fire poker');
-    html += step('Examine the ancient tome → hidden note (Oracle clue)');
-    html += step('Go north to Secret Room — fight the wraith');
-    html += step('Equip the magic staff', 'magic staff');
+    html += step('Go north → Hallway, west → Library');
+    html += step('Take the fire poker, equip it — fight the shadow (weak to fire)');
+    html += step('Examine the ancient tome → hidden note');
+    html += step('Go north to Secret Room');
+    html += step('Take the magic staff, equip it — fight the wraith (weak to magic)', 'magic staff');
     html += step('Take the Strange Amulet', 'strange amulet', '1');
 
     html += phase('Phase 3 — Defeat the Ghost');
-    html += step('Return to Study — equip magic staff — fight the ghost');
-    html += step('Collect the Unmaking Flame', 'unmaking flame', '2');
+    html += step('Return to Study (south → Library, east → Hallway, south → Study)');
+    html += step('Use the health potion to heal up first');
+    html += step('Fight the ghost with the magic staff (weak to magic)');
+    html += step('Unmaking Flame auto-collected from ghost', 'unmaking flame', '2');
 
     html += phase('Phase 4 — Dining Hall &amp; Basement');
-    html += step('Unlock Grand Foyer (rusty key, north from Hallway)');
-    html += step('Fight the vampire in the Dining Hall');
-    html += step('Open the dusty lockbox with oracle\'s note → 50 gold + potion', "oracle's note");
-    html += step('Unlock Basement Stairs (iron key, west from Dining Hall)');
-    html += step('Fight the ghoul in the Basement');
+    html += step('Go north → Hallway, north → Grand Foyer (rusty key auto-unlocks), north → Dining Hall');
+    html += step('Open the dusty lockbox (need oracle\'s note) → 50 gold + health potion revealed', "oracle's note");
+    html += step('Take the health potion from the lockbox, then use it to heal up');
+    html += step('Fight the vampire (vampire won\'t attack first — heal before engaging)');
+    html += step('Go west → Basement Stairs, down → Basement (iron key auto-unlocks)');
+    html += step('Fight the ghoul');
 
     html += phase('Phase 5 — Lord Harwick\'s Vault');
-    html += step('Go north into the Vault — defeat Lord Harwick Vane');
-    html += step('Collect the Blood Pact', 'blood pact', '3');
+    html += step('Go north into the Vault');
+    html += step('Defeat Lord Harwick Vane (weak to magic &amp; fire)');
+    html += step('Take the Blood Pact', 'blood pact', '3');
 
     html += phase('Phase 6 — The Ritual');
     const allRitual = inv.has('strange amulet') && inv.has('unmaking flame') && inv.has('blood pact');
-    html += step('Return to Grand Foyer with all three ritual items');
-    html += step(allRitual ? 'Type "ritual" — <strong>you\'re ready!</strong>' : 'Type "ritual"');
+    html += step('Return: south → Basement, up → Basement Stairs, east → Dining Hall, south → Grand Foyer');
+    html += step(allRitual ? 'Type "ritual" — <strong>you\'re ready!</strong>' : 'Type "ritual" with all three ritual items');
 
     html += '<div class="win-optional-header">Optional</div>';
     html += step('Offer the silver bullet to Edmund in the Garden (mercy path)', "groundskeeper's note");

@@ -130,7 +130,7 @@ def _handle_victory(monster, target, room, room_override, room_states, room_id, 
         player["gold"] = player.get("gold", 0) + gold_drop
         io.send(f"You find {gold_drop} gold coins.")
     if item_drop:
-        catalogue_entry = (item_catalogue or {}).get(item_drop, {})
+        catalogue_entry = (item_catalogue or {}).get(make_slug(item_drop), {})
         display_name = catalogue_entry.get("name") or item_drop.replace("_", " ")
         debug(f"drop resolve: id={item_drop!r} display={display_name!r}")
         drop_item_data = {
