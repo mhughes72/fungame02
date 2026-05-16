@@ -3,6 +3,7 @@ uvicorn[standard]==0.38.0
 langchain==1.2.10
 langchain-core==1.2.17
 langchain-openai==1.1.10
+langsmith==0.7.30
 langgraph==1.0.10
 openai==2.26.0
 anthropic>=0.40.0
