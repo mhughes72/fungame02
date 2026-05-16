@@ -157,62 +157,152 @@
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.92);
+      background: rgba(0, 0, 0, 0);
       z-index: 3000;
       align-items: center;
       justify-content: center;
       flex-direction: column;
+      transition: background 1.2s ease;
+      overflow: hidden;
     }
     #win-overlay.active { display: flex; }
+    #win-overlay.faded  { background: rgba(0, 0, 0, 0.94); }
+
+    /* Ember particles */
+    .win-ember {
+      position: absolute;
+      bottom: -10px;
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: #c8a050;
+      pointer-events: none;
+      animation: emberRise linear infinite;
+      opacity: 0;
+    }
+    @keyframes emberRise {
+      0%   { transform: translateY(0) translateX(0) scale(1);   opacity: 0; }
+      10%  { opacity: 1; }
+      50%  { opacity: 0.7; }
+      80%  { opacity: 0.3; }
+      100% { transform: translateY(-110vh) translateX(var(--drift)) scale(0.3); opacity: 0; }
+    }
+
     #win-overlay-content {
-      background: #0d0d0d;
-      border: 2px solid #7a6030;
-      padding: 40px 48px;
-      max-width: 560px;
+      background: #0a0a08;
+      border: 1px solid #4a3820;
+      padding: 44px 52px;
+      max-width: 580px;
       width: 90%;
       text-align: center;
-      box-shadow: 0 0 60px rgba(180, 140, 60, 0.25), 0 0 120px rgba(100, 80, 30, 0.15);
+      box-shadow: 0 0 80px rgba(180, 140, 60, 0.3), 0 0 160px rgba(100, 70, 20, 0.2), inset 0 0 40px rgba(0,0,0,0.6);
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.8s ease, transform 0.8s ease;
+      position: relative;
+      z-index: 1;
     }
-    #win-overlay-content .win-glyph {
-      font-size: 36px;
-      letter-spacing: 12px;
-      color: #a89060;
-      margin-bottom: 20px;
-      opacity: 0.8;
+    #win-overlay-content.visible {
+      opacity: 1;
+      transform: translateY(0);
     }
-    #win-overlay-content h2 {
-      font-size: 20px;
+
+    /* Ritual sigil */
+    #win-sigil {
+      font-size: 13px;
+      letter-spacing: 10px;
+      color: #7a5a28;
+      margin-bottom: 6px;
+      opacity: 0;
+      transition: opacity 1s ease 0.3s;
+    }
+    #win-sigil.visible { opacity: 1; }
+
+    /* Letter-by-letter title */
+    #win-title {
+      font-size: 22px;
       color: #c8a050;
-      letter-spacing: 4px;
+      letter-spacing: 6px;
       text-transform: uppercase;
-      margin-bottom: 24px;
-      text-shadow: 0 0 20px rgba(180, 140, 60, 0.4);
+      margin-bottom: 28px;
+      text-shadow: 0 0 30px rgba(200, 160, 80, 0.6);
+      min-height: 32px;
     }
-    #win-overlay-content p {
+    #win-title .win-letter {
+      display: inline-block;
+      opacity: 0;
+      transform: translateY(-6px);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+    #win-title .win-letter.shown {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Typed narrative */
+    #win-narrative {
       color: #8a7a5a;
       font-size: 13px;
-      line-height: 1.9;
-      margin-bottom: 12px;
+      line-height: 2;
+      margin-bottom: 8px;
+      text-align: left;
+      min-height: 60px;
     }
-    #win-overlay-content .win-stats {
-      margin-top: 24px;
-      border-top: 1px solid #2a2a1a;
-      padding-top: 16px;
-      color: #6a5a3a;
-      font-size: 11px;
-      letter-spacing: 1px;
+    #win-narrative .cursor {
+      display: inline-block;
+      width: 7px;
+      height: 13px;
+      background: #7a6030;
+      margin-left: 2px;
+      vertical-align: middle;
+      animation: blink 0.9s step-end infinite;
     }
-    #win-overlay-content .play-again-btn {
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    /* Stats grid */
+    #win-stats {
       margin-top: 24px;
-      background: none;
-      border: 1px solid #5a4a2a;
-      color: #a89060;
-      padding: 10px 28px;
-      font-family: inherit;
-      font-size: 12px;
+      border-top: 1px solid #1e1a10;
+      padding-top: 18px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px 24px;
+      opacity: 0;
+      transition: opacity 0.6s ease;
+    }
+    #win-stats.visible { opacity: 1; }
+    .win-stat {
+      text-align: left;
+    }
+    .win-stat-label {
+      color: #4a3e26;
+      font-size: 9px;
       letter-spacing: 2px;
       text-transform: uppercase;
+      margin-bottom: 3px;
+    }
+    .win-stat-value {
+      color: #a89060;
+      font-size: 18px;
+      letter-spacing: 1px;
+    }
+
+    #win-overlay-content .play-again-btn {
+      margin-top: 28px;
+      background: none;
+      border: 1px solid #3a2e18;
+      color: #7a6030;
+      padding: 10px 32px;
+      font-family: inherit;
+      font-size: 11px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
       cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.6s ease, border-color 0.3s, color 0.3s;
+    }
+    #win-overlay-content .play-again-btn.visible {
+      opacity: 1;
     }
     #win-overlay-content .play-again-btn:hover {
       border-color: #a89060;
@@ -1610,10 +1700,10 @@
 
   <div id="win-overlay">
     <div id="win-overlay-content">
-      <div class="win-glyph">✦ ✦ ✦</div>
-      <h2>You Are Free</h2>
-      <p id="win-narrative">The seal breaks. The door opens. You walk out.</p>
-      <div class="win-stats" id="win-stats"></div>
+      <div id="win-sigil">— ✦ —</div>
+      <div id="win-title"></div>
+      <p id="win-narrative"></p>
+      <div id="win-stats"></div>
       <button class="play-again-btn" onclick="location.reload()">Begin Again</button>
     </div>
   </div>
@@ -1705,6 +1795,10 @@
     inventory: [], equipped_weapon: null, equipped_armor: {}
   };
 
+  let commandsSent = 0;
+  let monstersDefeated = 0;
+  let lastNarrativeText = 'The seal breaks. The ancient darkness unravels. You walk out into the cold morning air — free.';
+
   /**
    * Initialize WebSocket connection
    */
@@ -1758,6 +1852,8 @@
       } else if (text.includes('defeated') || text.includes('slain') || text.includes('escaped') || text.includes('turns away')) {
         className = 'combat-system';
       }
+    } else if (msg.text && msg.text.length > 60) {
+      lastNarrativeText = msg.text;
     }
     appendOutput(msg.text, className, msg.text + '\n');
   }
@@ -1823,14 +1919,103 @@
     inputField.disabled = true;
     sendBtn.disabled = true;
 
-    const overlay = document.getElementById('win-overlay');
-    const statsEl = document.getElementById('win-stats');
-
-    const health = document.getElementById('health')?.textContent || '?';
-    const gold = document.getElementById('gold')?.textContent || '?';
-    statsEl.textContent = `Health: ${health}  ·  Gold: ${gold}`;
+    const overlay  = document.getElementById('win-overlay');
+    const content  = document.getElementById('win-overlay-content');
+    const sigil    = document.getElementById('win-sigil');
+    const titleEl  = document.getElementById('win-title');
+    const narrative= document.getElementById('win-narrative');
+    const statsEl  = document.getElementById('win-stats');
+    const btn      = document.querySelector('#win-overlay-content .play-again-btn');
 
     overlay.classList.add('active');
+
+    // ── Embers ────────────────────────────────────────────────────────────────
+    function spawnEmber() {
+      const e = document.createElement('div');
+      e.className = 'win-ember';
+      const hue = 30 + Math.random() * 30;
+      const size = 2 + Math.random() * 3;
+      e.style.cssText = [
+        `left:${Math.random() * 100}%`,
+        `width:${size}px`,
+        `height:${size}px`,
+        `background:hsl(${hue},80%,60%)`,
+        `--drift:${(Math.random() - 0.5) * 120}px`,
+        `animation-duration:${4 + Math.random() * 5}s`,
+        `animation-delay:${Math.random() * 3}s`,
+        `box-shadow:0 0 ${size * 2}px hsl(${hue},80%,60%)`,
+      ].join(';');
+      overlay.appendChild(e);
+      setTimeout(() => e.remove(), 9000);
+    }
+    for (let i = 0; i < 40; i++) setTimeout(spawnEmber, i * 120);
+    const emberInterval = setInterval(spawnEmber, 600);
+
+    // ── Fade backdrop, then reveal content ────────────────────────────────────
+    requestAnimationFrame(() => {
+      overlay.classList.add('faded');
+      setTimeout(() => {
+        content.classList.add('visible');
+        sigil.classList.add('visible');
+
+        // ── Letter-by-letter title ─────────────────────────────────────────
+        const titleText = 'You Are Free';
+        titleEl.innerHTML = titleText.split('').map(
+          ch => `<span class="win-letter">${ch === ' ' ? '&nbsp;' : ch}</span>`
+        ).join('');
+        const letters = titleEl.querySelectorAll('.win-letter');
+        letters.forEach((l, i) => setTimeout(() => l.classList.add('shown'), 300 + i * 80));
+
+        // ── Typewriter narrative ───────────────────────────────────────────
+        const fullText = lastNarrativeText;
+        let charIdx = 0;
+        const cursor = document.createElement('span');
+        cursor.className = 'cursor';
+        narrative.appendChild(cursor);
+
+        const typeDelay = Math.max(18, Math.min(38, 2800 / fullText.length));
+        const typeStart = 300 + titleText.length * 80 + 400;
+
+        setTimeout(() => {
+          const typeTimer = setInterval(() => {
+            if (charIdx < fullText.length) {
+              cursor.insertAdjacentText('beforebegin', fullText[charIdx++]);
+            } else {
+              clearInterval(typeTimer);
+              cursor.remove();
+
+              // ── Stats grid ───────────────────────────────────────────────
+              const finalHp   = currentPlayerState.health;
+              const finalGold = currentPlayerState.gold;
+              const itemCount = currentPlayerState.inventory.length;
+              statsEl.innerHTML = [
+                ['Rooms Explored', visitedRooms.size],
+                ['Monsters Defeated', monstersDefeated],
+                ['Commands Issued', commandsSent],
+                ['Items Carried', itemCount],
+              ].map(([label, val]) =>
+                `<div class="win-stat">
+                  <div class="win-stat-label">${label}</div>
+                  <div class="win-stat-value">${val}</div>
+                </div>`
+              ).join('') +
+              `<div class="win-stat">
+                <div class="win-stat-label">Health Remaining</div>
+                <div class="win-stat-value">${finalHp}</div>
+              </div>` +
+              `<div class="win-stat">
+                <div class="win-stat-label">Gold</div>
+                <div class="win-stat-value">${finalGold}</div>
+              </div>`;
+
+              statsEl.classList.add('visible');
+              setTimeout(() => { btn.classList.add('visible'); clearInterval(emberInterval); }, 800);
+            }
+          }, typeDelay);
+        }, typeStart);
+
+      }, 600);
+    });
   }
 
   /**
@@ -1851,7 +2036,15 @@
       scrollToBottom();
       return;
     }
-    if (msg.type === 'token_end') { streamSpan = null; scrollToBottom(); return; }
+    if (msg.type === 'token_end') {
+      if (streamSpan) {
+        const t = streamSpan.textContent;
+        if (t.length > 60) lastNarrativeText = t;
+      }
+      streamSpan = null;
+      scrollToBottom();
+      return;
+    }
     if (msg.type === 'debug')     { appendDebug(msg.text); return; }
 
     const handlers = {
@@ -1933,6 +2126,7 @@
     // Echo player command in a distinct color
     appendOutput('> ' + text, 'command', '> ' + text + '\n');
 
+    commandsSent++;
     // Send to server
     ws.send(text);
 
@@ -2100,6 +2294,7 @@
   }
 
   function hideEncounter() {
+    if (encounterData.encounter_type === 'combat') monstersDefeated++;
     inEncounter = false;
     encounterData = {};
     deactivateShopTab();
