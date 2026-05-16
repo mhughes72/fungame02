@@ -16,6 +16,8 @@ Client → server:
 
 import asyncio
 import json as json_lib
+import logging
+import os
 from concurrent.futures import ThreadPoolExecutor
 
 import openai
@@ -30,6 +32,11 @@ from npc_memory import clear_all_memories
 
 executor = ThreadPoolExecutor(max_workers=10)
 fastapi_app = FastAPI()
+
+logging.basicConfig(level=logging.INFO)
+_log = logging.getLogger(__name__)
+_log.info("LANGSMITH_TRACING=%s", os.getenv("LANGSMITH_TRACING"))
+_log.info("LANGSMITH_API_KEY set: %s", bool(os.getenv("LANGSMITH_API_KEY")))
 
 # Mount static files directory
 fastapi_app.mount("/static", StaticFiles(directory="static"), name="static")
