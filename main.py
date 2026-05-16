@@ -628,7 +628,7 @@ graph.add_conditional_edges(
 )
 graph.add_edge("get_player_action", "resolve_action")
 graph.add_edge("npc_dialogue", "load_room_data")
-graph.add_edge("combat", "load_room_data")
+graph.add_conditional_edges("combat", next_step, {END: END, "load_room_data": "load_room_data"})
 
 graph.add_conditional_edges(
     "resolve_action",

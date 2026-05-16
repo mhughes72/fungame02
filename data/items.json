@@ -40,7 +40,7 @@
   "health_potion": {
     "name": "health potion",
     "description": "A small glass vial stoppered with wax, containing a viscous liquid the colour of old blood. It smells faintly of copper and something floral.",
-    "heal_amount": 30
+    "heal_amount": 50
   },
   "knife": {
     "name": "knife",

@@ -111,8 +111,12 @@ WIN_PATH: list[Step] = [
 
     # ── Phase 4b: Dining Hall → Basement Stairs → Basement (room_10 → room_11)
     Step("go west",              "Move to Basement Stairs"),
+    Step("take health potion",   "Take health potion from Basement Stairs"),
     Step("go down",              "Descend to Basement"),
     Step("fight the ghoul",      "Defeat ghoul"),
+    Step("take health potion",   "Take health potion from Basement"),
+    Step("use health potion",    "Heal before vault",
+         assert_min_hp=70),
 
     # ── Phase 5: Vault (room_12) ─────────────────────────────────────────────
     Step("go north",             "Enter Lord Harwick's Vault"),

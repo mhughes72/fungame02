@@ -68,7 +68,7 @@
     "defense": 8,
     "damage": 18,
     "damage_variance": 4,
-    "weaknesses": ["blade", "fire"],
+    "weaknesses": ["blade", "fire", "magic"],
     "drops": {"gold": 40, "item": "iron key"}
   },
   "werewolf": {
@@ -89,9 +89,9 @@
     "behavior": "Speaks before striking, offering terms that are not negotiable. Fights with cold efficiency — no wasted motion, no theatrics. Gets faster as he is damaged, not slower. Believes, absolutely, that you cannot win.",
     "health": 75,
     "max_health": 75,
-    "defense": 8,
-    "damage": 16,
-    "damage_variance": 6,
+    "defense": 6,
+    "damage": 12,
+    "damage_variance": 4,
     "weaknesses": ["magic", "fire"],
     "drops": {"gold": 60, "item": "blood pact"},
     "aggressive": true

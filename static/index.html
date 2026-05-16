@@ -2945,13 +2945,13 @@
     html += step('Open the dusty lockbox (need oracle\'s note) → 50 gold + health potion revealed', "oracle's note");
     html += step('Take the health potion from the lockbox, then use it to heal up');
     html += step('Fight the vampire (vampire won\'t attack first — heal before engaging)');
-    html += step('Go west → Basement Stairs, down → Basement (iron key auto-unlocks)');
-    html += step('Fight the ghoul');
+    html += step('Go west → Basement Stairs — take the health potion there');
+    html += step('Go down → Basement (iron key auto-unlocks) — take the health potion there too');
+    html += step('Fight the ghoul, then use a health potion to heal before the Vault (aim for 70+ HP)');
 
     html += phase('Phase 5 — Lord Harwick\'s Vault');
-    html += step('Go north into the Vault');
-    html += step('Defeat Lord Harwick Vane (weak to magic &amp; fire)');
-    html += step('Take the Blood Pact', 'blood pact', '3');
+    html += step('Go north — Lord Harwick attacks immediately on entry (weak to magic &amp; fire)');
+    html += step('Blood Pact auto-collected from Lord Harwick as a combat drop', 'blood pact', '3');
 
     html += phase('Phase 6 — The Ritual');
     const allRitual = inv.has('strange amulet') && inv.has('unmaking flame') && inv.has('blood pact');
