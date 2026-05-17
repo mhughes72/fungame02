@@ -52,7 +52,7 @@
     "can_search_web": false,
     "opens_conversation": true,
     "shop_id": "aldous",
-    "gossips_with": ["Shadow"],
+    "gossips_with": ["The Cat"],
     "knows_about": {
       "npc:shadow_cat": "Once caught the cat rummaging through his stock. Never found anything missing, which somehow made it worse.",
       "item:magic_staff": "Has been trying to acquire it for years. Considers it the finest item in the mansion and is bitter he does not own it.",
@@ -97,7 +97,7 @@
     }
   },
   "shadow_cat": {
-    "name": "Shadow",
+    "name": "The Cat",
     "description": "A sleek black cat with luminous amber eyes who sits with the posture of someone who has seen civilizations rise and fall.",
     "personality": "Speaks slowly and cryptically as if imparting ancient wisdom, but everything it says is either completely obvious, total nonsense, or accidentally wrong. Enormously self-confident about all of it.",
     "knowledge": "Thinks it knows everything but is usually wrong. Occasionally stumbles onto something true completely by accident.",
